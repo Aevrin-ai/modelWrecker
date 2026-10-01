@@ -14,6 +14,7 @@ modelwrecker run        my.yaml  --output md|json  # run all objectives, verify,
 modelwrecker report     runs/<run-id>              # re-render a finished run's findings (markdown)
 modelwrecker replay     evidence.json              # reproduce a finding from its evidence
 modelwrecker strategies                            # list registered strategies + required capabilities
+modelwrecker transforms                            # list payload transforms (first-party + PyRIT)
 modelwrecker mcp        --runs-dir runs            # start the harness MCP server over stdio (ADR-0013)
 modelwrecker version
 ```

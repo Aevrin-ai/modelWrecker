@@ -29,8 +29,7 @@ class ManyShot(BaseStrategy):
     ]
 
     async def run(self, ctx: StrategyContext) -> StrategyResult:
-        shots = int((getattr(ctx, "params", {}) or {}).get("shots", len(_FAUX))) if hasattr(ctx, "params") else len(_FAUX)
-        shots = max(1, min(shots, len(_FAUX)))
+        shots = max(1, min(int((ctx.params or {}).get("shots", len(_FAUX))), len(_FAUX)))
         thread: list[dict] = []
         for q, a in _FAUX[:shots]:
             thread.append({"role": "user", "content": q})

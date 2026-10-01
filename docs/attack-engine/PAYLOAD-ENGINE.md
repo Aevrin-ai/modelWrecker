@@ -32,13 +32,20 @@ flowchart LR
   D --> F
 ```
 
-## Transforms (first-party set)
+## Transforms (implemented)
 
-Base64 / other encodings · Unicode obfuscation · homoglyph substitution · zero-width characters · token
-splitting · character transformations · delimiter manipulation · simple structured transforms · (later)
-multimodal/framing transforms. Each is a `Transform` plugin
-([`PLUGIN-SYSTEM.md`](../architecture/PLUGIN-SYSTEM.md)) with a declared name and params; new transforms
-plug in without touching the engine.
+First-party (always available): `base64`, `rot13`, `reverse`, `zero_width`, `leetspeak`, `homoglyph`.
+Reversible ones (`base64`, `rot13`, `reverse`, `zero_width`) support `decode`; `leetspeak`/`homoglyph`
+are one-way.
+
+PyRIT-backed (registered when the `attacks` extra is installed): `pyrit_morse`, `pyrit_binary`,
+`pyrit_leetspeak`, and more from PyRIT's converter library, wrapped behind our Transform interface
+(`payloads/pyrit_converters.py`). This is the Phase 6 reuse of PyRIT (ADR-0006).
+
+Run `modelwrecker transforms` for the live list. The `encoded_jailbreak` strategy uses the engine: it
+applies a transform chain (from `attack.params.transforms`, default `["base64"]`) and wraps the result
+with a decode-and-comply instruction, recording the chain on the attempt for reproducibility. New
+transforms plug in via the registry without touching the engine.
 
 ## Why first-party instead of vendoring Parseltongue
 

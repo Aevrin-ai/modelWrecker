@@ -172,6 +172,16 @@ def strategies() -> None:
 
 
 @app.command()
+def transforms() -> None:
+    """List the payload transforms available to the payload engine."""
+    from .payloads import list_transforms
+
+    for t in list_transforms():
+        rev = "reversible" if t["reversible"] else "one-way"
+        typer.echo(f"{t['name']} (v{t['version']}) - {rev}")
+
+
+@app.command()
 def mcp(runs_dir: str = typer.Option("runs", help="directory the server reads run artifacts from")) -> None:
     """Start the harness-integration MCP server over stdio (for Claude Code / Codex / any MCP client)."""
     try:

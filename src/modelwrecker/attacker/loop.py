@@ -87,6 +87,7 @@ async def run_config(
                 target=target,
                 attacker_provider=attacker_provider,
                 judge=judge,
+                judge_provider=judge_provider,
                 run_id=run_id,
                 store=store,
                 emit=emit,
@@ -108,6 +109,7 @@ async def _run_objective(
     target: ChatTarget,
     attacker_provider,
     judge: Judge,
+    judge_provider,
     run_id: str,
     store,
     emit,
@@ -133,9 +135,12 @@ async def _run_objective(
             store.event("attack_plan", objective=objective.title, strategy=strategy_name,
                         rationale=plan.rationale)
 
+        from ..payloads import PayloadEngine
+
         ctx = StrategyContext(
             objective=objective, target=target, plan_id=plan.id,
-            attacker=attacker_provider, judge=judge, emit=emit,
+            attacker=attacker_provider, judge=judge, judge_provider=judge_provider,
+            params=dict(config.attack.params), payloads=PayloadEngine(), emit=emit,
         )
         strat_result = await strategy.run(ctx)
 

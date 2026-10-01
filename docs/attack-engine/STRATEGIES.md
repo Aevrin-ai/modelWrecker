@@ -41,12 +41,13 @@ flowchart TD
   SI --> MM[Multimodal]
 ```
 
-**Implemented and tested today:** `direct_jailbreak`, `prompt_extraction` (Phase 4) and `best_of_n`,
-`prefill`, `many_shot`, `crescendo` (Phase 5). Run `modelwrecker strategies` for the live list.
+**Implemented and tested today:** `direct_jailbreak`, `prompt_extraction` (Phase 4); `best_of_n`,
+`prefill`, `many_shot`, `crescendo` (Phase 5 first-party); `encoded_jailbreak` (Phase 6, uses the payload
+engine); and the PyRIT-backed `pyrit_send`, `pyrit_pair` (PAIR), `pyrit_tap` (TAP), registered when the
+`attacks` extra is installed. Run `modelwrecker strategies` for the live list.
 
-**Planned:** PAIR, TAP (via the PyRIT seam), encoding/probe batteries (via garak, Phase 8), and
-RAG / MCP / tool / memory / multimodal attacks (Phase 9). These ship across later phases (see
-[`../../ROADMAP.md`](../../ROADMAP.md)), not all at once.
+**Planned:** encoding/probe batteries (via garak, Phase 8) and RAG / MCP / tool / memory / multimodal
+attacks (Phase 9). See [`../../ROADMAP.md`](../../ROADMAP.md).
 
 ## Build vs reuse per strategy
 
@@ -55,8 +56,9 @@ interface rather than rewriting it:
 
 | Strategy | Source | How |
 |----------|--------|-----|
-| best_of_n, prefill, many_shot, crescendo, direct jailbreak, prompt extraction | first-party | small, specific to our loop; cheap to own and test. **Done.** |
-| PAIR, TAP (and PyRIT memory/scoring reuse) | **PyRIT** (MIT) | adapter drives the PyRIT orchestrator; our planner selects it; PyRIT memory/scorers reused - a hybrid. **Seam in place; BLOCKED here** because PyRIT 0.6.0 fails to import (broken termcolor dep). See [`ADR-0006`](../decisions/ADR-0006-reuse-pyrit-garak.md) and `strategies/pyrit_adapter.py`. |
+| best_of_n, prefill, many_shot, crescendo, encoded_jailbreak, direct jailbreak, prompt extraction | first-party | small, specific to our loop; cheap to own and test. **Done.** |
+| PAIR, TAP | **PyRIT 1.1** (MIT) | our provider is bridged into a PyRIT target (`pyrit_bridge.py`); `pyrit_attacks.py` runs `PAIRAttack`/`TAPAttack` and converts the result. **Done** - PAIR runs offline to a SUCCESS outcome; registered when the `attacks` extra is present. See [`ADR-0006`](../decisions/ADR-0006-reuse-pyrit-garak.md). |
+| Converters (morse, binary, leetspeak, ...) | **PyRIT 1.1** (MIT) | wrapped as payload transforms (`payloads/pyrit_converters.py`). **Done.** |
 | Encoding/probe batteries (gcg, encoding, glitch, ...) | **garak** (Apache-2.0) | batch-scan adapter (Phase 8). |
 | RAG / MCP / tool / memory / multimodal | first-party | modelWrecker's differentiated targets; built on our target adapters (Phase 9). |
 

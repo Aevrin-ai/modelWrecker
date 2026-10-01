@@ -4,7 +4,9 @@
 
 ## Install
 
-- Python 3.12+. Dependency/venv management with **uv** (`uv sync`); `uv.lock` pins everything.
+- Python 3.12+. Use a project `.venv` via **uv** (never the global interpreter):
+  `uv venv` then `uv pip install -e ".[dev,mcp,attacks]"`. Extras: `mcp` (harness server),
+  `attacks` (PyRIT PAIR/TAP + converters), `providers` (any-llm + direct SDKs).
 - `pip install modelwrecker` once published.
 - A container image for CI/headless use.
 
