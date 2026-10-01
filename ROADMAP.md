@@ -40,10 +40,16 @@ installs in a fresh venv and runs a full loop. Live OpenRouter run verified.
 Exit criterion: largely met over a real provider (OpenRouter) and the wheel/stub full loop. Still open:
 the same run against a real local Ollama model, and a verified Docker build.
 
+## In progress - Phase 5 (strategy system)
+
+- **Done:** first-party `best_of_n`, `prefill`, `many_shot`, `crescendo` (tested offline); reports now
+  include the full attempt transcript (prompt sent, model reply, result).
+- **Blocked:** the PyRIT adapter (PAIR/TAP + memory/scoring reuse). PyRIT 0.6.0 is unusable here (broken
+  termcolor dep); the seam is in place. Needs a working PyRIT 1.1+ install.
+
 ## Later
 
-- **Phase 5** - Full strategy system (PAIR, TAP, Crescendo, best-of-N, many-shot, prefill, ...),
-  reusing PyRIT (with its memory/scoring) behind adapters.
+- **Phase 5 (remaining)** - PAIR, TAP via the PyRIT adapter once PyRIT works; skeleton-key.
 - **Phase 6** - Payload engine (transform/chain/mutate), planner-driven, optional.
 - **Phase 7** - Campaign engine (parallel runs, budgets, limits, stop conditions).
 - **Phase 8** - Reliability & analytics (confidence scoring, dashboards of ASR, leaderboards),

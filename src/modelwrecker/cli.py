@@ -115,9 +115,9 @@ def run(
         typer.secho(f"note: {note}", fg=typer.colors.YELLOW)
 
     rendered = (
-        render_json(result.findings, result.run_id)
+        render_json(result.findings, result.run_id, result.attempts)
         if output == "json"
-        else render_markdown(result.findings, result.run_id)
+        else render_markdown(result.findings, result.run_id, result.attempts)
     )
     report_path = store.dir / (f"report.{ 'json' if output == 'json' else 'md' }")
     report_path.write_text(rendered, encoding="utf-8")
@@ -129,19 +129,22 @@ def run(
 
 
 @app.command()
-def report(run_dir: str = typer.Argument(..., help="a run directory under runs/")) -> None:
-    """Render a markdown report from a finished run's findings."""
-    from .data import Finding
-    from .findings.report import render_markdown
+def report(
+    run_dir: str = typer.Argument(..., help="a run directory under runs/"),
+    output: str = typer.Option("md", help="md | json"),
+) -> None:
+    """Render a report from a finished run: findings plus the full attempt transcript."""
+    from .findings.report import load_run, render_json, render_markdown
 
     d = Path(run_dir)
     if not d.is_dir():
         typer.secho(f"not a run directory: {d}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2)
-    findings = []
-    for fp in sorted(d.glob("finding-*.json")):
-        findings.append(Finding.model_validate_json(fp.read_text(encoding="utf-8")))
-    typer.echo(render_markdown(findings, d.name))
+    findings, attempts = load_run(d)
+    if output == "json":
+        typer.echo(render_json(findings, d.name, attempts))
+    else:
+        typer.echo(render_markdown(findings, d.name, attempts))
 
 
 @app.command()

@@ -6,6 +6,24 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added (Phase 5 + reporting + Docker)
+- Four new attack strategies, tested offline: `best_of_n`, `prefill`, `many_shot`, `crescendo`
+  (six strategies total). PyRIT adapter seam added but inert (see Blocked).
+- Reports now include a full **attempt transcript**: for every attempt, the exact prompt sent to the
+  model, the model's reply, and the result (SUCCESS / PARTIAL / FAILED with score). `run` and `report`
+  render it (md and json); the MCP `get_report` includes it too.
+- Docker: image **built and verified** - runs as non-root, lists strategies, validates a mounted config,
+  and runs a full in-container attack loop against a host stub (critical finding, 3/3 replays).
+- Test suite grown to 44 passing offline tests (adds strategy + report-transcript tests).
+
+### Changed
+- Removed unused empty placeholder packages (`campaigns/`, `payloads/`, `evidence/`); evidence capture
+  lives in `findings/`. Repo-structure doc updated to match. Those packages return when their phase lands.
+
+### Blocked
+- PyRIT adapter: PyRIT 0.6.0 is unusable in this environment (broken `termcolor` transitive dep); the
+  seam is in place but inert rather than shipping untested integration code. Needs PyRIT 1.1+.
+
 ### Added
 - Project memory and documentation system: `CLAUDE.md`, `docs/index.md`,
   `docs/DOCUMENTATION.md`, `docs/DEPENDENCIES.md`, `DECISIONS.md`, `ROADMAP.md`, this file.

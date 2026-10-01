@@ -7,12 +7,20 @@ system in docs/architecture/PLUGIN-SYSTEM.md will add entry-point discovery late
 from __future__ import annotations
 
 from .base import BaseStrategy
+from .best_of_n import BestOfN
+from .crescendo import Crescendo
 from .direct import DirectJailbreak
 from .extraction import PromptExtraction
+from .many_shot import ManyShot
+from .prefill import Prefill
 
 _REGISTRY: dict[str, type[BaseStrategy]] = {
     DirectJailbreak.name: DirectJailbreak,
     PromptExtraction.name: PromptExtraction,
+    BestOfN.name: BestOfN,
+    Prefill.name: Prefill,
+    ManyShot.name: ManyShot,
+    Crescendo.name: Crescendo,
 }
 
 

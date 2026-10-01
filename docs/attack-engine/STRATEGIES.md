@@ -41,10 +41,12 @@ flowchart TD
   SI --> MM[Multimodal]
 ```
 
-Planned set (the planned set): Jailbreak, PromptInjection, SystemPromptExtraction, Crescendo,
-PAIR, TAP, BestOfN, ManyShot, Prefill, RAGAttack, MCPAttack, ToolAttack, MemoryAttack,
-MultimodalAttack. These ship across Phases 4-9 (see [`../../ROADMAP.md`](../../ROADMAP.md)), not all at
-once.
+**Implemented and tested today:** `direct_jailbreak`, `prompt_extraction` (Phase 4) and `best_of_n`,
+`prefill`, `many_shot`, `crescendo` (Phase 5). Run `modelwrecker strategies` for the live list.
+
+**Planned:** PAIR, TAP (via the PyRIT seam), encoding/probe batteries (via garak, Phase 8), and
+RAG / MCP / tool / memory / multimodal attacks (Phase 9). These ship across later phases (see
+[`../../ROADMAP.md`](../../ROADMAP.md)), not all at once.
 
 ## Build vs reuse per strategy
 
@@ -53,10 +55,10 @@ interface rather than rewriting it:
 
 | Strategy | Source | How |
 |----------|--------|-----|
-| PAIR, TAP, Crescendo, skeleton-key, many-shot | **PyRIT** (MIT) | adapter drives the PyRIT orchestrator; our planner selects it. PyRIT **memory** backs the PyRIT-driven conversation store and PyRIT **scorers** run as judge signals - a hybrid reuse. See [`ADR-0006`](../decisions/ADR-0006-reuse-pyrit-garak.md). |
+| best_of_n, prefill, many_shot, crescendo, direct jailbreak, prompt extraction | first-party | small, specific to our loop; cheap to own and test. **Done.** |
+| PAIR, TAP (and PyRIT memory/scoring reuse) | **PyRIT** (MIT) | adapter drives the PyRIT orchestrator; our planner selects it; PyRIT memory/scorers reused - a hybrid. **Seam in place; BLOCKED here** because PyRIT 0.6.0 fails to import (broken termcolor dep). See [`ADR-0006`](../decisions/ADR-0006-reuse-pyrit-garak.md) and `strategies/pyrit_adapter.py`. |
 | Encoding/probe batteries (gcg, encoding, glitch, ...) | **garak** (Apache-2.0) | batch-scan adapter (Phase 8). |
-| Prefill, best-of-N, direct jailbreak, prompt extraction | first-party | small, specific to our loop; cheap to own. |
-| RAG / MCP / tool / memory / multimodal | first-party | these are modelWrecker's differentiated targets; built on our target adapters. |
+| RAG / MCP / tool / memory / multimodal | first-party | modelWrecker's differentiated targets; built on our target adapters (Phase 9). |
 
 A reused algorithm still produces our `Attempt`/`Observation`/`Verdict` shapes and goes through our
 reliability + evidence pipeline. PyRIT's memory is adapted into our shapes at the boundary and its scorers

@@ -7,7 +7,7 @@ Date: 2026-10-01. Phase: 4 (minimum engine). Legend: PASS / FAIL / BLOCKED / NOT
 The modelWrecker local engine core is implemented and verified offline. The full pipeline - config ->
 planner -> strategy -> target -> judge -> reliability -> evidence -> finding -> report - runs end to end,
 including a real run over HTTP against a loopback stub that speaks the OpenAI chat-completions wire
-format (the same code path used for OpenRouter and Ollama). 30 automated tests pass with no network and
+format (the same code path used for OpenRouter and Ollama). 44 automated tests pass with no network and
 no API key.
 
 Live provider testing (OpenRouter / Ollama), MCP, Docker, and PyPI packaging are **not yet tested** and
@@ -16,7 +16,7 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 ## Environment
 
 - OS: Windows 11. Python 3.12.9. pydantic 2.11, httpx, typer, pyyaml present.
-- Test command: `PYTHONPATH=src python -m pytest -q` -> 30 passed.
+- Test command: `PYTHONPATH=src python -m pytest -q` -> 44 passed.
 
 ## What was verified (PASS)
 
@@ -24,7 +24,7 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 - Authorization gate: an unauthorized target is refused before any request.
 - Security: egress guard blocks loopback/link-local/RFC1918/metadata; redaction strips secret fields.
 - Provider: OpenAI-compatible adapter parses the wire format; real HTTP round-trip produced a finding.
-- Strategies: `direct_jailbreak`, `prompt_extraction` run through the loop.
+- Strategies: direct_jailbreak, prompt_extraction, best_of_n, prefill, many_shot, crescendo (6 total).
 - Judge: multi-signal ensemble + calibration (0 false positives on benign fixtures).
 - Reliability: replay labelled a repeated success `reliable` (5/5).
 - Findings/evidence/storage: finding created with verified taxonomy (OWASP LLM07/LLM08, ATLAS
@@ -55,11 +55,29 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
   `mcp` packages, and the wheel-installed CLI ran a full loop against a loopback stub - a critical finding,
   3/3 replays. 36 offline tests pass.
 
+## Phase 5 strategies + report (PASS)
+
+- Four new strategies, tested offline: `best_of_n`, `prefill`, `many_shot`, `crescendo` (plus the Phase 4
+  `direct_jailbreak`, `prompt_extraction`). Six strategies total.
+- Reports now include a full **attempt transcript**: for every attempt, the exact prompt sent to the
+  model, the model's reply, and the result (SUCCESS / PARTIAL / FAILED with score). Verified for both a
+  success and a refusal.
+
+## Docker (PASS)
+
+- `docker build` succeeds. The container runs as a **non-root** user (uid 10001), lists all six
+  strategies, validates a mounted config, and runs a **full attack loop in-container** against a host
+  stub - producing a reliable critical finding (3/3 replays) with the transcript rendered.
+- Security: non-root verified; no Docker socket mounted; run with `--add-host` only. Resource limits and
+  no-privileged are documented in `docs/workflows/DEPLOYMENT.md`.
+
 ## Blocked
 
-- Docker: the image build could not run because the Docker daemon is not running in this environment. The
-  `Dockerfile` and `.dockerignore` are written (non-root user, mcp extra, `/work` workdir). Marked BLOCKED,
-  not PASS.
+- PyRIT adapter: PyRIT 0.6.0 is installed but **fails to import** in this environment (broken `termcolor`
+  transitive dependency: `No module named 'termcolor._types'`). Per the "investigate before replacing /
+  do not claim untested compatibility" rule, the adapter seam is in place but inert (no untested PyRIT
+  code is shipped as working). It needs a working PyRIT (1.1+) install to activate. See
+  `src/modelwrecker/strategies/pyrit_adapter.py`.
 
 ## Not tested yet (NOT TESTED)
 
@@ -80,8 +98,8 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 - [x] Judge works; findings work; evidence works
 - [x] Reliability/replay works
 - [x] MCP works; MCP guardrails work
-- [ ] Docker works - BLOCKED (daemon not running); Dockerfile ready
-- [ ] Docker security verified - BLOCKED
+- [x] Docker works - build + in-container full attack loop
+- [x] Docker security verified - non-root; no socket/privileged by default
 - [x] Live tests have cost limits (small model, low rounds/replays, printed caps)
 - [x] Documentation matches reality
 - [x] YAML examples actually executed/validated
@@ -115,11 +133,12 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 
 ## Final status
 
-**Phase 4 local engine core + harness integration: PASS - verified offline and live.** The engine, the
-installed CLI, a real OpenRouter provider, the wheel, and the MCP harness server all work end to end
-(one real packaging bug found and fixed). Docker is BLOCKED (daemon not running; Dockerfile ready).
-Direct provider adapters and the later-phase features remain NOT TESTED and are marked as such. Full
-detail in `docs/testing/test-matrix.md`.
+**Phase 4 + Phase 5 (first-party strategies) + harness + Docker: PASS - verified offline and live.** The
+engine, the installed CLI, a real OpenRouter provider, the wheel, the MCP harness server, and the Docker
+image all work end to end, including a full in-container attack loop (one real packaging bug found and
+fixed). Reports now show the prompt sent, the model reply, and pass/fail per attempt. The PyRIT adapter is
+BLOCKED (broken PyRIT install here). Direct provider adapters, any-llm, garak, the payload and campaign
+engines, Ollama, and PyPI publish remain NOT TESTED. Full detail in `docs/testing/test-matrix.md`.
 
 ## API key rotation
 

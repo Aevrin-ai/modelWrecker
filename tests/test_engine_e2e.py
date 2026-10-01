@@ -100,3 +100,27 @@ def test_explicit_strategy_is_respected(monkeypatch) -> None:
     cfg.attack = AttackConfig(strategy="prompt_extraction")
     result = asyncio.run(loop_module.run_config(cfg))
     assert len(result.findings) == 1
+
+
+def test_report_includes_prompt_response_and_result(monkeypatch) -> None:
+    from modelwrecker.findings.report import render_markdown
+
+    _patch_providers(monkeypatch, _vulnerable_target_responder)
+    result = asyncio.run(loop_module.run_config(_make_config()))
+    assert result.attempts, "attempts transcript must be collected"
+    report = render_markdown(result.findings, result.run_id, result.attempts)
+    # The report must show what was sent, what the model replied, and the result.
+    assert "Prompt sent to the model" in report
+    assert "Model response" in report
+    assert "SUCCESS" in report
+    assert SECRET in report  # the leaked content is shown in the transcript
+
+
+def test_report_shows_failed_attempts(monkeypatch) -> None:
+    from modelwrecker.findings.report import render_markdown
+
+    _patch_providers(monkeypatch, _refusing_target_responder)
+    result = asyncio.run(loop_module.run_config(_make_config()))
+    report = render_markdown(result.findings, result.run_id, result.attempts)
+    assert "FAILED (refused)" in report  # refusals are shown, not hidden
+    assert "No findings" in report

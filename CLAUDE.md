@@ -9,12 +9,13 @@ agents, RAG, MCP-connected tools) to find security weaknesses *before* real atta
 turns each confirmed weakness into a reproducible **finding**. It is designed to become the
 AI red-teaming layer of the Aevrin security platform.
 
-Status: **Phase 4 (minimum engine) - working.** The local engine runs end to end and is verified offline
-and live: config, OpenAI-compatible provider, chat target, planner, two strategies, multi-signal judge,
-reliability, evidence, findings, storage, CLI, plus the MCP harness server and a built wheel. Verified
-live against OpenRouter. Docker is BLOCKED here (daemon down; Dockerfile ready). Direct provider adapters,
-any-llm/PyRIT/garak, payload + campaign engines are not built yet. See `ROADMAP.md` and
-`docs/testing/test-matrix.md`.
+Status: **Phase 4 done, Phase 5 in progress.** The local engine runs end to end, verified offline and
+live: config, OpenAI-compatible provider, chat target, planner, six strategies (direct_jailbreak,
+prompt_extraction, best_of_n, prefill, many_shot, crescendo), multi-signal judge, reliability, evidence,
+findings (reports show the prompt sent + model reply + pass/fail per attempt), storage, CLI, the MCP
+harness server, a built wheel, and a verified non-root Docker image. Live-verified against OpenRouter.
+The PyRIT adapter is BLOCKED (PyRIT unusable here). any-llm/garak, direct OpenAI/Anthropic adapters, and
+the payload + campaign engines are not built yet. See `ROADMAP.md` and `docs/testing/test-matrix.md`.
 
 ---
 
