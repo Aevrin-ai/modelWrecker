@@ -37,6 +37,10 @@ class Endpoint(BaseModel):
     api_key_env: str | None = None  # NAME of an env var, never the key itself
     provider_pin: str | None = None
     timeout: float | None = None
+    # Target-only fields:
+    type: str | None = None  # e.g. "model" (informational)
+    authorized: bool = False  # a target MUST be explicitly authorized before it is attacked
+    system: str | None = None  # an optional system prompt to plant on the target (self-test)
 
     @model_validator(mode="after")
     def _check(self) -> Endpoint:
@@ -77,12 +81,20 @@ class EngineConfig(BaseModel):
     deadline_seconds: int = 1800
 
 
+class AttackConfig(BaseModel):
+    model_config = {"extra": "forbid"}
+    strategy: str = "auto"  # "auto" lets the planner choose; or a strategy name
+    params: dict = Field(default_factory=dict)
+
+
 class Config(BaseModel):
     model_config = {"extra": "forbid"}
 
+    project: dict | None = None
     attacker: Endpoint | None = None
     target: Endpoint | None = None
     judge: Endpoint | None = None
+    attack: AttackConfig = Field(default_factory=AttackConfig)
     objectives: list[Objective] = Field(default_factory=list)
     engine: EngineConfig = Field(default_factory=EngineConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
@@ -92,6 +104,21 @@ class Config(BaseModel):
         missing = [r for r in ("attacker", "target", "judge") if getattr(self, r) is None]
         if missing:
             raise ConfigError(f"missing required endpoints: {', '.join(missing)}")
+
+    def require_authorized_target(self) -> None:
+        """modelWrecker refuses to attack a target that is not explicitly authorized."""
+        if self.target is None:
+            raise ConfigError("no target configured")
+        if not self.target.authorized:
+            raise ConfigError(
+                "target is not authorized. Set `authorized: true` on the target in your config to "
+                "confirm you have permission to test it. modelWrecker will not attack a target "
+                "without explicit authorization."
+            )
+
+    def require_objectives(self) -> None:
+        if not self.objectives:
+            raise ConfigError("no objectives configured; add at least one under `objectives:`")
 
 
 def load_config(path: str | Path | None = None) -> Config:

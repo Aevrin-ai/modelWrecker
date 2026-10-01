@@ -1,0 +1,24 @@
+# Keep the build context small and secret-free.
+.git
+.prompt
+.env
+.env.*
+*.key
+runs/
+sessions/
+evidence/
+findings/
+library/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+docs/
+reports/
+tests/
