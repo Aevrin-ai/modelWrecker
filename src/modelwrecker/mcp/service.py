@@ -13,7 +13,7 @@ from pathlib import Path
 
 from ..config import ConfigError, load_config
 from ..data import Finding
-from ..findings.report import render_markdown
+from ..findings.report import load_run, render_markdown
 from ..strategies.registry import list_strategies
 
 
@@ -59,9 +59,8 @@ class McpService:
 
     def get_report(self, run_id: str) -> str:
         d = self._safe_run_dir(run_id)
-        findings = [Finding.model_validate_json(fp.read_text(encoding="utf-8"))
-                    for fp in sorted(d.glob("finding-*.json"))]
-        return render_markdown(findings, run_id)
+        findings, attempts = load_run(d)
+        return render_markdown(findings, run_id, attempts)
 
     # --- action tools ------------------------------------------------------------------------------
 

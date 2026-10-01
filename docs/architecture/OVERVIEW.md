@@ -98,33 +98,38 @@ provider, or a judge signal without touching the engine ([`ADR-0005`](../decisio
 
 ## Repository structure
 
-The engine is a Python package (`modelwrecker/`). Proposed layout - evaluated, not blindly adopted
-(see "Why this structure" below):
+The engine is a Python package (`modelwrecker/`). Layout as it exists today, with planned homes marked.
+Packages are added when their phase lands, not kept as empty stubs:
 
 ```text
 modelWrecker/
 ├─ CLAUDE.md, README.md, ROADMAP.md, CHANGELOG.md, DECISIONS.md
-├─ pyproject.toml, uv.lock
+├─ pyproject.toml, uv.lock, Dockerfile, .dockerignore
 ├─ docs/                      # everything in docs/index.md
+├─ examples/                  # runnable example configs
+├─ reports/                   # test + provider + strategy reports
 ├─ src/modelwrecker/
-│  ├─ core/                   # engine loop, context, orchestration (owns nothing provider-specific)
-│  ├─ providers/              # Provider interface + adapters (openai, anthropic, openai_compatible, …)
-│  ├─ targets/                # Target interface + adapters (chat_api, agent, rag, mcp, http)
+│  ├─ data.py                 # the pipeline data models
+│  ├─ interfaces.py           # the plugin contracts (Protocols) + Capability enum
+│  ├─ config.py               # Pydantic config models + loader
+│  ├─ taxonomy.py             # OWASP/ATLAS mapping tables + validators
+│  ├─ providers/              # Provider base + adapters (openai_compatible today; any-llm/anthropic next)
+│  ├─ targets/                # Target adapters (chat today; agent/rag/mcp next)
 │  ├─ attacker/               # Attack Planner + adaptive loop
-│  ├─ strategies/             # Strategy interface + built-in and PyRIT/garak-backed strategies
-│  ├─ payloads/               # transform/chain/mutate engine (first-party)
-│  ├─ judges/                 # Judge interface + signals + verdict combiner + calibration
+│  ├─ strategies/             # Strategy interface + built-in strategies + the PyRIT seam
+│  ├─ judges/                 # judge signals + verdict combiner + calibration
 │  ├─ reliability/            # replay + confidence scoring
-│  ├─ evidence/               # evidence capture + redaction + store
-│  ├─ findings/               # finding engine + report renderers (md/html/json/sarif)
-│  ├─ taxonomy/               # OWASP/ATLAS mapping tables + validators
-│  ├─ campaigns/              # campaign engine (parallel, budgets, limits, stop conditions)
-│  ├─ security/               # egress guard, sandbox, redaction, auth helpers
-│  ├─ storage/                # atomic JSONL + SQLite index
-│  ├─ config/                 # Pydantic config models + loaders
-│  ├─ cli/                    # Typer CLI
-│  └─ api/                    # optional authenticated API (separate, later)
-└─ tests/
+│  ├─ findings/               # evidence capture + finding engine + report renderers
+│  ├─ security/               # egress guard + redaction (sandbox/auth helpers planned)
+│  ├─ storage/                # atomic JSONL event log + SQLite index
+│  ├─ mcp/                    # harness-integration MCP server + safe service layer
+│  └─ cli.py                  # Typer CLI
+└─ tests/                     # offline unit + e2e + mcp + strategy tests
+```
+
+Planned (added in their phase, not kept empty): `payloads/` (transform engine, Phase 6), `campaigns/`
+(campaign engine, Phase 7), and a separate authenticated `api/` layer (Phase 10). Evidence capture
+currently lives in `findings/` rather than its own package.
 ```
 
 ### Why this structure

@@ -3,7 +3,7 @@
 Honest status of what has actually been tested. Legend: PASS (ran and verified), FAIL, BLOCKED,
 NOT TESTED. Last updated 2026-10-01.
 
-Run the automated suite with: `PYTHONPATH=src python -m pytest -q` (30 tests, offline, no API key).
+Run the automated suite with: `PYTHONPATH=src python -m pytest -q` (44 tests, offline, no API key).
 
 | Component | Test | Status | Evidence |
 |-----------|------|--------|----------|
@@ -20,6 +20,12 @@ Run the automated suite with: `PYTHONPATH=src python -m pytest -q` (30 tests, of
 | Strategy | registry load + unknown name error | PASS | `tests/test_components.py` |
 | Strategy | direct_jailbreak | PASS (fake + stub) | e2e |
 | Strategy | prompt_extraction | PASS (fake + stub) | e2e, stub_run |
+| Strategy | best_of_n (resample N) | PASS | `tests/test_strategies.py` |
+| Strategy | prefill (assistant priming, multi-turn) | PASS | `tests/test_strategies.py` |
+| Strategy | many_shot (faux turns, multi-turn) | PASS | `tests/test_strategies.py` |
+| Strategy | crescendo (multi-turn escalation) | PASS | `tests/test_strategies.py` |
+| Strategy | PyRIT adapter (PAIR/TAP) | BLOCKED | PyRIT 0.6.0 import broken here (termcolor); seam in place, inert |
+| Report | shows prompt sent + model reply + result per attempt | PASS | `tests/test_engine_e2e.py` (success and refusal) |
 | Judge | calibration on benign fixtures | PASS | `tests/test_components.py`, e2e |
 | Judge | success vs refusal verdict | PASS | e2e |
 | Reliability | replay -> reliable/flaky/does_not_hold | PASS | e2e (5/5 reliable in stub run) |
@@ -37,7 +43,8 @@ Run the automated suite with: `PYTHONPATH=src python -m pytest -q` (30 tests, of
 | Packaging bug | source `findings/`+`evidence/` excluded by .gitignore (hatchling honors it) | FIXED | root-anchored the ignore patterns; reinstall includes them |
 | Direct provider | OpenAI / Anthropic adapters | NOT TESTED - adapters not implemented yet (anthropic raises a clear error) |
 | any-llm multiplexer | adapter | NOT TESTED - falls back to OpenAI-compatible wire today |
-| PyRIT / garak strategies | adapters | NOT TESTED - not implemented yet (Phase 5/8) |
+| PyRIT strategies | adapter | BLOCKED - PyRIT 0.6.0 unusable here (broken termcolor dep); seam in place |
+| garak strategies | adapter | NOT TESTED - not implemented yet (Phase 8) |
 | Payload engine | transforms | NOT TESTED - not implemented yet (Phase 6) |
 | Campaign engine | parallel/budgets | NOT TESTED - not implemented yet (Phase 7) |
 | Harness integration | MCP server + JSON driver | PASS (built + tested); see MCP rows above |
@@ -50,17 +57,20 @@ Run the automated suite with: `PYTHONPATH=src python -m pytest -q` (30 tests, of
 | Packaging | console script runs (--help/version/validate/strategies) | PASS | clean-env run |
 | Packaging | `uv build` wheel + install in a fresh venv | PASS | wheel installs; contains findings/evidence/mcp |
 | Packaging | wheel-installed CLI runs a full loop | PASS | critical finding vs loopback stub, 3/3 replays |
-| Docker | image build | BLOCKED | Dockerfile written; Docker daemon not running in this environment |
-| Docker | in-container run | BLOCKED | depends on the build |
-| Docker | security (non-root etc.) | BLOCKED | image declares non-root user; not verifiable without a build |
+| Docker | image build | PASS | `docker build` succeeded |
+| Docker | in-container run (help/validate/strategies) | PASS | runs; all 6 strategies listed |
+| Docker | in-container full attack loop | PASS | critical finding vs host stub, 3/3 replays, transcript rendered |
+| Docker | security: runs as non-root | PASS | `id` -> uid=10001(wrecker) |
+| Docker | security: no socket/privileged by default | PASS (by run flags) | documented in deployment; no socket mounted |
 
 ## Summary
 
-The **local engine core** (config, providers over the OpenAI-compatible wire, chat target, planner, two
-strategies, multi-signal judge with calibration, reliability replay, evidence, findings, storage, the
-CLI, and the MCP harness server) is implemented and verified: 36 offline tests pass, a real end-to-end
-run works over HTTP, live OpenRouter works, the wheel builds and runs a full loop, and the MCP server
-passes a real client round-trip with its guardrails. **Docker is BLOCKED** (the daemon is not running in
-this environment; the Dockerfile is written and ready). Direct OpenAI/Anthropic adapters, any-llm,
-PyRIT/garak, the payload and campaign engines, Ollama, and PyPI publish are NOT TESTED and are marked
-accordingly - none are claimed as passing.
+The **local engine** (config, providers over the OpenAI-compatible wire, chat target, planner, six
+strategies, multi-signal judge with calibration, reliability replay, evidence, findings with a full
+attempt transcript, storage, the CLI, and the MCP harness server) is implemented and verified: 44 offline
+tests pass, a real end-to-end run works over HTTP, live OpenRouter works, the wheel builds and runs a full
+loop, the MCP server passes a real client round-trip with its guardrails, and **Docker builds and runs a
+full in-container attack loop as a non-root user**. The **PyRIT adapter is BLOCKED** (PyRIT 0.6.0 is
+unusable in this environment due to a broken `termcolor` dependency; the seam is in place but inert).
+Direct OpenAI/Anthropic adapters, any-llm, garak, the payload and campaign engines, Ollama, and PyPI
+publish are NOT TESTED and are marked accordingly - none are claimed as passing.

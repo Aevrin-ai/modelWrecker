@@ -23,12 +23,24 @@ from .planner import Planner
 
 
 @dataclass
+class AttemptRecord:
+    """One transcript line for the report: what we sent and what the model replied."""
+    objective: str
+    strategy: str
+    prompt_sent: str
+    model_response: str
+    outcome: str  # success | partial | refused | error
+    score: int
+
+
+@dataclass
 class RunResult:
     run_id: str
     findings: list[Finding] = field(default_factory=list)
     calibration: dict = field(default_factory=dict)
     objectives_run: int = 0
     notes: list[str] = field(default_factory=list)
+    attempts: list[AttemptRecord] = field(default_factory=list)
 
 
 def _emit_noop(_m: str) -> None:
@@ -68,7 +80,7 @@ async def run_config(
 
         for objective in config.objectives:
             emit(f"objective: {objective.title}")
-            finding = await _run_objective(
+            finding, records = await _run_objective(
                 objective=objective,
                 config=config,
                 planner=planner,
@@ -81,6 +93,7 @@ async def run_config(
                 config_snapshot=config_snapshot,
             )
             result.objectives_run += 1
+            result.attempts.extend(records)
             if finding is not None:
                 result.findings.append(finding)
 
@@ -99,7 +112,8 @@ async def _run_objective(
     store,
     emit,
     config_snapshot: dict,
-) -> Finding | None:
+) -> tuple[Finding | None, list[AttemptRecord]]:
+    records: list[AttemptRecord] = []
     sequence = planner.select_sequence(objective, config)
     for strategy_name in sequence:
         strategy = get_strategy(strategy_name)
@@ -129,10 +143,15 @@ async def _run_objective(
         best = None  # (verdict, run)
         for srun in strat_result.runs:
             verdict = await judge.judge(srun.observation, objective, srun.attempt.payload)
+            records.append(AttemptRecord(
+                objective=objective.title, strategy=strategy_name,
+                prompt_sent=srun.attempt.payload, model_response=srun.observation.response,
+                outcome=verdict.outcome.value, score=verdict.score,
+            ))
             if store:
-                store.event("attempt", strategy=strategy_name, payload=srun.attempt.payload,
-                            response=srun.observation.response, outcome=verdict.outcome.value,
-                            score=verdict.score)
+                store.event("attempt", objective=objective.title, strategy=strategy_name,
+                            payload=srun.attempt.payload, response=srun.observation.response,
+                            outcome=verdict.outcome.value, score=verdict.score)
             if best is None or verdict.score > best[0].score:
                 best = (verdict, srun)
 
@@ -176,9 +195,9 @@ async def _run_objective(
             store.save_finding(finding)
             store.event("finding", id=finding.id, severity=finding.severity.value, title=finding.title)
         emit(f"FINDING: {finding.severity.value} - {finding.title}")
-        return finding
+        return finding, records
 
-    return None
+    return None, records
 
 
 def _config_snapshot(config: Config) -> dict:

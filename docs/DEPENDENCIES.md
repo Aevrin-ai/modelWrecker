@@ -24,7 +24,7 @@ Status/versions verified 2026-10-01; re-check before adopting.
 
 | Name | Purpose | License | Why | Alternative | Risk | Replace difficulty |
 |------|---------|---------|-----|-------------|------|--------------------|
-| PyRIT | attack algorithms (PAIR/TAP/Crescendo/...) behind a Strategy adapter; **its memory + scorers are reused** (hybrid) | MIT | mature, Microsoft AI Red Team, active (1.1.0 Sep 2026); avoids re-implementing algorithms, a conversation store, and scorers | implement each strategy + own memory/scorers | medium (deeper coupling; confined to the PyRIT adapter + scorer wrappers) | medium (ADR-0006) |
+| PyRIT | attack algorithms (PAIR/TAP) behind a Strategy adapter; memory + scorers reused (hybrid) | MIT | mature, Microsoft AI Red Team; avoids re-implementing algorithms/memory/scorers | implement each strategy | **BLOCKED in dev env**: installed 0.6.0 fails to import (broken `termcolor` dep). Needs 1.1+. Adapter seam is inert until then | medium (ADR-0006) |
 | any-llm (`any-llm-sdk`) | **default** multi-provider multiplexer behind our Provider interface | Apache-2.0 | library (no proxy), Mozilla.ai, active (1.25.0 Aug 2026); broad coverage, self-hostable | direct SDKs only | medium: relatively new; kept behind our interface so it is swappable | medium (ADR-0003) |
 | garak | batch probe/detector scanning (Phase 8) | Apache-2.0 | NVIDIA, active (0.17.0 Sep 2026); broad probe set | first-party probes | low-medium | medium |
 | mcp (Python SDK v2) | MCP client/server for MCP targets & attack delivery | MIT | official, supports 2026-07-28 spec | raw protocol | low | hard |
