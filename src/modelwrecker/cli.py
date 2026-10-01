@@ -155,6 +155,69 @@ def report(
 
 
 @app.command()
+def analyze(
+    run_dirs: list[str] = typer.Argument(..., help="one or more run directories under runs/"),
+    out_dir: str = typer.Option(None, help="where to write artifacts (default: each run's own dir)"),
+    formats: str = typer.Option("html,json,csv", help="comma list: html | json | csv"),
+) -> None:
+    """Compute ASR analytics (per strategy/category/taxonomy) and a leaderboard as static HTML/JSON/CSV."""
+    from .analytics import (
+        compute_analytics,
+        render_analytics_csv,
+        render_analytics_html,
+        render_analytics_json,
+        render_leaderboard_csv,
+        render_leaderboard_html,
+        render_leaderboard_json,
+    )
+    from .findings.report import load_run, load_run_meta
+
+    wanted = {f.strip() for f in formats.split(",") if f.strip()}
+    runs = []
+    written: list[Path] = []
+    for rd in run_dirs:
+        d = Path(rd)
+        if not d.is_dir():
+            typer.secho(f"not a run directory: {d}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2)
+        findings, attempts = load_run(d)
+        meta = load_run_meta(d)
+        label = meta.get("target_model") or d.name
+        a = compute_analytics(findings, attempts, label=label)
+        runs.append(a)
+
+        dest = Path(out_dir) if out_dir else d
+        dest.mkdir(parents=True, exist_ok=True)
+        if "html" in wanted:
+            (dest / f"analytics-{d.name}.html").write_text(render_analytics_html(a), encoding="utf-8")
+            written.append(dest / f"analytics-{d.name}.html")
+        if "json" in wanted:
+            (dest / f"analytics-{d.name}.json").write_text(render_analytics_json(a), encoding="utf-8")
+            written.append(dest / f"analytics-{d.name}.json")
+        if "csv" in wanted:
+            (dest / f"analytics-{d.name}.csv").write_text(render_analytics_csv(a), encoding="utf-8")
+            written.append(dest / f"analytics-{d.name}.csv")
+        typer.echo(f"{label}: ASR {a.successes}/{a.total_attempts}, {a.findings_total} finding(s)")
+
+    if len(runs) > 1:
+        lb_dir = Path(out_dir) if out_dir else Path(".")
+        lb_dir.mkdir(parents=True, exist_ok=True)
+        if "html" in wanted:
+            (lb_dir / "leaderboard.html").write_text(render_leaderboard_html(runs), encoding="utf-8")
+            written.append(lb_dir / "leaderboard.html")
+        if "json" in wanted:
+            (lb_dir / "leaderboard.json").write_text(render_leaderboard_json(runs), encoding="utf-8")
+            written.append(lb_dir / "leaderboard.json")
+        if "csv" in wanted:
+            (lb_dir / "leaderboard.csv").write_text(render_leaderboard_csv(runs), encoding="utf-8")
+            written.append(lb_dir / "leaderboard.csv")
+
+    typer.secho(f"wrote {len(written)} artifact(s)", fg=typer.colors.GREEN)
+    for p in written:
+        typer.echo(f"  {p}")
+
+
+@app.command()
 def replay(evidence: str = typer.Argument(..., help="an evidence-*.json file from a run")) -> None:
     """Reproduce a finding: re-send its payload to the same target and re-judge."""
     typer.secho(

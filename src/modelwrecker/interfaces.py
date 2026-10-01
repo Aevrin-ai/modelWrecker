@@ -22,6 +22,7 @@ class Capability(str, Enum):
     UPLOAD_IMAGE = "upload_image"
     CALL_TOOL = "call_tool"
     OBSERVE_TOOL_CALL = "observe_tool_call"
+    INGEST_DOCUMENT = "ingest_document"  # a RAG target can take attacker-controlled documents
     RESET_SESSION = "reset_session"
     GET_METADATA = "get_metadata"
 

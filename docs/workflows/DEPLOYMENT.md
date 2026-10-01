@@ -61,6 +61,14 @@ Status: the Dockerfile is written; building/running it was not verified in the c
 - No custom checksum/corpus-integrity subsystem - normal lockfiles only
   ([`../decisions/ADR-0010-no-mandatory-checksum-gate.md`](../decisions/ADR-0010-no-mandatory-checksum-gate.md)).
 
+## Hosted platform (Phase 10, planned)
+
+The optional hosted surface adds a managed Postgres database with row-level security, a Google OAuth
+identity, and a Cloudflare-hosted web app and landing page, all behind the authenticated REST API. It stays
+optional: the free CLI + local-model path remains a complete deployment. All platform credentials are
+supplied out of band through local untracked files and the deploy secret store - never committed to this
+repo, baked into an image, logged, or printed. See `../../ROADMAP.md` (Phase 10).
+
 ## Data handling
 
 Run artifacts (runs/evidence/findings/reports) can contain harmful content and redacted secrets; they are

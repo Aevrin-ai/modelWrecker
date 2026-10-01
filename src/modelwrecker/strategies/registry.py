@@ -13,7 +13,10 @@ from .direct import DirectJailbreak
 from .encoded import EncodedJailbreak
 from .extraction import PromptExtraction
 from .many_shot import ManyShot
+from .mcp_poisoning import McpToolPoisoning
 from .prefill import Prefill
+from .rag_injection import RagInjection
+from .tool_misuse import ToolMisuse
 
 _REGISTRY: dict[str, type[BaseStrategy]] = {
     DirectJailbreak.name: DirectJailbreak,
@@ -23,6 +26,9 @@ _REGISTRY: dict[str, type[BaseStrategy]] = {
     ManyShot.name: ManyShot,
     Crescendo.name: Crescendo,
     EncodedJailbreak.name: EncodedJailbreak,
+    ToolMisuse.name: ToolMisuse,
+    RagInjection.name: RagInjection,
+    McpToolPoisoning.name: McpToolPoisoning,
 }
 
 # PyRIT-backed strategies (PAIR/TAP/send) register only when a working PyRIT is importable, so the
@@ -34,6 +40,14 @@ if pyrit_available()[0]:
 
     for _cls in (PyRITPromptSending, PyRITPair, PyRITTap):
         _REGISTRY[_cls.name] = _cls
+
+# garak-backed strategy registers only when the optional `modelwrecker[scan]` dependency is importable.
+from .garak_adapter import garak_available  # noqa: E402
+
+if garak_available()[0]:
+    from .garak_probe import GarakProbe  # noqa: E402
+
+    _REGISTRY[GarakProbe.name] = GarakProbe
 
 
 def get_strategy(name: str) -> BaseStrategy:

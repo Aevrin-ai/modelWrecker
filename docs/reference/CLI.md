@@ -12,6 +12,7 @@ modelwrecker check      my.yaml                    # validate + show which API k
 modelwrecker provider test my.yaml --role target   # one small live request: latency, tokens, errors
 modelwrecker run        my.yaml  --output md|json  # run all objectives, verify, write a report
 modelwrecker report     runs/<run-id>              # re-render a finished run's findings (markdown)
+modelwrecker analyze    runs/<run-id> [more...]    # ASR analytics + leaderboard as static HTML/JSON/CSV
 modelwrecker replay     evidence.json              # reproduce a finding from its evidence
 modelwrecker strategies                            # list registered strategies + required capabilities
 modelwrecker transforms                            # list payload transforms (first-party + PyRIT)
@@ -24,11 +25,18 @@ overrides (they override the config's `campaign:` section): `--concurrency N` (o
 `--stop-on complete|first_finding|budget`, `--max-objectives N`, `--max-seconds N`. See
 [`../campaigns/OVERVIEW.md`](../campaigns/OVERVIEW.md).
 `provider test` option: `--role attacker|target|judge` (default `target`).
+`analyze` options: one or more run directories; `--out-dir` (default: each run's own dir),
+`--formats html,json,csv`. With two or more runs it also writes a `leaderboard.*`. Output is static
+files only - no server. See [`../attack-engine/ANALYTICS.md`](../attack-engine/ANALYTICS.md).
 
 ## Planned (later phases)
 
 - `attack` - run a single quick objective.
 - `--output sarif|html`, `--fail-on-finding`, `--ci`, `--headless` (CI modes).
+- `login` / `logout` (Phase 10) - authenticate the CLI to the Aevrin server via the OAuth 2.0
+  device-code flow (with a `--token` API-key fallback for CI); the token is stored with `0600`
+  permissions. `run --remote` then calls the authenticated REST API with a bearer token. Needs
+  `modelwrecker` published to PyPI so `pip install modelwrecker` provides the command.
 
 The `mcp` server and a JSON driver are implemented; see
 [`../features/harness-integration.md`](../features/harness-integration.md).

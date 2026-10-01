@@ -6,6 +6,43 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added (Phase 9 new target types)
+- **Agent, RAG, and MCP targets.** `config.target.type` (chat default | agent | rag | mcp) plus
+  `target_options` select the target via a new `targets/factory.py`; the loop is unchanged.
+  - `targets/agent.py`: a tool-using agent. Tool calls are only observed and recorded - never executed -
+    and sensitive calls are flagged for the judge.
+  - `targets/rag.py`: a retrieval-augmented target; retrieves by keyword overlap, injects documents as
+    untrusted context, and (by default) accepts attacker-ingested documents (INGEST_DOCUMENT capability).
+  - `targets/mcp_target.py`: an MCP-connected agent whose (inline) tools may carry poisoned descriptions.
+- **Matching strategies**: `tool_misuse` (excessive agency / goal hijack; OWASP LLM03, ASI01),
+  `rag_injection` (indirect prompt injection; OWASP LLM01/LLM05), `mcp_tool_poisoning` (OWASP MCP03). Each
+  requires the capability only its target type declares, so the planner only runs compatible ones.
+- **`tool_misuse` judge signal** (reads the target's `sensitive_tool_calls`), wired into the ensemble and
+  made decisive for agent/MCP objectives in the combiner. New INGEST_DOCUMENT capability.
+- Attempts carry the objective `category` through for analytics. Test suite: 85 passing + 1 skipped without
+  the `scan` extra (86 with it); adds `tests/test_phase9_targets.py`. The agent attack is also verified
+  through the real CLI (critical finding mapped to LLM03/ASI01). A live MCP-server connection is a
+  documented follow-up (inline tools exercise the full path today).
+
+### Added (Phase 8 reliability & analytics)
+- **Analytics engine** (`src/modelwrecker/analytics/`): computes attack success rate (ASR) at the attempt
+  level with **Wilson 95% confidence intervals**, broken down by strategy and objective category, plus
+  findings by severity and taxonomy, and a cross-run **model leaderboard** (most-robust first).
+- **Static report artifacts**: a self-contained HTML page (inline CSS, CSS-only bars, no scripts/fonts/
+  external assets), plus JSON and CSV. New `modelwrecker analyze <run-dir> [more...]` command writes
+  `analytics-<run>.{html,json,csv}` per run and `leaderboard.{html,json,csv}` for two or more runs. No
+  server (the live dashboard is Phase 10).
+- **Reliability**: `ReliabilityResult` now carries `ci_low`/`ci_high` (Wilson) and a `high_variance` flag
+  (set when the backend is unpinned); `reliability/replay.py` exposes `wilson_interval`.
+- **garak adapter** (`scan` extra, ADR-0006): `garak_probe` loads a garak probe's prompts and sends them at
+  our target, judged by our judge (roles stay separate); registers only when garak is importable. **Verified
+  live**: real DAN/glitch probes load, and a full `garak_probe` attack loop runs against a loopback stub
+  (4 DAN prompts, 2/4 SUCCESS, a critical finding, ASR 2/4) with no API key.
+- Attempt records/events now carry the objective `category`; a `run_meta` event records the target model for
+  leaderboard labels. Test suite: 76 passing without the `scan` extra (+1 skipped garak test), 77 with it.
+  Adds `tests/test_analytics.py` and `tests/test_garak.py`. Verified through the real CLI over two
+  loopback-stub runs (leaderboard ranked the robust target first; HTML confirmed self-contained).
+
 ### Added (Phase 7 campaign engine)
 - **Campaign engine** (`src/modelwrecker/campaigns/engine.py`): schedules a run's objectives with
   parallelism (a per-run `asyncio.Semaphore`), budgets (`max_objectives`, `max_attempts`, `max_tokens`,

@@ -145,6 +145,9 @@ class ReliabilityResult(BaseModel):
     successes: int = 0
     partials: int = 0
     success_rate: float = 0.0
+    ci_low: float = 0.0  # Wilson 95% lower bound on the success rate
+    ci_high: float = 0.0  # Wilson 95% upper bound on the success rate
+    high_variance: bool = False  # true when the backend was not pinned (routing inflates variance)
     confidence: Confidence = Confidence.DOES_NOT_HOLD
     backend_pinned: bool = False
 
