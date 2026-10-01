@@ -9,7 +9,12 @@ agents, RAG, MCP-connected tools) to find security weaknesses *before* real atta
 turns each confirmed weakness into a reproducible **finding**. It is designed to become the
 AI red-teaming layer of the Aevrin security platform.
 
-Status: **Phase 0-3 (design & documentation).** No engine code is written yet. See `ROADMAP.md`.
+Status: **Phase 4 (minimum engine) - working.** The local engine runs end to end and is verified offline
+and live: config, OpenAI-compatible provider, chat target, planner, two strategies, multi-signal judge,
+reliability, evidence, findings, storage, CLI, plus the MCP harness server and a built wheel. Verified
+live against OpenRouter. Docker is BLOCKED here (daemon down; Dockerfile ready). Direct provider adapters,
+any-llm/PyRIT/garak, payload + campaign engines are not built yet. See `ROADMAP.md` and
+`docs/testing/test-matrix.md`.
 
 ---
 
@@ -68,7 +73,9 @@ architecture, security, the CLI, or dependencies, follow the full order.
 
 ## Testing rules
 
-- Tests are the contract. Run them before calling anything done. (`uv run pytest -q` once code exists.)
+- Tests are the contract. Run them before calling anything done: `PYTHONPATH=src python -m pytest -q`
+  (offline, no API key). Never mark something PASS without actually running it; use PASS / FAIL /
+  BLOCKED / NOT TESTED honestly. See `docs/testing/test-matrix.md`.
 - Judges need **calibration tests** on benign fixtures so a weak judge cannot invent findings.
 - Reliability/replay behavior must be tested, not assumed.
 

@@ -1,62 +1,53 @@
 # CLI reference
 
-**Status: proposed.** The CLI is Typer-based. Command names may change after Phase 4. This
-is the source of truth for the CLI; update it with every command/flag change.
+The CLI is Typer-based. This is the source of truth for the CLI; update it with every command/flag
+change. Binary: `modelwrecker`.
 
-Binary: `modelwrecker` (the engine). An Aevrin-branded wrapper may alias these later.
-
-## Commands
+## Implemented today (Phase 4)
 
 ```bash
-modelwrecker run       target.yaml      # run all objectives in a config against a target
-modelwrecker attack    target.yaml      # run a single objective/strategy (quick, interactive)
-modelwrecker campaign  campaign.yaml    # run a multi-objective campaign
-modelwrecker replay    evidence.json    # reproduce a finding from its evidence
-modelwrecker report    run.json         # render a report from a run (md/html/json/sarif)
-modelwrecker validate  finding.json     # re-run reliability on a finding
-modelwrecker check                      # validate config: providers, keys, target, judge, egress
-modelwrecker providers list             # show configured providers and health
-modelwrecker strategies list           # show registered strategies + required capabilities
+modelwrecker init       my.yaml                    # write a starter config to edit
+modelwrecker validate   my.yaml                    # validate a config (schema, protocols, authorization, objectives)
+modelwrecker check      my.yaml                    # validate + show which API keys resolve from the environment
+modelwrecker provider test my.yaml --role target   # one small live request: latency, tokens, errors
+modelwrecker run        my.yaml  --output md|json  # run all objectives, verify, write a report
+modelwrecker report     runs/<run-id>              # re-render a finished run's findings (markdown)
+modelwrecker replay     evidence.json              # reproduce a finding from its evidence
+modelwrecker strategies                            # list registered strategies + required capabilities
+modelwrecker mcp        --runs-dir runs            # start the harness MCP server over stdio (ADR-0013)
+modelwrecker version
 ```
 
-## Modes
+`run` options: `--output md|json` (default `md`), `--out-dir runs` (where artifacts go).
+`provider test` option: `--role attacker|target|judge` (default `target`).
 
-| Flag | Meaning |
-|------|---------|
-| (default) | interactive |
-| `--auto "<objective>"` | autonomous one-shot run |
-| `--headless` | no prompts, machine output |
-| `--ci` | headless + non-zero exit on findings |
-| `--output {json,sarif,md,html}` | output format |
-| `--fail-on-finding` | exit non-zero if any finding (CI gate) |
+## Planned (later phases)
 
-## Common options
+- `attack` - run a single quick objective.
+- `campaign` - multi-objective run with budgets and stop conditions (Phase 7).
+- `--output sarif|html`, `--fail-on-finding`, `--ci`, `--headless` (CI modes).
 
-| Option | Meaning |
-|--------|---------|
-| `--attacker / --target / --judge <endpoint>` | override role endpoints |
-| `--max-rounds N` · `--budget-tokens N` · `--timeout S` | limits |
-| `--strategy <name>` | force a strategy (else planner chooses) |
-| `--replays N` | reliability replay count |
-| `--allow-host-tools` | explicit opt-in to host-affecting tools (off by default) |
-| `--authorized "<text>"` | record asserted authorization in run metadata |
-| `--out <path>` | artifact output location |
+The `mcp` server and a JSON driver are implemented; see
+[`../features/harness-integration.md`](../features/harness-integration.md).
 
 ## Safety behavior
 
-- No command opens a network listener. (A future `api` command would require an auth token and refuse
+- No command opens a network listener. (A future `api`/`mcp` surface requires an auth token and refuses
   non-loopback binds without auth - see [`../security/SECURITY.md`](../security/SECURITY.md).)
-- `--allow-host-tools` is the only way to enable shell/file-write/arbitrary-HTTP tools, and it is never
-  implied.
-- `check` validates the egress guard and that secrets resolve from env, not from tracked config.
+- `run` refuses a target that is not marked `authorized: true`.
+- Host-affecting tools stay off by default; there is no flag that silently enables them.
+- Errors return a non-zero exit code with a useful message, not a stack trace (config errors exit `2`).
 
 ## Examples
 
 ```bash
-# Fully local run against an Ollama model, report to HTML
-modelwrecker run target.yaml --attacker ollama/llama3 --target ollama/llama3 \
-  --judge ollama/llama3 --output html --out report.html
+# Fully local, free run against an Ollama model (no API key)
+modelwrecker run examples/local-model.yaml
 
-# CI gate on a hosted target
-modelwrecker campaign campaign.yaml --ci --fail-on-finding --output sarif --out findings.sarif
+# Through OpenRouter, JSON output
+export OPENROUTER_API_KEY=sk-or-...
+modelwrecker run examples/openrouter.yaml --output json
+
+# Check connectivity before spending anything
+modelwrecker provider test examples/openrouter.yaml --role target
 ```

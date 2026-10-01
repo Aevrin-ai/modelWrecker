@@ -4,7 +4,11 @@
 any MCP client), say "use modelWrecker to try to break this model" and get a clear findings summary back,
 without leaving the harness.
 
-**Status: planned (Phase 9).** Decision: [`../decisions/ADR-0013-harness-integration.md`](../decisions/ADR-0013-harness-integration.md).
+**Status: implemented and tested.** The MCP server (`modelwrecker mcp`) and the JSON driver
+(`modelwrecker run --output json`) both work; a real MCP client round-trip and the guardrails are covered
+by `tests/test_mcp.py`. Decision: [`../decisions/ADR-0013-harness-integration.md`](../decisions/ADR-0013-harness-integration.md).
+
+To add it to a client such as Claude Code, register a stdio MCP server that runs `modelwrecker mcp`.
 
 ## How it works
 

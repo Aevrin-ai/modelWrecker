@@ -36,6 +36,45 @@ happened - never invent historical entries.
   reframed all prior-tooling references as Aevrin design principles. Fixed the Mermaid parse error in
   `docs/architecture/OVERVIEW.md` (parentheses in subgraph titles).
 
+### Added (engine implementation)
+- Working local engine: OpenAI-compatible provider adapter (OpenRouter/Ollama/vLLM) with a provider
+  factory and `provider_scope` lifecycle; a fake provider for offline tests.
+- Chat target with an authorization gate (refuses targets not marked `authorized: true`).
+- Attack planner + loop; two strategies (`direct_jailbreak`, `prompt_extraction`) with a registry.
+- Multi-signal judge (LLM + secret + PII + rule) with a weighted combiner and calibration.
+- Reliability replay; evidence capture; finding engine with severity + verified taxonomy; storage
+  (atomic JSONL event log + SQLite index, tight file permissions).
+- Real CLI: `init`, `validate`, `check`, `provider test`, `run`, `report`, `replay`, `strategies`.
+- `examples/` (basic, openrouter, local-model, system-prompt) - all validated.
+- `docs/getting-started/` (yaml, first-campaign), `docs/testing/test-matrix.md`, and
+  `reports/final-test-report.md`.
+- Test suite grown to 30 passing offline tests, plus a verified real-HTTP end-to-end run against a
+  loopback stub (config -> finding -> evidence -> report).
+
+### Added (harness integration + distribution)
+- MCP server (`modelwrecker mcp`) exposing safe orchestration tools only (list_strategies,
+  validate_config, run, get_findings, get_report, replay) behind a testable service layer, with
+  guardrails (authorized-target-only, path-traversal rejection, no host tools). Verified by a real MCP
+  client round-trip over in-memory streams. See ADR-0013 and `docs/features/harness-integration.md`.
+- `Dockerfile` + `.dockerignore`: non-root image, installs the engine with the mcp extra (one engine,
+  many distributions).
+- Test suite grown to 36 passing offline tests (adds MCP service + round-trip tests).
+
+### Verified live
+- OpenRouter (`openai/gpt-4o-mini`) connectivity, engine run, and the installed CLI `run`/`provider test`
+  all work end to end. The model resisted the benign test objectives (0 findings, no false positives);
+  the finding/evidence/replay path is verified by a real-HTTP stub run with a vulnerable target.
+- Packaging: `pip install .` in a clean venv works and the console script runs live. `uv build` produces
+  a wheel that installs in a fresh venv and runs a full loop (critical finding vs a loopback stub).
+- MCP server passes a real client round-trip with guardrails enforced.
+
+### Fixed
+- Packaging bug: `.gitignore` patterns `evidence/` and `findings/` also matched the source packages
+  `src/modelwrecker/evidence/` and `src/modelwrecker/findings/` (hatchling honors `.gitignore`), so they
+  were missing from the install and from git staging. Root-anchored the artifact ignore patterns.
+
 ### Notes
-- The attack engine loop and concrete adapters are not wired yet; the action CLI commands say so.
-  This is Phase 4 in progress (see `ROADMAP.md`).
+- Docker image build is BLOCKED in this environment (daemon not running); the Dockerfile is written.
+- Ollama local run, direct OpenAI/Anthropic adapters, any-llm/PyRIT/garak adapters, payload + campaign
+  engines, and PyPI publish are NOT TESTED yet and are marked as such in
+  `docs/testing/test-matrix.md`. Nothing untested is claimed as passing.

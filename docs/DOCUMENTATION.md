@@ -27,6 +27,10 @@ and update everything in the right column.
 | Harness/MCP integration change | `docs/features/harness-integration.md` |
 | A bug fix that changes expected behavior | the relevant doc; `CHANGELOG.md` |
 | Any writing/formatting question | `docs/reference/WRITING-STANDARD.md` |
+| New example config | `examples/` (and validate it); mention in `docs/getting-started/yaml.md` |
+| Anything tested or newly verified | `docs/testing/test-matrix.md` (honest PASS/FAIL/BLOCKED/NOT TESTED) |
+| A test report / run summary | `reports/` |
+| Getting-started / tutorial change | `docs/getting-started/` |
 
 ## Before a major phase is "complete"
 

@@ -1,0 +1,107 @@
+"""Run storage: append-only JSONL event log + a SQLite index for findings.
+
+Atomic writes; the index is rebuildable from the JSONL (see docs/decisions/ADR-0011-storage.md).
+Artifacts can contain harmful content and redacted secrets, so files are written with tight permissions
+and live under a gitignored runs dir.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sqlite3
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+from ..data import Evidence, Finding
+from ..security.redaction import redact
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write via a temp file + os.replace so a crash or reader never sees a torn file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    _chmod(path, 0o600)
+
+
+def _chmod(path: Path, mode: int) -> None:
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        pass  # best effort (e.g. on Windows)
+
+
+class RunStore:
+    def __init__(self, run_id: str, base_dir: str | Path = "runs") -> None:
+        self.run_id = run_id
+        self.dir = Path(base_dir) / run_id
+        self.dir.mkdir(parents=True, exist_ok=True)
+        _chmod(self.dir, 0o700)
+        self.events_path = self.dir / "events.jsonl"
+        self.db_path = self.dir / "index.sqlite"
+        self._init_db()
+
+    def _init_db(self) -> None:
+        con = sqlite3.connect(self.db_path)
+        try:
+            con.execute(
+                "CREATE TABLE IF NOT EXISTS findings ("
+                "id TEXT PRIMARY KEY, objective_id TEXT, severity TEXT, title TEXT, "
+                "taxonomy TEXT, created_at TEXT)"
+            )
+            con.commit()
+        finally:
+            con.close()
+
+    def event(self, kind: str, **data: object) -> None:
+        """Append one redacted event to the JSONL log."""
+        record = {"ts": datetime.now(timezone.utc).isoformat(), "kind": kind, **data}
+        line = json.dumps(redact(record), ensure_ascii=False)
+        with open(self.events_path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        _chmod(self.events_path, 0o600)
+
+    def save_evidence(self, evidence: Evidence) -> Path:
+        path = self.dir / f"evidence-{evidence.id}.json"
+        _atomic_write(path, json.dumps(redact(evidence.model_dump(mode="json")), ensure_ascii=False, indent=2))
+        return path
+
+    def save_finding(self, finding: Finding) -> Path:
+        path = self.dir / f"finding-{finding.id}.json"
+        _atomic_write(path, json.dumps(finding.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        con = sqlite3.connect(self.db_path)
+        try:
+            con.execute(
+                "INSERT OR REPLACE INTO findings VALUES (?,?,?,?,?,?)",
+                (
+                    finding.id,
+                    finding.objective_id,
+                    finding.severity.value,
+                    finding.title,
+                    ",".join(f"{t.framework}:{t.id}" for t in finding.taxonomy),
+                    finding.created_at.isoformat(),
+                ),
+            )
+            con.commit()
+        finally:
+            con.close()
+        return path
+
+    def list_findings(self) -> list[dict]:
+        con = sqlite3.connect(self.db_path)
+        try:
+            rows = con.execute(
+                "SELECT id, objective_id, severity, title, taxonomy, created_at FROM findings"
+            ).fetchall()
+        finally:
+            con.close()
+        cols = ["id", "objective_id", "severity", "title", "taxonomy", "created_at"]
+        return [dict(zip(cols, r)) for r in rows]

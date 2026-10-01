@@ -20,26 +20,25 @@ things work, read `docs/`.
 
 ## In progress
 
-- **Phase 4 - minimum engine.** Project scaffolding started: packaging, package layout, interfaces as
-  Python Protocols, data models, config models, and a CLI skeleton. Concrete adapters and the loop land
-  next in this phase.
+- **Phase 4 - minimum engine.** The core is implemented and verified offline (see
+  `docs/testing/test-matrix.md`): OpenAI-compatible provider + factory + lifecycle; chat target with an
+  authorization gate; planner + loop; two strategies; multi-signal judge + calibration; reliability
+  replay; evidence + finding engine; JSONL/SQLite storage; and the CLI (`init`, `validate`, `check`,
+  `provider test`, `run`, `report`, `replay`, `strategies`). A real end-to-end run over HTTP (loopback
+  stub) produces a verified finding. 30 offline tests pass.
 
-## Next (finish Phase 4 - minimum engine)
+Also done this phase (ahead of the original plan): the **harness-integration MCP server** (Phase 9 item,
+pulled forward) with guardrails and a real client round-trip; a **Dockerfile**; and a built **wheel** that
+installs in a fresh venv and runs a full loop. Live OpenRouter run verified.
 
-Build the smallest end-to-end slice, each piece behind its interface:
+### Remaining in Phase 4
 
-- Provider interface + OpenAI adapter + OpenAI-compatible adapter + any-llm multiplexer (covers
-  Ollama/vLLM/OpenRouter).
-- One target adapter: a chat/completions API target.
-- Attacker loop (run_turn / run_autonomous) + a basic Attack Planner.
-- One attack strategy (direct single-shot jailbreak) through the Strategy interface.
-- Judge: LLM judge + secret/PII detector, with calibration tests.
-- Reliability replay.
-- Evidence store + Finding engine.
-- CLI: `run`, `report`, `validate`.
+- **Docker build/run** - BLOCKED here (daemon not running); Dockerfile ready, needs a machine with Docker.
+- **Ollama local run** - the free end-to-end path; not run in this environment.
+- `replay` full re-execution wiring; `--output sarif/html`.
 
-Exit criterion: `modelwrecker run target.yaml` finds, verifies, and reports one finding locally
-against a model served by Ollama, with no paid service involved.
+Exit criterion: largely met over a real provider (OpenRouter) and the wheel/stub full loop. Still open:
+the same run against a real local Ollama model, and a verified Docker build.
 
 ## Later
 
@@ -49,9 +48,9 @@ against a model served by Ollama, with no paid service involved.
 - **Phase 7** - Campaign engine (parallel runs, budgets, limits, stop conditions).
 - **Phase 8** - Reliability & analytics (confidence scoring, dashboards of ASR, leaderboards),
   garak batch-scan adapter.
-- **Phase 9** - Agent, RAG, then MCP targets and the matching strategies/judges;
-  **harness integration** (MCP server + JSON driver so Claude Code / Codex can drive modelWrecker;
-  see `docs/features/harness-integration.md`).
+- **Phase 9** - Agent, RAG, then MCP *targets* and the matching strategies/judges.
+  (**Harness integration** - the MCP server + JSON driver so Claude Code / Codex can drive modelWrecker -
+  is already done, pulled forward into Phase 4; see `docs/features/harness-integration.md`.)
 - **Phase 10** - Production security hardening; optional authenticated API layer.
 
 ## Known problems / risks

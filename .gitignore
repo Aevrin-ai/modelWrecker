@@ -1,23 +1,23 @@
 # IDE / local prompt scratch
 .prompt
 
-# Secrets & config (never commit)
+# Secrets and config (never commit)
 .env
 .env.*
 config.local.*
 *.key
 
-# Red-team run artifacts (can contain harmful content / secrets — keep out of git)
-runs/
-evidence/
-findings/
-reports/
-sessions/
-*.jsonl
+# Red-team run artifacts (can contain harmful content and secrets; keep out of git).
+# Root-anchored so they only match top-level output dirs, NOT source packages like
+# src/modelwrecker/evidence/ or src/modelwrecker/findings/.
+/runs/
+/sessions/
+/evidence/
+/findings/
 
 # Datasets fetched at runtime (respect each dataset's own license)
-library/
-datasets/_cache/
+/library/
+/datasets/_cache/
 
 # Python
 __pycache__/

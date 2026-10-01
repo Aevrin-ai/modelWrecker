@@ -9,6 +9,12 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 - [`architecture/OVERVIEW.md`](architecture/OVERVIEW.md) - how the whole system fits together.
   **Read this second.**
 
+## New user? (getting started)
+
+- [`getting-started/first-campaign.md`](getting-started/first-campaign.md) - run your first campaign, step by step.
+- [`getting-started/yaml.md`](getting-started/yaml.md) - how the YAML config works, field by field.
+- [`testing/test-matrix.md`](testing/test-matrix.md) - what has actually been tested (honest status).
+
 ## If you are working on…
 
 | Area | Read |
