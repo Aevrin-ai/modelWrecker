@@ -6,9 +6,26 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added (PyRIT activation + Phase 6 payload engine)
+- **PyRIT 1.1 integrated** (`attacks` extra): a bridge wraps a modelWrecker provider as a PyRIT target
+  (`strategies/pyrit_bridge.py`), and `strategies/pyrit_attacks.py` adds `pyrit_send`, `pyrit_pair`
+  (PAIR), and `pyrit_tap` (TAP). PAIR runs offline end to end to a SUCCESS outcome; TAP executes. These
+  register only when PyRIT imports, so the engine still runs without the extra.
+- **Phase 6 payload engine**: first-party transforms (`base64`, `rot13`, `reverse`, `zero_width`,
+  `leetspeak`, `homoglyph`) with chains + reversible round-trips, a `PayloadEngine`, and a registry; plus
+  PyRIT converters (morse/binary/leetspeak, ...) wrapped as transforms when the `attacks` extra is present.
+- New `encoded_jailbreak` strategy that applies a transform chain and records it on the attempt.
+- CLI `transforms` command. Test suite grown to 58 (adds payload + PyRIT tests; PyRIT tests skip without
+  the extra).
+
+### Workflow
+- Standardized on the project `.venv` via uv (`uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`); do
+  not pip-install into the global interpreter. Migrated the MCP server to the MCP SDK v2 `MCPServer`
+  (the `.venv` resolves mcp 2.x).
+
 ### Added (Phase 5 + reporting + Docker)
-- Four new attack strategies, tested offline: `best_of_n`, `prefill`, `many_shot`, `crescendo`
-  (six strategies total). PyRIT adapter seam added but inert (see Blocked).
+- Four new attack strategies, tested offline: `best_of_n`, `prefill`, `many_shot`, `crescendo`.
+  (The PyRIT adapter seam added here was activated later this cycle - see "PyRIT activation" above.)
 - Reports now include a full **attempt transcript**: for every attempt, the exact prompt sent to the
   model, the model's reply, and the result (SUCCESS / PARTIAL / FAILED with score). `run` and `report`
   render it (md and json); the MCP `get_report` includes it too.
@@ -17,12 +34,8 @@ happened - never invent historical entries.
 - Test suite grown to 44 passing offline tests (adds strategy + report-transcript tests).
 
 ### Changed
-- Removed unused empty placeholder packages (`campaigns/`, `payloads/`, `evidence/`); evidence capture
-  lives in `findings/`. Repo-structure doc updated to match. Those packages return when their phase lands.
-
-### Blocked
-- PyRIT adapter: PyRIT 0.6.0 is unusable in this environment (broken `termcolor` transitive dep); the
-  seam is in place but inert rather than shipping untested integration code. Needs PyRIT 1.1+.
+- Removed unused empty placeholder packages (`campaigns/`, `evidence/`); evidence capture lives in
+  `findings/`. (`payloads/` was later re-added for Phase 6.) Repo-structure doc updated to match.
 
 ### Added
 - Project memory and documentation system: `CLAUDE.md`, `docs/index.md`,
@@ -92,7 +105,7 @@ happened - never invent historical entries.
   were missing from the install and from git staging. Root-anchored the artifact ignore patterns.
 
 ### Notes
-- Docker image build is BLOCKED in this environment (daemon not running); the Dockerfile is written.
-- Ollama local run, direct OpenAI/Anthropic adapters, any-llm/PyRIT/garak adapters, payload + campaign
-  engines, and PyPI publish are NOT TESTED yet and are marked as such in
-  `docs/testing/test-matrix.md`. Nothing untested is claimed as passing.
+- (Superseded later this cycle: Docker was then built and verified; PyRIT and the payload engine were
+  integrated.) Ollama local run, direct OpenAI/Anthropic adapters, any-llm/garak adapters, and the
+  campaign engine remain NOT TESTED, marked as such in `docs/testing/test-matrix.md`. Nothing untested is
+  claimed as passing.

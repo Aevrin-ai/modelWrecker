@@ -7,7 +7,7 @@ Date: 2026-10-01. Phase: 4 (minimum engine). Legend: PASS / FAIL / BLOCKED / NOT
 The modelWrecker local engine core is implemented and verified offline. The full pipeline - config ->
 planner -> strategy -> target -> judge -> reliability -> evidence -> finding -> report - runs end to end,
 including a real run over HTTP against a loopback stub that speaks the OpenAI chat-completions wire
-format (the same code path used for OpenRouter and Ollama). 44 automated tests pass with no network and
+format (the same code path used for OpenRouter and Ollama). 58 automated tests pass with no network and
 no API key.
 
 Live provider testing (OpenRouter / Ollama), MCP, Docker, and PyPI packaging are **not yet tested** and
@@ -16,7 +16,7 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 ## Environment
 
 - OS: Windows 11. Python 3.12.9. pydantic 2.11, httpx, typer, pyyaml present.
-- Test command: `PYTHONPATH=src python -m pytest -q` -> 44 passed.
+- Test command: `.venv\Scripts\python -m pytest -q` -> 58 passed.
 
 ## What was verified (PASS)
 
@@ -24,7 +24,8 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 - Authorization gate: an unauthorized target is refused before any request.
 - Security: egress guard blocks loopback/link-local/RFC1918/metadata; redaction strips secret fields.
 - Provider: OpenAI-compatible adapter parses the wire format; real HTTP round-trip produced a finding.
-- Strategies: direct_jailbreak, prompt_extraction, best_of_n, prefill, many_shot, crescendo (6 total).
+- Strategies: direct_jailbreak, prompt_extraction, best_of_n, prefill, many_shot, crescendo,
+  encoded_jailbreak, and PyRIT-backed pyrit_send/pyrit_pair/pyrit_tap (10 total).
 - Judge: multi-signal ensemble + calibration (0 false positives on benign fixtures).
 - Reliability: replay labelled a repeated success `reliable` (5/5).
 - Findings/evidence/storage: finding created with verified taxonomy (OWASP LLM07/LLM08, ATLAS
@@ -71,20 +72,26 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 - Security: non-root verified; no Docker socket mounted; run with `--add-host` only. Resource limits and
   no-privileged are documented in `docs/workflows/DEPLOYMENT.md`.
 
-## Blocked
+## PyRIT 1.1 integration + Phase 6 payload engine (PASS)
 
-- PyRIT adapter: PyRIT 0.6.0 is installed but **fails to import** in this environment (broken `termcolor`
-  transitive dependency: `No module named 'termcolor._types'`). Per the "investigate before replacing /
-  do not claim untested compatibility" rule, the adapter seam is in place but inert (no untested PyRIT
-  code is shipped as working). It needs a working PyRIT (1.1+) install to activate. See
-  `src/modelwrecker/strategies/pyrit_adapter.py`.
+- A clean `.venv` (uv) with the `attacks` extra pulls **PyRIT 1.1.0**, which imports fine (the earlier
+  0.6.0/termcolor breakage was an environment issue, resolved by the fresh venv).
+- Our provider is bridged into a PyRIT target (`strategies/pyrit_bridge.py`); `pyrit_send`, `pyrit_pair`
+  (PAIR), `pyrit_tap` (TAP) run through PyRIT. **PAIR runs offline end to end to a SUCCESS outcome**; TAP
+  executes (prunes offline without a live adversarial model, a valid outcome). Registered only when the
+  extra is installed.
+- Payload engine: 6 first-party transforms (base64/rot13/reverse/zero_width/leetspeak/homoglyph) with
+  chains and reversible round-trips, plus PyRIT converters (morse/binary/leetspeak) wrapped as transforms.
+  New `encoded_jailbreak` strategy and `transforms` CLI command.
+- Also fixed in the clean venv: migrated the MCP server to the MCP SDK v2 `MCPServer` (the venv resolves
+  mcp 2.x).
 
 ## Not tested yet (NOT TESTED)
 
 - Live Ollama run - not run in this environment.
 - Direct OpenAI/Anthropic adapters - not implemented (anthropic raises a clear "not implemented" error).
 - any-llm multiplexer adapter - currently falls back to the OpenAI-compatible wire.
-- PyRIT/garak strategies, payload engine, campaign engine, PyPI publish.
+- garak strategies, campaign engine, PyPI publish.
 
 ## Definition of done (this phase)
 
@@ -133,12 +140,13 @@ are honestly marked NOT TESTED. Nothing untested is claimed as passing.
 
 ## Final status
 
-**Phase 4 + Phase 5 (first-party strategies) + harness + Docker: PASS - verified offline and live.** The
-engine, the installed CLI, a real OpenRouter provider, the wheel, the MCP harness server, and the Docker
-image all work end to end, including a full in-container attack loop (one real packaging bug found and
-fixed). Reports now show the prompt sent, the model reply, and pass/fail per attempt. The PyRIT adapter is
-BLOCKED (broken PyRIT install here). Direct provider adapters, any-llm, garak, the payload and campaign
-engines, Ollama, and PyPI publish remain NOT TESTED. Full detail in `docs/testing/test-matrix.md`.
+**Phases 4-6 + PyRIT + harness + Docker: PASS - verified offline and live.** The engine, the installed
+CLI, a real OpenRouter provider, the wheel, the MCP harness server, and the Docker image all work end to
+end, including a full in-container attack loop (one real packaging bug found and fixed). Reports show the
+prompt sent, the model reply, and pass/fail per attempt. **PyRIT 1.1 is integrated** (PAIR runs offline to
+SUCCESS) and the **payload engine** (first-party + PyRIT converters) is in. Direct OpenAI/Anthropic
+adapters, any-llm, garak, the campaign engine, Ollama, and PyPI publish remain NOT TESTED. Full detail in
+`docs/testing/test-matrix.md`. 58 offline tests pass.
 
 ## API key rotation
 

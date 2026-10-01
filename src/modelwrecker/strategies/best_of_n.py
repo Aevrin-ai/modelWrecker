@@ -21,8 +21,7 @@ class BestOfN(BaseStrategy):
     ]
 
     async def run(self, ctx: StrategyContext) -> StrategyResult:
-        n = int((getattr(ctx, "params", {}) or {}).get("n", 3)) if hasattr(ctx, "params") else 3
-        n = max(1, n)
+        n = max(1, int((ctx.params or {}).get("n", 3)))
         payload = ctx.objective.description or ctx.objective.title
         runs: list[StrategyRun] = []
         for i in range(1, n + 1):

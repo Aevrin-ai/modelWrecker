@@ -18,40 +18,27 @@ things work, read `docs/`.
   adapter plus its memory and scoring; target order after chat is agent, RAG, then MCP; harness
   integration is in scope. See `DECISIONS.md`. No open decisions remain.
 
-## In progress
+- **Phase 4 - minimum engine (done).** OpenAI-compatible provider + factory + lifecycle; chat target with
+  an authorization gate; planner + loop; judge + calibration; reliability replay; evidence + finding
+  engine; JSONL/SQLite storage; CLI. Verified end to end over HTTP and live against OpenRouter. Harness
+  MCP server, Dockerfile, and a built wheel came in alongside it.
+- **Phase 5 - strategy system (done).** First-party `best_of_n`, `prefill`, `many_shot`, `crescendo`;
+  reports show the full attempt transcript (prompt sent, model reply, result). **PyRIT 1.1 integrated**:
+  `pyrit_send`, `pyrit_pair` (PAIR), `pyrit_tap` (TAP) via a provider bridge - PAIR runs offline to a
+  SUCCESS outcome.
+- **Phase 6 - payload engine (done).** First-party transforms (base64/rot13/reverse/zero_width/leetspeak/
+  homoglyph) + chains + reversible round-trips; PyRIT converters wrapped as transforms; `encoded_jailbreak`
+  strategy; `transforms` CLI command.
+- **Docker (done).** Built and verified: non-root, full in-container attack loop.
 
-- **Phase 4 - minimum engine.** The core is implemented and verified offline (see
-  `docs/testing/test-matrix.md`): OpenAI-compatible provider + factory + lifecycle; chat target with an
-  authorization gate; planner + loop; two strategies; multi-signal judge + calibration; reliability
-  replay; evidence + finding engine; JSONL/SQLite storage; and the CLI (`init`, `validate`, `check`,
-  `provider test`, `run`, `report`, `replay`, `strategies`). A real end-to-end run over HTTP (loopback
-  stub) produces a verified finding. 30 offline tests pass.
+## In progress / next
 
-Also done this phase (ahead of the original plan): the **harness-integration MCP server** (Phase 9 item,
-pulled forward) with guardrails and a real client round-trip; a **Dockerfile**; and a built **wheel** that
-installs in a fresh venv and runs a full loop. Live OpenRouter run verified.
-
-### Remaining in Phase 4
-
-- **Docker build/run** - BLOCKED here (daemon not running); Dockerfile ready, needs a machine with Docker.
-- **Ollama local run** - the free end-to-end path; not run in this environment.
-- `replay` full re-execution wiring; `--output sarif/html`.
-
-Exit criterion: largely met over a real provider (OpenRouter) and the wheel/stub full loop. Still open:
-the same run against a real local Ollama model, and a verified Docker build.
-
-## In progress - Phase 5 (strategy system)
-
-- **Done:** first-party `best_of_n`, `prefill`, `many_shot`, `crescendo` (tested offline); reports now
-  include the full attempt transcript (prompt sent, model reply, result).
-- **Blocked:** the PyRIT adapter (PAIR/TAP + memory/scoring reuse). PyRIT 0.6.0 is unusable here (broken
-  termcolor dep); the seam is in place. Needs a working PyRIT 1.1+ install.
+- **Phase 7** - Campaign engine (parallel runs, budgets, limits, stop conditions).
+- Loose ends: Ollama local run (free path, not run in this environment), `replay` full re-execution,
+  `--output sarif/html`, and a verified PyPI publish.
 
 ## Later
 
-- **Phase 5 (remaining)** - PAIR, TAP via the PyRIT adapter once PyRIT works; skeleton-key.
-- **Phase 6** - Payload engine (transform/chain/mutate), planner-driven, optional.
-- **Phase 7** - Campaign engine (parallel runs, budgets, limits, stop conditions).
 - **Phase 8** - Reliability & analytics (confidence scoring, dashboards of ASR, leaderboards),
   garak batch-scan adapter.
 - **Phase 9** - Agent, RAG, then MCP *targets* and the matching strategies/judges.

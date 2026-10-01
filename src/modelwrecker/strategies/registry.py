@@ -10,6 +10,7 @@ from .base import BaseStrategy
 from .best_of_n import BestOfN
 from .crescendo import Crescendo
 from .direct import DirectJailbreak
+from .encoded import EncodedJailbreak
 from .extraction import PromptExtraction
 from .many_shot import ManyShot
 from .prefill import Prefill
@@ -21,7 +22,18 @@ _REGISTRY: dict[str, type[BaseStrategy]] = {
     Prefill.name: Prefill,
     ManyShot.name: ManyShot,
     Crescendo.name: Crescendo,
+    EncodedJailbreak.name: EncodedJailbreak,
 }
+
+# PyRIT-backed strategies (PAIR/TAP/send) register only when a working PyRIT is importable, so the
+# engine runs fine without the optional `modelwrecker[attacks]` dependency. See ADR-0006.
+from .pyrit_adapter import pyrit_available  # noqa: E402
+
+if pyrit_available()[0]:
+    from .pyrit_attacks import PyRITPair, PyRITPromptSending, PyRITTap  # noqa: E402
+
+    for _cls in (PyRITPromptSending, PyRITPair, PyRITTap):
+        _REGISTRY[_cls.name] = _cls
 
 
 def get_strategy(name: str) -> BaseStrategy:

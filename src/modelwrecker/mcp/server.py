@@ -1,8 +1,9 @@
 """The MCP server: wraps the safe service functions as MCP tools.
 
-Only safe orchestration tools are exposed (no shell/file-write/http). Over local stdio no token is
-needed; a networked transport requires MW_MCP_TOKEN (see service.authorize). Build it with
-build_server() (handy for tests) and run it with main().
+Built on the MCP Python SDK v2 (`MCPServer`, renamed from v1's `FastMCP`). Only safe orchestration
+tools are exposed (no shell/file-write/http). Over local stdio no token is needed; a networked
+transport requires MW_MCP_TOKEN (see service.authorize). Build it with build_server() (handy for tests)
+and run it with main().
 """
 
 from __future__ import annotations
@@ -11,11 +12,11 @@ from .service import McpService
 
 
 def build_server(runs_dir: str = "runs"):
-    """Create the FastMCP server with modelWrecker's safe tools registered."""
-    from mcp.server.fastmcp import FastMCP
+    """Create the MCP server with modelWrecker's safe tools registered (MCP SDK v2 `MCPServer`)."""
+    from mcp.server.mcpserver import MCPServer
 
     service = McpService(runs_dir=runs_dir)
-    mcp = FastMCP("modelwrecker")
+    mcp = MCPServer("modelwrecker")
 
     @mcp.tool()
     def list_strategies() -> list[dict]:

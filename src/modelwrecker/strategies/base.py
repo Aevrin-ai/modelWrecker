@@ -21,7 +21,10 @@ class StrategyContext:
     target: Any  # a Target (ChatTarget today)
     plan_id: str
     attacker: BaseProvider | None = None
-    judge: Any | None = None
+    judge: Any | None = None  # the modelWrecker Judge (ensemble)
+    judge_provider: BaseProvider | None = None  # raw judge provider (for e.g. PyRIT scorers)
+    params: dict = field(default_factory=dict)  # strategy params from config.attack.params
+    payloads: Any | None = None  # a PayloadEngine (transforms); may be None
     emit: Callable[[str], None] = field(default=lambda _m: None)
 
 

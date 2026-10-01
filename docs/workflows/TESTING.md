@@ -1,7 +1,14 @@
 # Testing
 
-Tests are the contract. Nothing is "done" until tests pass. Runner:
-`uv run pytest -q` (once code exists).
+Tests are the contract. Nothing is "done" until tests pass. Use the project `.venv` (never global pip):
+
+```bash
+uv venv
+uv pip install -e ".[dev,mcp,attacks]"
+.venv\Scripts\python -m pytest -q    # 58 tests, offline, no API key
+```
+
+Without the `attacks` extra (PyRIT), the PyRIT tests skip and the rest still pass.
 
 ## What must be tested
 
