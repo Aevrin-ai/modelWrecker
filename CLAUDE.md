@@ -9,17 +9,18 @@ agents, RAG, MCP-connected tools) to find security weaknesses *before* real atta
 turns each confirmed weakness into a reproducible **finding**. It is designed to become the
 AI red-teaming layer of the Aevrin security platform.
 
-Status: **Phases 4-6 done.** The local engine runs end to end, verified offline and live: config,
+Status: **Phases 4-7 done.** The local engine runs end to end, verified offline and live: config,
 OpenAI-compatible provider, chat target, planner, ten strategies (direct_jailbreak, prompt_extraction,
 best_of_n, prefill, many_shot, crescendo, encoded_jailbreak, and PyRIT-backed pyrit_send/pyrit_pair/
 pyrit_tap), multi-signal judge, reliability, evidence, findings (reports show the prompt sent + model
-reply + pass/fail per attempt), the payload/transform engine (first-party + PyRIT converters), storage,
-CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 is
-integrated** (PAIR runs offline to SUCCESS). Live-verified against OpenRouter. 58 offline tests.
+reply + pass/fail per attempt), the payload/transform engine (first-party + PyRIT converters), the
+campaign engine (parallel objectives, budgets, stop conditions, retries), storage, CLI, the MCP harness
+server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 is integrated** (PAIR runs
+offline to SUCCESS). Live-verified against OpenRouter. 65 offline tests.
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
-Run tests: `.venv\Scripts\python -m pytest -q`. any-llm/garak, direct OpenAI/Anthropic adapters, and the
-campaign engine are not built yet. See `ROADMAP.md` and `docs/testing/test-matrix.md`.
+Run tests: `.venv\Scripts\python -m pytest -q`. any-llm/garak, direct OpenAI/Anthropic adapters, and
+money/cost budgets are not built yet. See `ROADMAP.md` and `docs/testing/test-matrix.md`.
 
 ---
 

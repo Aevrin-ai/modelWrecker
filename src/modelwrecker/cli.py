@@ -58,6 +58,8 @@ def check(config: str = typer.Argument("modelwrecker.yaml")) -> None:
         typer.echo(f"  {role}: {ep.protocol} {ep.model} (api key: {key}){extra}")
     typer.echo(f"  objectives: {len(cfg.objectives)}")
     typer.echo(f"  attack strategy: {cfg.attack.strategy}")
+    c = cfg.campaign
+    typer.echo(f"  campaign: concurrency={c.concurrency} stop_on={c.stop_on} retries={c.retries}")
 
 
 @app.command()
@@ -82,10 +84,15 @@ def run(
     config: str = typer.Argument("modelwrecker.yaml"),
     output: str = typer.Option("md", help="md | json"),
     out_dir: str = typer.Option("runs", help="base directory for run artifacts"),
+    concurrency: int = typer.Option(None, help="objectives to run in parallel (overrides config)"),
+    stop_on: str = typer.Option(None, help="complete | first_finding | budget (overrides config)"),
+    max_objectives: int = typer.Option(None, help="cap objectives scheduled (overrides config)"),
+    max_seconds: int = typer.Option(None, help="wall-clock budget in seconds (overrides config)"),
 ) -> None:
     """Run all objectives in a config against the target, verify, and report."""
     cfg = _load(config)
     try:
+        _apply_campaign_overrides(cfg, concurrency, stop_on, max_objectives, max_seconds)
         cfg.require_full()
         cfg.require_authorized_target()
         cfg.require_objectives()
@@ -235,6 +242,32 @@ def provider_test(
 
 
 # --- helpers ---------------------------------------------------------------------------------------
+
+
+def _apply_campaign_overrides(cfg, concurrency, stop_on, max_objectives, max_seconds) -> None:
+    """Apply CLI campaign flags onto the loaded config, re-validating so bad values fail cleanly."""
+    from .config import CampaignConfig
+
+    c = cfg.campaign
+    data = c.model_dump()
+    if concurrency is not None:
+        data["concurrency"] = concurrency
+    if stop_on is not None:
+        data["stop_on"] = stop_on
+    if max_objectives is not None:
+        data["budget"]["max_objectives"] = max_objectives
+    if max_seconds is not None:
+        data["budget"]["max_seconds"] = max_seconds
+    try:
+        cfg.campaign = CampaignConfig.model_validate(data)
+    except Exception as e:  # pydantic re-wraps our ConfigError; surface just the message
+        msg = str(e)
+        try:  # pull the clean "Value error, <msg>" out of the pydantic noise
+            first = e.errors()[0]["msg"]  # type: ignore[attr-defined]
+            msg = first.removeprefix("Value error, ")
+        except Exception:
+            pass
+        raise ConfigError(msg) from e
 
 
 def _load(config: str):

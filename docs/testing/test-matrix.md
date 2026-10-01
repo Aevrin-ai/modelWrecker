@@ -3,7 +3,7 @@
 Honest status of what has actually been tested. Legend: PASS (ran and verified), FAIL, BLOCKED,
 NOT TESTED. Last updated 2026-10-01.
 
-Run the automated suite in the project venv: `.venv\Scripts\python -m pytest -q` (58 tests, offline, no
+Run the automated suite in the project venv: `.venv\Scripts\python -m pytest -q` (65 tests, offline, no
 API key; create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). Without the `attacks`
 extra, the PyRIT tests skip and the rest still pass.
 
@@ -51,7 +51,13 @@ extra, the PyRIT tests skip and the rest still pass.
 | Direct provider | OpenAI / Anthropic adapters | NOT TESTED - adapters not implemented yet (anthropic raises a clear error) |
 | any-llm multiplexer | adapter | NOT TESTED - falls back to OpenAI-compatible wire today |
 | garak strategies | adapter | NOT TESTED - not implemented yet (Phase 8) |
-| Campaign engine | parallel/budgets | NOT TESTED - not implemented yet (Phase 7) |
+| Campaign engine | run all objectives to completion | PASS | `tests/test_campaign.py`; real CLI (3 objectives, concurrency 3, 3 findings) |
+| Campaign engine | parallel execution (concurrency) | PASS | `tests/test_campaign.py`; real CLI `--concurrency 3` ran all in parallel |
+| Campaign engine | stop_on first_finding | PASS | `tests/test_campaign.py`; real CLI stopped after first, skipped the rest |
+| Campaign engine | budgets (max_objectives / max_attempts) | PASS | `tests/test_campaign.py` |
+| Campaign engine | retry + per-objective error isolation | PASS | `tests/test_campaign.py` (transient error retried; campaign survives) |
+| Campaign engine | invalid campaign config rejected | PASS | `tests/test_campaign.py`; real CLI exit 2 clean message |
+| Campaign engine | money budget / wall-clock deadline live | NOT TESTED - money pricing not implemented; deadline tested only via unit budget |
 | Harness integration | MCP server + JSON driver | PASS (built + tested); see MCP rows above |
 | MCP server | builds; tools registered | PASS | `tests/test_mcp.py` |
 | MCP server | real client round-trip (list_tools + call_tool) over in-memory streams | PASS | `tests/test_mcp.py` |
@@ -73,10 +79,12 @@ extra, the PyRIT tests skip and the rest still pass.
 The **local engine** (config, providers over the OpenAI-compatible wire, chat target, planner, ten
 strategies, multi-signal judge with calibration, reliability replay, evidence, findings with a full
 attempt transcript, the payload/transform engine, storage, the CLI, and the MCP harness server) is
-implemented and verified: 58 offline tests pass, a real end-to-end run works over HTTP, live OpenRouter
+implemented and verified: 65 offline tests pass, a real end-to-end run works over HTTP, live OpenRouter
 works, the wheel builds and runs a full loop, the MCP server passes a real client round-trip with its
 guardrails, and **Docker builds and runs a full in-container attack loop as a non-root user**. **PyRIT
 1.1 is integrated**: our provider is bridged into PyRIT targets and **PAIR runs offline to a SUCCESS
-outcome**, TAP executes, and PyRIT converters are available as transforms. Direct OpenAI/Anthropic
-adapters, any-llm, garak, the campaign engine, Ollama, and PyPI publish are NOT TESTED and are marked
-accordingly - none are claimed as passing.
+outcome**, TAP executes, and PyRIT converters are available as transforms. The **campaign engine**
+(parallel objectives, budgets, stop conditions, retries, per-objective error isolation) is implemented and
+verified offline and through the real CLI against a loopback stub. Direct OpenAI/Anthropic adapters,
+any-llm, garak, Ollama, and PyPI publish are NOT TESTED and are marked accordingly - none are claimed as
+passing.

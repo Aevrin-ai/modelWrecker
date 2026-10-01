@@ -6,6 +6,20 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added (Phase 7 campaign engine)
+- **Campaign engine** (`src/modelwrecker/campaigns/engine.py`): schedules a run's objectives with
+  parallelism (a per-run `asyncio.Semaphore`), budgets (`max_objectives`, `max_attempts`, `max_tokens`,
+  `max_seconds`), stop conditions (`complete`, `first_finding`, `budget`), and bounded retries on transient
+  provider errors. A single objective's failure is isolated so it never kills the campaign, and stopping is
+  cooperative (no in-flight objective is hard-cancelled). The attack loop now delegates scheduling to it.
+- New `campaign:` config section (`config.py`: `CampaignConfig` + `BudgetConfig`, validated) and `run`
+  overrides `--concurrency`, `--stop-on`, `--max-objectives`, `--max-seconds`. `check` prints the campaign
+  settings.
+- Budgets are checked before each objective and before each strategy, and target tokens are accounted per
+  observation. Test suite grown to 65 (adds `tests/test_campaign.py`). Verified through the real CLI
+  against a loopback stub (concurrency ran objectives in parallel; `first_finding` stopped and skipped the
+  rest cleanly).
+
 ### Added (PyRIT activation + Phase 6 payload engine)
 - **PyRIT 1.1 integrated** (`attacks` extra): a bridge wraps a modelWrecker provider as a PyRIT target
   (`strategies/pyrit_bridge.py`), and `strategies/pyrit_attacks.py` adds `pyrit_send`, `pyrit_pair`

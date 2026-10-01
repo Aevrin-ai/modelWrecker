@@ -30,12 +30,16 @@ things work, read `docs/`.
   homoglyph) + chains + reversible round-trips; PyRIT converters wrapped as transforms; `encoded_jailbreak`
   strategy; `transforms` CLI command.
 - **Docker (done).** Built and verified: non-root, full in-container attack loop.
+- **Phase 7 - campaign engine (done).** `campaigns/engine.py`: parallel objectives (per-run semaphore),
+  budgets (attempts/tokens/wall-clock/objective count), stop conditions (`complete`/`first_finding`/
+  `budget`), bounded retries on transient errors, and per-objective error isolation. Exposed via the
+  `campaign:` config section and `run` flags (`--concurrency`, `--stop-on`, `--max-objectives`,
+  `--max-seconds`). Verified offline and through the real CLI against a loopback stub.
 
 ## In progress / next
 
-- **Phase 7** - Campaign engine (parallel runs, budgets, limits, stop conditions).
 - Loose ends: Ollama local run (free path, not run in this environment), `replay` full re-execution,
-  `--output sarif/html`, and a verified PyPI publish.
+  `--output sarif/html`, money/cost budgets (needs per-model pricing), and a verified PyPI publish.
 
 ## Later
 

@@ -78,9 +78,12 @@ async def run_config(
         if not result.calibration.get("calibrated", False):
             result.notes.append("judge not calibrated: it flagged a benign fixture; treat findings with care")
 
-        for objective in config.objectives:
-            emit(f"objective: {objective.title}")
-            finding, records = await _run_objective(
+        from ..campaigns.engine import build_budget, execute_campaign
+
+        budget = build_budget(config)
+
+        async def run_one(objective: Objective):
+            return await _run_objective(
                 objective=objective,
                 config=config,
                 planner=planner,
@@ -92,11 +95,17 @@ async def run_config(
                 store=store,
                 emit=emit,
                 config_snapshot=config_snapshot,
+                budget=budget,
             )
-            result.objectives_run += 1
-            result.attempts.extend(records)
-            if finding is not None:
-                result.findings.append(finding)
+
+        await execute_campaign(
+            config=config,
+            objectives=config.objectives,
+            run_one=run_one,
+            result=result,
+            budget=budget,
+            emit=emit,
+        )
 
     return result
 
@@ -114,10 +123,17 @@ async def _run_objective(
     store,
     emit,
     config_snapshot: dict,
+    budget=None,
 ) -> tuple[Finding | None, list[AttemptRecord]]:
     records: list[AttemptRecord] = []
     sequence = planner.select_sequence(objective, config)
     for strategy_name in sequence:
+        # Budgets are checked before each strategy, so a running objective stops cleanly.
+        if budget is not None:
+            exhausted, why = budget.exhausted()
+            if exhausted:
+                emit(f"{objective.title}: stopping before {strategy_name} ({why})")
+                break
         strategy = get_strategy(strategy_name)
         # Capability check: skip a strategy the target cannot support.
         if not strategy.required_target_capabilities.issubset(target.capabilities()):
@@ -143,6 +159,13 @@ async def _run_objective(
             params=dict(config.attack.params), payloads=PayloadEngine(), emit=emit,
         )
         strat_result = await strategy.run(ctx)
+
+        # Account this strategy's attempts and target tokens against the campaign budget.
+        if budget is not None:
+            budget.record(
+                attempts=len(strat_result.runs),
+                tokens=sum(_obs_tokens(sr.observation) for sr in strat_result.runs),
+            )
 
         # Judge each attempt; keep the strongest.
         best = None  # (verdict, run)
@@ -203,6 +226,12 @@ async def _run_objective(
         return finding, records
 
     return None, records
+
+
+def _obs_tokens(observation) -> int:
+    """Target tokens (prompt + completion) reported for one observation, for budget accounting."""
+    meta = observation.target_meta or {}
+    return int(meta.get("prompt_tokens") or 0) + int(meta.get("completion_tokens") or 0)
 
 
 def _config_snapshot(config: Config) -> dict:
