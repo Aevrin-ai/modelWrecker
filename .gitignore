@@ -1,0 +1,38 @@
+# IDE / local prompt scratch
+.prompt
+
+# Secrets & config (never commit)
+.env
+.env.*
+config.local.*
+*.key
+
+# Red-team run artifacts (can contain harmful content / secrets — keep out of git)
+runs/
+evidence/
+findings/
+reports/
+sessions/
+*.jsonl
+
+# Datasets fetched at runtime (respect each dataset's own license)
+library/
+datasets/_cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
