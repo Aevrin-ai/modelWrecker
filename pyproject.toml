@@ -1,0 +1,61 @@
+[project]
+name = "modelwrecker"
+version = "0.0.1"
+description = "An AI red teaming engine. Safely attacks AI systems and turns verified weaknesses into reproducible findings."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Aevrin" }]
+keywords = ["ai", "security", "red-teaming", "llm", "jailbreak", "owasp"]
+
+# Core runtime dependencies. Kept small on purpose (see docs/DEPENDENCIES.md).
+# Provider breadth comes from any-llm (the default multiplexer); direct SDKs stay first-class.
+dependencies = [
+    "pydantic>=2.7",
+    "httpx>=0.27",
+    "typer>=0.12",
+    "pyyaml>=6.0",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+# Provider adapters beyond the OpenAI-compatible baseline.
+providers = ["any-llm-sdk>=1.25", "openai>=1.40", "anthropic>=0.34"]
+# Attack algorithms and scanning, reused behind our Strategy adapters (see ADR-0006).
+attacks = ["pyrit>=1.1"]
+scan = ["garak>=0.17"]
+# Judge signals.
+judges = ["presidio-analyzer>=2.2", "detect-secrets>=1.5"]
+# MCP targets and the harness-integration MCP server (see ADR-0013).
+mcp = ["mcp>=2.0"]
+# Everything, for a full install.
+all = [
+    "modelwrecker[providers,attacks,scan,judges,mcp]",
+]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "hypothesis>=6.0", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+modelwrecker = "modelwrecker.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/modelwrecker"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
