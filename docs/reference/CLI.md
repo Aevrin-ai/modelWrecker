@@ -19,13 +19,15 @@ modelwrecker mcp        --runs-dir runs            # start the harness MCP serve
 modelwrecker version
 ```
 
-`run` options: `--output md|json` (default `md`), `--out-dir runs` (where artifacts go).
+`run` options: `--output md|json` (default `md`), `--out-dir runs` (where artifacts go). Campaign
+overrides (they override the config's `campaign:` section): `--concurrency N` (objectives in parallel),
+`--stop-on complete|first_finding|budget`, `--max-objectives N`, `--max-seconds N`. See
+[`../campaigns/OVERVIEW.md`](../campaigns/OVERVIEW.md).
 `provider test` option: `--role attacker|target|judge` (default `target`).
 
 ## Planned (later phases)
 
 - `attack` - run a single quick objective.
-- `campaign` - multi-objective run with budgets and stop conditions (Phase 7).
 - `--output sarif|html`, `--fail-on-finding`, `--ci`, `--headless` (CI modes).
 
 The `mcp` server and a JSON driver are implemented; see

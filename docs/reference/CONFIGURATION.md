@@ -35,6 +35,16 @@ engine:
   allow_host_tools: false     # host tools OFF by default
   deadline_seconds: 1800
 
+campaign:                     # how the run schedules its objectives (see campaigns/OVERVIEW.md)
+  concurrency: 1              # objectives to run in parallel
+  stop_on: complete          # complete | first_finding | budget
+  retries: 0                 # bounded retries per objective, transient provider errors only
+  budget:
+    max_objectives: null     # cap how many objectives are scheduled
+    max_attempts: null       # total strategy attempts across the campaign
+    max_tokens: null         # total target tokens (prompt + completion) across the campaign
+    max_seconds: null        # wall-clock budget; falls back to engine.deadline_seconds
+
 security:
   egress:
     allowed_schemes: [https]
