@@ -11,7 +11,13 @@ import asyncio
 from ..data import Objective, Observation, Outcome, Verdict
 from ..providers.base import BaseProvider
 from .combiner import WeightedCombiner
-from .signals import LLMJudgeSignal, PIIDetectorSignal, RuleSignal, SecretDetectorSignal
+from .signals import (
+    LLMJudgeSignal,
+    PIIDetectorSignal,
+    RuleSignal,
+    SecretDetectorSignal,
+    ToolMisuseSignal,
+)
 
 
 class Judge:
@@ -21,6 +27,7 @@ class Judge:
             SecretDetectorSignal(),
             PIIDetectorSignal(),
             RuleSignal(),
+            ToolMisuseSignal(),
         ]
         self.combiner = WeightedCombiner()
 

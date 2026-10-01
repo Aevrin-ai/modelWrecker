@@ -35,6 +35,11 @@ across replays). Default N and the `reliable` threshold are config
 ([`../reference/CONFIGURATION.md`](../reference/CONFIGURATION.md)); sensible defaults are N≈8 and
 rate ≥ ~0.7, matching common red-team practice.
 
+Every result also carries a **Wilson 95% confidence interval** (`ci_low`/`ci_high`) on the success rate,
+not just the bare fraction - small N is the norm, and Wilson stays honest at the edges (5/5 is not a flat
+100%, 0/N still has a real upper bound). A `high_variance` flag is set when the backend was not pinned (see
+below). The same interval powers the Phase 8 analytics (see [`ANALYTICS.md`](ANALYTICS.md)).
+
 ## Backend pinning
 
 Routing a target through a load-balanced backend (e.g. OpenRouter without a pinned provider) means each

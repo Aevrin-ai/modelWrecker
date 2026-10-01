@@ -17,6 +17,14 @@ target:
   base_url: http://localhost:11434/v1   # e.g. Ollama
   model: llama3
   provider_pin: null          # pin a backend for reproducible replays if supported
+  type: chat                  # chat (default) | agent | rag | mcp  (see targets/OVERVIEW.md)
+  target_options:             # type-specific config; empty for a plain chat target
+    # agent / mcp: tools the target can call
+    tools:
+      - {name: send_email, description: "send email", sensitive: true}
+    # rag: the corpus to retrieve from (indirect-injection testing)
+    documents:
+      - {id: kb1, text: "Company handbook ..."}
 judge:
   protocol: anthropic
   model: claude-sonnet

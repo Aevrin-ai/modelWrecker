@@ -44,10 +44,13 @@ flowchart TD
 **Implemented and tested today:** `direct_jailbreak`, `prompt_extraction` (Phase 4); `best_of_n`,
 `prefill`, `many_shot`, `crescendo` (Phase 5 first-party); `encoded_jailbreak` (Phase 6, uses the payload
 engine); and the PyRIT-backed `pyrit_send`, `pyrit_pair` (PAIR), `pyrit_tap` (TAP), registered when the
-`attacks` extra is installed. Run `modelwrecker strategies` for the live list.
+`attacks` extra is installed; plus `garak_probe` (Phase 8) when the `scan` extra is installed; plus the
+Phase 9 target-specific strategies `tool_misuse` (agent), `rag_injection` (RAG), and `mcp_tool_poisoning`
+(MCP), each gated by the capability only its target type declares. Run `modelwrecker strategies` for the
+live list.
 
-**Planned:** encoding/probe batteries (via garak, Phase 8) and RAG / MCP / tool / memory / multimodal
-attacks (Phase 9). See [`../../ROADMAP.md`](../../ROADMAP.md).
+**Planned:** memory and multimodal attacks, and a live MCP-server connection for the MCP target. See
+[`../../ROADMAP.md`](../../ROADMAP.md).
 
 ## Build vs reuse per strategy
 
@@ -59,8 +62,9 @@ interface rather than rewriting it:
 | best_of_n, prefill, many_shot, crescendo, encoded_jailbreak, direct jailbreak, prompt extraction | first-party | small, specific to our loop; cheap to own and test. **Done.** |
 | PAIR, TAP | **PyRIT 1.1** (MIT) | our provider is bridged into a PyRIT target (`pyrit_bridge.py`); `pyrit_attacks.py` runs `PAIRAttack`/`TAPAttack` and converts the result. **Done** - PAIR runs offline to a SUCCESS outcome; registered when the `attacks` extra is present. See [`ADR-0006`](../decisions/ADR-0006-reuse-pyrit-garak.md). |
 | Converters (morse, binary, leetspeak, ...) | **PyRIT 1.1** (MIT) | wrapped as payload transforms (`payloads/pyrit_converters.py`). **Done.** |
-| Encoding/probe batteries (gcg, encoding, glitch, ...) | **garak** (Apache-2.0) | batch-scan adapter (Phase 8). |
-| RAG / MCP / tool / memory / multimodal | first-party | modelWrecker's differentiated targets; built on our target adapters (Phase 9). |
+| Encoding/probe batteries (gcg, encoding, glitch, ...) | **garak** (Apache-2.0) | `garak_probe` loads a probe's prompts and sends them at our target; our judge decides. **Done** (adapter + mapping tested); registered when the `scan` extra is present. A live probe run needs garak + a model installed. See [`ADR-0006`](../decisions/ADR-0006-reuse-pyrit-garak.md). |
+| tool_misuse / rag_injection / mcp_tool_poisoning | first-party | modelWrecker's differentiated target attacks (agent/RAG/MCP), built on our target adapters. **Done** (Phase 9); each gated by its target's capability. |
+| memory / multimodal | first-party | later work; built on the same target adapters. |
 
 A reused algorithm still produces our `Attempt`/`Observation`/`Verdict` shapes and goes through our
 reliability + evidence pipeline. PyRIT's memory is adapted into our shapes at the boundary and its scorers

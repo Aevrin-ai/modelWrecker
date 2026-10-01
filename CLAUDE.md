@@ -9,18 +9,22 @@ agents, RAG, MCP-connected tools) to find security weaknesses *before* real atta
 turns each confirmed weakness into a reproducible **finding**. It is designed to become the
 AI red-teaming layer of the Aevrin security platform.
 
-Status: **Phases 4-7 done.** The local engine runs end to end, verified offline and live: config,
-OpenAI-compatible provider, chat target, planner, ten strategies (direct_jailbreak, prompt_extraction,
-best_of_n, prefill, many_shot, crescendo, encoded_jailbreak, and PyRIT-backed pyrit_send/pyrit_pair/
-pyrit_tap), multi-signal judge, reliability, evidence, findings (reports show the prompt sent + model
-reply + pass/fail per attempt), the payload/transform engine (first-party + PyRIT converters), the
-campaign engine (parallel objectives, budgets, stop conditions, retries), storage, CLI, the MCP harness
-server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 is integrated** (PAIR runs
-offline to SUCCESS). Live-verified against OpenRouter. 65 offline tests.
+Status: **Phases 4-9 done.** The local engine runs end to end, verified offline and live: config,
+OpenAI-compatible provider, target types (chat, agent, rag, mcp via `target.type` + a target factory),
+planner, strategies (direct_jailbreak, prompt_extraction, best_of_n, prefill, many_shot, crescendo,
+encoded_jailbreak, PyRIT-backed pyrit_send/pyrit_pair/pyrit_tap, garak_probe with the scan extra, and the
+Phase 9 tool_misuse/rag_injection/mcp_tool_poisoning), multi-signal judge (incl. a tool_misuse signal) with
+reliability (Wilson confidence intervals), evidence, findings (reports show the prompt sent + model reply +
+pass/fail per attempt), the payload/transform engine, the campaign engine (parallel objectives, budgets,
+stop conditions, retries), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
+storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
+garak are integrated.** Live-verified against OpenRouter. 85 offline tests (86 with the `scan` extra).
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
-Run tests: `.venv\Scripts\python -m pytest -q`. any-llm/garak, direct OpenAI/Anthropic adapters, and
-money/cost budgets are not built yet. See `ROADMAP.md` and `docs/testing/test-matrix.md`.
+Run tests: `.venv\Scripts\python -m pytest -q`. Next is Phase 10 (hardening + authenticated REST API, remote
+MCP, CLI auth, Supabase/Cloudflare/Google web app). A live MCP-server target connection, any-llm, direct
+OpenAI/Anthropic adapters, Ollama, and money/cost budgets are not built/tested yet. See `ROADMAP.md` and
+`docs/testing/test-matrix.md`.
 
 ---
 
@@ -93,6 +97,9 @@ architecture, security, the CLI, or dependencies, follow the full order.
   link-local, RFC1918, cloud metadata `169.254.169.254`; re-check on redirect).
 - Redact secrets (API keys, auth headers, passwords, PII) before writing logs or evidence.
 - Run attack-generated code only in a sandbox with timeouts and resource limits, never on the host.
+- Hosted-platform credentials (the Phase 10 managed database, hosting/CDN, and OAuth provider) live only
+  in local untracked files and the deploy secret store. Never commit, log, print, or paste them, and never
+  name the specific credential files in anything that ships to a public repo or CDN. This repo is published.
 - Full model: `docs/security/SECURITY.md` and `docs/security/THREAT-MODEL.md`.
 
 ## Documentation rules

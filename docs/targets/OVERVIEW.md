@@ -38,10 +38,25 @@ flowchart TD
   TI --> BROWSER[Browser app - later]
 ```
 
-Phase 4 ships the **chat/completions API** target (the baseline). After that the confirmed order is
-**agent, then RAG, then MCP** targets, with the generic HTTP target alongside them (see
-[`../../ROADMAP.md`](../../ROADMAP.md)). This order is a resolved decision in
-[`../../DECISIONS.md`](../../DECISIONS.md).
+Phase 4 ships the **chat/completions API** target (the baseline). **Phase 9 adds the agent, RAG, and MCP
+targets** (the confirmed order, a resolved decision in [`../../DECISIONS.md`](../../DECISIONS.md)); the
+generic HTTP and browser targets remain later work (see [`../../ROADMAP.md`](../../ROADMAP.md)).
+
+`config.target.type` selects the target (`chat` default, `agent`, `rag`, `mcp`) and `target_options`
+carries its type-specific config. A factory (`targets/factory.py`) builds the right one, so the loop never
+changes. What each adds:
+
+- **agent** (`targets/agent.py`): a tool-using agent. `target_options.tools` is a list of
+  `{name, description, sensitive}`. The agent decides tool calls; modelWrecker only *observes and records*
+  them (it never executes a tool), and marks any sensitive call for the judge. Attack: `tool_misuse`
+  (excessive agency / goal hijack; OWASP LLM03, ASI01).
+- **rag** (`targets/rag.py`): a retrieval-augmented system. `target_options.documents` is the corpus; it
+  retrieves by keyword overlap and injects documents as untrusted context. If `allow_ingest` (default on)
+  it declares INGEST_DOCUMENT. Attack: `rag_injection` plants a poisoned document and triggers its
+  retrieval (indirect prompt injection; OWASP LLM01/LLM05).
+- **mcp** (`targets/mcp_target.py`): an MCP-connected agent whose tools (inline for now) may carry poisoned
+  descriptions. Attack: `mcp_tool_poisoning` (OWASP MCP03). A live MCP-server connection is a documented
+  follow-up; the inline form already exercises the full attack and judge path.
 
 ## Untrusted by default
 

@@ -38,9 +38,10 @@ class Endpoint(BaseModel):
     provider_pin: str | None = None
     timeout: float | None = None
     # Target-only fields:
-    type: str | None = None  # e.g. "model" (informational)
+    type: str | None = None  # target kind: chat (default) | agent | rag | mcp
     authorized: bool = False  # a target MUST be explicitly authorized before it is attacked
     system: str | None = None  # an optional system prompt to plant on the target (self-test)
+    target_options: dict = Field(default_factory=dict)  # type-specific config (tools, documents)
 
     @model_validator(mode="after")
     def _check(self) -> Endpoint:

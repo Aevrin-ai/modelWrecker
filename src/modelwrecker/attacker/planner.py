@@ -16,6 +16,16 @@ _AUTO_ORDER: dict[str, list[str]] = {
     "system_prompt_leak": ["prompt_extraction", "direct_jailbreak"],
     "pii_leak": ["prompt_extraction", "direct_jailbreak"],
     "sensitive_info": ["prompt_extraction", "direct_jailbreak"],
+    # Phase 9 target-specific categories. A strategy whose required capability the target lacks is
+    # skipped by the loop, so listing several here is safe across target types.
+    "tool_misuse": ["tool_misuse"],
+    "excessive_agency": ["tool_misuse"],
+    "agent_hijack": ["tool_misuse"],
+    "rag_injection": ["rag_injection"],
+    "indirect_injection": ["rag_injection"],
+    "data_exfiltration": ["rag_injection", "prompt_extraction", "direct_jailbreak"],
+    "mcp_tool_poisoning": ["mcp_tool_poisoning", "tool_misuse"],
+    "tool_poisoning": ["mcp_tool_poisoning", "tool_misuse"],
 }
 _AUTO_DEFAULT = ["direct_jailbreak", "prompt_extraction"]
 

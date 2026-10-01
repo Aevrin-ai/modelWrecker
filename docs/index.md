@@ -27,6 +27,7 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | Deciding if an attack worked | [`judges/OVERVIEW.md`](judges/OVERVIEW.md) |
 | Transforming/encoding payloads | [`attack-engine/PAYLOAD-ENGINE.md`](attack-engine/PAYLOAD-ENGINE.md) |
 | Running many objectives at once | [`campaigns/OVERVIEW.md`](campaigns/OVERVIEW.md) |
+| ASR analytics, leaderboards, reports | [`attack-engine/ANALYTICS.md`](attack-engine/ANALYTICS.md) |
 | Security / what we must never do | [`security/SECURITY.md`](security/SECURITY.md), [`security/THREAT-MODEL.md`](security/THREAT-MODEL.md) |
 | The CLI | [`reference/CLI.md`](reference/CLI.md) |
 | Configuration and env vars | [`reference/CONFIGURATION.md`](reference/CONFIGURATION.md), [`reference/ENVIRONMENT.md`](reference/ENVIRONMENT.md) |

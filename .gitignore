@@ -1,11 +1,15 @@
 # IDE / local prompt scratch
 .prompt
 
-# Secrets and config (never commit)
+# Secrets and config (never commit). Keep ALL local credential files out of git:
+# platform/service tokens live only on disk and in the deploy secret store, never here.
 .env
 .env.*
 config.local.*
 *.key
+*-key
+*-keys
+.secrets/
 
 # Red-team run artifacts (can contain harmful content and secrets; keep out of git).
 # Root-anchored so they only match top-level output dirs, NOT source packages like

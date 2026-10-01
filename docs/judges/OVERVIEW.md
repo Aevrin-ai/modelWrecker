@@ -39,13 +39,13 @@ flowchart TD
 | Secret detector (detect-secrets/gitleaks) | leaked keys/credentials in the response |
 | PII detector (Presidio) | leaked personal data |
 | Rule / regex | known markers (system-prompt echo, policy strings) |
+| Tool misuse | the agent called a sensitive tool it should not have (agent/MCP targets) - **implemented** (`tool_misuse` signal; reads the target's `sensitive_tool_calls`) |
 | Structured-output judge | malformed/injected structured output |
-| Tool-action validator | the agent called a tool it shouldn't, or with unsafe args |
 | Differential judge | behavior changed vs a benign control (A/B) |
 
 Each signal is a `JudgeSignal` plugin ([`../architecture/PLUGIN-SYSTEM.md`](../architecture/PLUGIN-SYSTEM.md)).
-The combiner weights them per objective (a `pii_leak` objective weights Presidio heavily; an
-`unsafe_tool_use` objective weights the tool-action validator). Full signatures:
+The combiner weights them per objective (a `pii_leak` objective weights Presidio heavily; a tool-misuse
+hit is decisive for agent/MCP objectives). Full signatures:
 [`../interfaces/judge.md`](../interfaces/judge.md).
 
 ## Calibration (don't trust an un-calibrated judge)

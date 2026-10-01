@@ -17,7 +17,7 @@ from ..providers.factory import build_provider, provider_scope
 from ..reliability.replay import measure_reliability
 from ..strategies.base import StrategyContext
 from ..strategies.registry import get_strategy
-from ..targets.chat import ChatTarget
+from ..targets.factory import build_target
 from ..findings.engine import build_evidence, build_finding
 from .planner import Planner
 
@@ -31,6 +31,7 @@ class AttemptRecord:
     model_response: str
     outcome: str  # success | partial | refused | error
     score: int
+    objective_category: str = ""  # carried for per-category analytics (Phase 8)
 
 
 @dataclass
@@ -69,8 +70,12 @@ async def run_config(
         target_provider = build_provider(config.target)
         judge_provider = build_provider(config.judge)
 
-        target = ChatTarget(target_provider, system=config.target.system)
+        target = build_target(config.target, target_provider)
         judge = Judge(judge_provider)
+
+        if store:
+            store.event("run_meta", target_model=config.target.model,
+                        target_provider=config.target.protocol, run_id=run_id)
 
         result.calibration = await judge.calibrate()
         if store:
@@ -115,7 +120,7 @@ async def _run_objective(
     objective: Objective,
     config: Config,
     planner: Planner,
-    target: ChatTarget,
+    target,
     attacker_provider,
     judge: Judge,
     judge_provider,
@@ -175,11 +180,13 @@ async def _run_objective(
                 objective=objective.title, strategy=strategy_name,
                 prompt_sent=srun.attempt.payload, model_response=srun.observation.response,
                 outcome=verdict.outcome.value, score=verdict.score,
+                objective_category=objective.category,
             ))
             if store:
                 store.event("attempt", objective=objective.title, strategy=strategy_name,
                             payload=srun.attempt.payload, response=srun.observation.response,
-                            outcome=verdict.outcome.value, score=verdict.score)
+                            outcome=verdict.outcome.value, score=verdict.score,
+                            category=objective.category)
             if best is None or verdict.score > best[0].score:
                 best = (verdict, srun)
 

@@ -109,6 +109,21 @@ def render_json(findings: list[Finding], run_id: str, attempts: list | None = No
     )
 
 
+def load_run_meta(run_dir: str | Path) -> dict:
+    """Read the run_meta event (target model/provider) from a run directory, if present."""
+    d = Path(run_dir)
+    events = d / "events.jsonl"
+    if events.exists():
+        for line in events.read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            if e.get("kind") == "run_meta":
+                return e
+    return {}
+
+
 def load_run(run_dir: str | Path) -> tuple[list[Finding], list[dict]]:
     """Read findings and the attempt transcript from a finished run directory."""
     d = Path(run_dir)
