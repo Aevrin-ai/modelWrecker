@@ -5,7 +5,7 @@ Tests are the contract. Nothing is "done" until tests pass. Use the project `.ve
 ```bash
 uv venv
 uv pip install -e ".[dev,mcp,attacks]"
-.venv\Scripts\python -m pytest -q    # 206 tests, offline, no API key
+.venv\Scripts\python -m pytest -q    # 225 tests, offline, no API key
 .venv\Scripts\python -m ruff check src tests    # lint; must be clean
 ```
 

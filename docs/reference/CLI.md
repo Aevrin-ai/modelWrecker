@@ -36,6 +36,22 @@ only folder the server reads config files from). MCP runs also obey the MCP guar
 `--formats html,json,csv`. With two or more runs it also writes a `leaderboard.*`. Output is static
 files only - no server. See [`../attack-engine/ANALYTICS.md`](../attack-engine/ANALYTICS.md).
 
+## Your plan (issue #11)
+
+`run` checks your plan before it creates anything or calls a model (see
+[`../security/entitlements.md`](../security/entitlements.md)). Without a valid signed entitlement it uses
+the free baseline. A run the plan does not allow (an MCP target, an explicitly chosen PyRIT or garak
+strategy, or a month with no runs or attempts left) stops with `not allowed by your plan: ...` and exit
+code 2. Auto-selected strategies the plan lacks are skipped with a note.
+
+| Command | What it does |
+|---------|--------------|
+| `modelwrecker plan` | Show the plan in force, where it came from (signed, or free baseline and why), when it expires, the monthly limits, and this month's usage. |
+| `modelwrecker plan --refresh` | Fetch a fresh signed entitlement first (needs `login`). Run it after buying or changing a plan. |
+
+`login` fetches the entitlement right away, `sync` refreshes it with the heartbeat, and `run` refreshes it
+when the stored one is over 12 hours old. `logout` removes it.
+
 ## Dashboard sign-in and sync (Phase 10.4, 10.8, 10.9)
 
 These commands connect a local install to the dashboard. By default they only send summary metadata

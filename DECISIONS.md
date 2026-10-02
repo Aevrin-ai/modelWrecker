@@ -26,6 +26,7 @@ Format of each ADR: Decision · Why · Alternatives · Trade-offs · Date · Sta
 | 0016 | Billing provider is Razorpay, cloud-only; payment confirmed by a server-verified webhook; no Razorpay secret in Docker/MCP/CLI/engine | Accepted | [ADR-0016](docs/decisions/ADR-0016-billing-razorpay.md) |
 | 0017 | Device credential model: each install gets a scoped, revocable device/project token, never the user's Google token | Accepted | [ADR-0017](docs/decisions/ADR-0017-device-credential-model.md) |
 | 0018 | Entitlement enforcement: cloud issues a signed scoped entitlement the local engine verifies; enforced outside the UI; no pricing logic in the engine | Accepted | [ADR-0018](docs/decisions/ADR-0018-entitlement-enforcement.md) |
+| 0019 | Prepaid plans (month or year) through Razorpay Orders; a payment is applied once, on the server, from verify (signature plus Razorpay fetch), webhook, or reconciliation | Accepted | [ADR-0019](docs/decisions/ADR-0019-prepaid-billing.md) |
 
 ## Resolved maintainer decisions
 
@@ -48,5 +49,14 @@ Confirmed by the maintainer on 2026-10-02:
 
 Recorded on 2026-10-02 (engineering decision, ADR-0013 update): MCP targets come only from config (there
 is no `define_target` tool), and every MCP run is capped by `McpLimits`.
+
+Confirmed by the maintainer on 2026-10-02 (issues #11, #12, #42):
+
+- **Local engine without a signed entitlement runs the free baseline**: core strategies, any model, Free
+  monthly limits. PyRIT, garak, and MCP targets need a signed Pro entitlement. (ADR-0018)
+- **Billing is prepaid** by the month or the year through Razorpay Orders, with no automatic renewal.
+  (ADR-0019)
+- **Prices include 18% GST** and keep a 30 to 40 percent margin under the cost model in
+  `docs/billing/pricing.md`.
 
 No open decisions remain.

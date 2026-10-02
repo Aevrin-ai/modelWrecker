@@ -15,6 +15,7 @@ reads today, with placeholders; Docker loads them from `.env` (see
 | `MODELWRECKER_CONFIG` | config path for `load_config()` when no path is passed. The CLI always passes one, so CLI commands ignore it | `modelwrecker.yaml` |
 | `MW_MCP_TOKEN` | shared token the harness MCP server requires on a networked transport | - |
 | `MODELWRECKER_CLOUD_URL` | base URL of the cloud API for `login` and `sync`. Must be https; plain http is allowed only for `localhost` or `127.0.0.1` (local Worker development) | `https://app.aevrin.net/api/v1` |
+| `MODELWRECKER_ENTITLEMENT` | a signed entitlement (from `GET /api/v1/device/entitlement`) for CI machines that never run `login`. Takes precedence over the stored `entitlement.jws`. Signed, so it grants nothing if edited | - |
 | `MODELWRECKER_DEVICE_TOKEN` | device token (`mwd_...`) for `sync` and auto-sync after `run`, for CI where `login` cannot open a browser. Takes precedence over the saved credential file. Secret: never logged | - |
 
 The three key names are conventions, not hard-coded reads: the engine reads whatever variable a config

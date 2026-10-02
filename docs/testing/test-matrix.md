@@ -169,6 +169,17 @@ PyRIT tests skip.
 | Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
 | Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
 | Engine | evidence stores the strategy name, not the plan id | PASS | regression test `test_evidence_records_the_strategy_name_not_a_plan_id` |
+| API | every paid price keeps a 30-40% margin under the cost model; plans and prices are public | PASS | `src/api/test/billing.test.ts` (#42) |
+| API | checkout uses the server price, never the client's; verify needs a valid signature AND Razorpay's captured record; amount mismatch, another account's order, and forged signatures refused; a payment applies once across verify, retries, and webhook; renewals add to the end date; a lapsed plan falls back to Free | PASS | `src/api/test/billing.test.ts` with a fake Razorpay (#12) |
+| API | account credit at checkout and full-credit purchases; reconciliation of a paid order nobody reported; webhook signature, duplicate event ids, full refund takes back the time; 503 when billing or the webhook secret is not configured | PASS | `src/api/test/billing.test.ts` (#12) |
+| API | device and project limits, Pro-only detail sync and leaderboard | PASS | `src/api/test/billing.test.ts`, `api.test.ts` |
+| API | signed entitlement on heartbeat verifies with the public key; an edited payload fails; Pro after payment expires at the paid-until date and includes a bonus; none without a signing key | PASS | `src/api/test/billing.test.ts` (#11) |
+| Engine | entitlement verification: valid, edited payload, signature, or header, expired, unknown key, wrong issuer, future-dated; the production key is 32 bytes and not the test key | PASS | `tests/test_entitlements.py` (#11) |
+| Engine | free baseline without a token or with a tampered file; MCP targets and explicit PyRIT strategies refused; auto-selected ones skipped; monthly caps from local and signed usage; attempt budget capped and the run counted; `plan` output; `run` refuses before creating a run folder; heartbeat stores only a valid token | PASS | 19 tests in `tests/test_entitlements.py` (#11) |
+| Live | migration `0004` applied; `payments` and `credit_ledger` owner read only, `billing_events` server only; `fulfil_payment`, `refund_payment`, `adjust_credit` executable by the server key only | PASS | checked with SQL after applying, 2026-10-02 |
+| Live | `fulfil_payment` (credit applied, invoice numbered, second call a no-op, 31 days of Pro), `refund_payment` (credit returned) on the real database | PASS | inside a block that always raised, so nothing was kept; invoice counter reset afterwards |
+| Live | Razorpay live key accepted (read-only orders listing) | PASS | 2026-10-02 |
+| Live | a real purchase, renewal, and refund on the live key | NOT TESTED | needs the maintainer to buy once and refund it from the admin console or Razorpay dashboard |
 
 ## Summary
 

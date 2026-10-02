@@ -19,6 +19,7 @@ Status/versions verified 2026-10-01; re-check before adopting.
 | openai (SDK) | OpenAI + OpenAI-compatible adapter | Apache-2.0 | official, stable | raw httpx | low | easy |
 | anthropic (SDK) | Anthropic adapter | MIT | official, stable | raw httpx | low | easy |
 | Jinja2 | HTML report rendering | BSD | templating | f-strings | low | easy |
+| cryptography | Ed25519 verification of the signed entitlement (issue #11) | Apache-2.0 / BSD-3-Clause | the standard, audited Python crypto library; already pulled in by PyRIT's dependencies | PyNaCl | low | easy |
 
 ## Reused behind interfaces (planned; optional or phase-gated)
 
@@ -61,6 +62,11 @@ self-hostable" rule holds for red teaming itself. Versions are pinned by each ap
 | Hono | api | request routing on Cloudflare Workers | MIT | tiny, built for Workers, testable with `app.request` | hand-written router | low | easy |
 | Wrangler | api | build, local dev, deploy of the Worker | MIT / Apache-2.0 | official Cloudflare CLI | Cloudflare dashboard upload | low | easy |
 | vitest, @cloudflare/workers-types | api | tests, Worker types | MIT / Apache-2.0 | offline tests against an in-memory database | jest | low | easy |
+| qrcode | dash (admin only) | draws the authenticator enrollment QR code in the browser, so the secret never goes to a third-party QR service | MIT | small, widely used, no network calls | show the setup key as text only | low | easy |
+
+Razorpay Checkout (`checkout.razorpay.com/v1/checkout.js`) is loaded by the dashboard's Billing page only
+when the user clicks Buy. It is Razorpay's hosted payment form, not a package; card and UPI details are
+entered there and never reach Aevrin. The API talks to Razorpay's REST API with `fetch` (no SDK).
 
 Platform services (not packages): Supabase (managed Postgres + Auth, Apache-2.0 open source and
 self-hostable), Cloudflare Pages and Workers (free tiers, see `deployment/cloudflare.md`), Google OAuth.

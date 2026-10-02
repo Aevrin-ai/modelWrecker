@@ -34,7 +34,7 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | Hosting the cloud control plane | [`deployment/cloudflare.md`](deployment/cloudflare.md) |
 | Sign-in, devices, entitlements | [`security/authentication.md`](security/authentication.md), [`security/entitlements.md`](security/entitlements.md) |
 | Driving modelWrecker over MCP | [`mcp/overview.md`](mcp/overview.md), [`mcp/tools.md`](mcp/tools.md), [`security/mcp.md`](security/mcp.md) |
-| Billing | [`billing/razorpay.md`](billing/razorpay.md) |
+| Billing and prices | [`billing/razorpay.md`](billing/razorpay.md), [`billing/pricing.md`](billing/pricing.md) |
 | The cloud dashboard and analytics | [`analytics/overview.md`](analytics/overview.md) |
 | Security / what we must never do | [`security/SECURITY.md`](security/SECURITY.md), [`security/THREAT-MODEL.md`](security/THREAT-MODEL.md) |
 | The CLI | [`reference/CLI.md`](reference/CLI.md) |

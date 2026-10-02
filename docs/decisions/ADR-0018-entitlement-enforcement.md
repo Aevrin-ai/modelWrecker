@@ -1,6 +1,7 @@
 # ADR-0018 - Entitlement enforcement
 
-- **Status:** Accepted
+- **Status:** Accepted; implemented 2026-10-02 (issue #11). Token format and checks:
+  [`../security/entitlements.md`](../security/entitlements.md)
 - **Date:** 2026-10-02
 
 ## Decision

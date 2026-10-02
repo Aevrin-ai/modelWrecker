@@ -118,9 +118,18 @@ things work, read `docs/`.
     mode against Supabase. The maintainer signed in with Google, approved a device with
     `modelwrecker login`, and synced real OpenRouter runs with evidence and transcripts (#7, #28).
   - DONE opt-in evidence and transcript sync (#28, #19), with back-fill of runs synced earlier.
-  - NOT DONE YET for the cloud (one GitHub issue each, label `roadmap`): signed entitlements (10.14, #11),
-    Razorpay (10.13, #12), opt-in report file sync, notifications (#20), remote MCP over
-    HTTP with OAuth (rest of 10.5, #14), enterprise guardrails (10.15, #21).
+  - BUILT 10.13 Razorpay billing (#12) and pricing (#42): prepaid Pro by the month (899 rupees) or year
+    (9,899 rupees), GST included, 30-40% margin under a tested cost model; payment applied once on the
+    server from verify, webhook, or reconciliation; account credit and refunds. Migration `0004` applied
+    live and smoke-tested in a rolled-back transaction. A real purchase on the live key is NOT TESTED
+    (needs the maintainer); the Razorpay webhook is configured by the maintainer.
+  - BUILT 10.14 signed entitlements (#11): Ed25519-signed, 7-day tokens on every heartbeat; the engine
+    verifies offline and runs the free baseline without one; server-side device, project, sync, and
+    leaderboard limits.
+  - NEXT 10.16-10.18 admin console (#43, #44, #45), below.
+  - NOT DONE YET for the cloud (one GitHub issue each, label `roadmap`): opt-in report file sync,
+    notifications (#20), remote MCP over HTTP with OAuth (rest of 10.5, #14), enterprise guardrails
+    (10.15, #21).
   - DONE 10.3 (egress part) - the egress guard now runs on every attacker, target, and judge request,
     redirects are refused, `validate` checks endpoints offline, and a local model is a narrow opt-in via
     `security.egress.allow_hosts`. Remaining for 10.3: DNS-rebinding address pinning (#16), the code
@@ -175,8 +184,9 @@ things work, read `docs/`.
     truth (see `.prompt/LANDING.md`), Folio + Nguyen design language, hero shows a real dashboard mockup.
   - **10.12 Analytics.** Dashboard views over synced metadata: ASR, findings by severity/taxonomy, trends,
     campaign activity, model leaderboard. Reuses the existing `analyze` outputs; prefers aggregates.
-  - **10.13 Razorpay billing.** Checkout + server-verified webhooks in the cloud control plane only.
-    Never trust the browser for payment success.
+  - **10.13 Razorpay billing.** Checkout + server-verified payments in the cloud control plane only.
+    Never trust the browser for payment success. Prepaid orders (ADR-0019); prices in
+    `docs/billing/pricing.md`.
   - **10.14 Entitlements.** A configuration-driven entitlement layer (free/pro/enterprise). The engine
     asks "can this operation run?"; the entitlement service answers allowed/denied. Enforced outside the
     UI (signed/scoped entitlement the local engine checks); no easy client-side bypass; no pricing logic
@@ -184,6 +194,16 @@ things work, read `docs/`.
   - **10.15 Enterprise guardrails + integrity.** Org policies, approved targets/providers/strategies,
     campaign caps, audit logs, device controls, evidence retention; signed-release / image-digest / signed
     MCP integrity controls after a threat model (no blanket checksum gate in normal dev, per ADR-0010).
+  - **10.16 Admin console access (#43).** `app.aevrin.net/admin`, staff only: a verified Google email on
+    `@aevrin.net` plus a TOTP authenticator code, both checked by the server on every admin request.
+    Encrypted TOTP secrets, no code replay, rate-limited attempts, recovery codes, short hashed admin
+    sessions, and an audit log of every admin action. Same look as the dashboard.
+  - **10.17 Admin user management (#44).** Search users; change plan and paid-until date; grant bonus
+    allowances and account credit; refund purchases; revoke devices; change sync settings; suspend
+    sign-in; delete a user and all their data. Every change audited with a reason.
+  - **10.18 Admin analytics (#45).** Platform metrics (sign-ups, active and paying users, revenue, plan
+    mix, synced activity) and first-party, cookie-free page analytics for the landing page and dashboard
+    (no third-party tracker, no raw IP stored).
 
   Hosting: Cloudflare Pages (static dashboard + landing) + minimal Workers; document each service and its
   current free-tier limits (Workers 100k req/day; Pages static assets free) and fail gracefully at quota.

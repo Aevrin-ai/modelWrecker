@@ -134,8 +134,17 @@ def run(
         raise typer.Exit(code=2) from e
 
     from .attacker.loop import run_config
+    from .entitlements import EntitlementDenied, check_run
     from .findings.report import render_json, render_markdown
     from .storage.store import RunStore
+
+    # The plan is checked before anything is created or any model is called (issue #11).
+    _refresh_entitlement_if_stale()
+    try:
+        allowance = check_run(cfg)
+    except EntitlementDenied as e:
+        typer.secho(f"not allowed by your plan: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from e
 
     store = RunStore(run_id=_new_run_id(), base_dir=out_dir)
 
@@ -143,7 +152,8 @@ def run(
         typer.echo(f"  {msg}")
 
     try:
-        result = asyncio.run(run_config(cfg, store=store, emit=emit, run_id=store.run_id))
+        result = asyncio.run(run_config(cfg, store=store, emit=emit, run_id=store.run_id,
+                                        allowance=allowance))
     except ConfigError as e:
         typer.secho(f"config error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from e
@@ -365,6 +375,13 @@ def login(
     path = save_credential(cred)
     typer.secho(f"signed in as device {cred.device_id or '(unknown id)'}", fg=typer.colors.GREEN)
     typer.echo(f"credential saved to {path} (owner-only permissions)")
+    try:
+        with _sync_client(cred) as client:
+            ent = client.refresh_entitlement()
+        typer.echo(f"plan: {ent.plan.capitalize()} (signed, valid until {_when(ent.expires_at)})")
+    except CloudError as e:
+        typer.secho(f"note: could not fetch your plan yet ({e.message}); the free baseline applies "
+                    "until `modelwrecker plan --refresh` succeeds", fg=typer.colors.YELLOW)
     if os.environ.get(ENV_TOKEN):
         typer.secho(f"note: {ENV_TOKEN} is set and takes precedence over the saved credential",
                     fg=typer.colors.YELLOW)
@@ -374,16 +391,61 @@ def login(
 def logout() -> None:
     """Remove this device's saved credential."""
     from .cloud import ENV_TOKEN, credential_path, delete_credential
+    from .entitlements import clear_token
 
     path = credential_path()
     if delete_credential(path):
         typer.secho(f"removed {path}", fg=typer.colors.GREEN)
     else:
         typer.echo("not signed in (no saved credential)")
+    clear_token()  # the engine falls back to the free baseline
     if os.environ.get(ENV_TOKEN):
         typer.secho(f"note: {ENV_TOKEN} is still set in this environment; unset it too",
                     fg=typer.colors.YELLOW)
     typer.echo("To invalidate the token on the server, revoke this device in the dashboard.")
+
+
+@app.command("plan")
+def plan_command(
+    refresh: bool = typer.Option(False, "--refresh", help="fetch a fresh signed entitlement first"),
+) -> None:
+    """Show what your plan allows on this machine, and this month's usage."""
+    from .cloud import CloudError
+    from .entitlements import effective_usage, load
+
+    if refresh:
+        cred = _load_credential_or_exit()
+        if cred is None:
+            typer.secho("not signed in. Run `modelwrecker login` first.", fg=typer.colors.RED,
+                        err=True)
+            raise typer.Exit(code=1)
+        try:
+            with _sync_client(cred) as client:
+                client.refresh_entitlement()
+            typer.secho("fetched a fresh entitlement", fg=typer.colors.GREEN)
+        except CloudError as e:
+            typer.secho(f"error: {e.message}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1) from e
+
+    ent, source = load()
+    used = effective_usage(ent)
+    typer.secho(f"plan: {ent.plan.capitalize()}", bold=True)
+    typer.echo(f"source: {source}")
+    if ent.signed:
+        typer.echo(f"valid until: {_when(ent.expires_at)} (refreshed on login, sync, and before "
+                   "a run when older than 12 hours)")
+        if ent.plan_ends_at:
+            typer.echo(f"paid until: {ent.plan_ends_at}")
+
+    def cap(meter: str) -> str:
+        n = ent.limit(meter)
+        return "unlimited" if n is None else str(n)
+
+    typer.echo(f"campaign runs this month: {used['campaigns']} of {cap('campaigns')}")
+    typer.echo(f"attack attempts this month: {used['attacks']} of {cap('attacks')}")
+    for feature, label in (("advanced_strategies", "PyRIT and garak strategies"),
+                           ("mcp", "MCP targets")):
+        typer.echo(f"{label}: {'yes' if ent.allows(feature) else 'no (Pro)'}")
 
 
 @app.command("sync")
@@ -633,6 +695,38 @@ def _auto_sync(run_dir: Path, wanted: bool | None) -> None:
             "`modelwrecker sync` will send it later.",
             fg=typer.colors.YELLOW, err=True,
         )
+
+
+_ENTITLEMENT_STALE_S = 12 * 60 * 60
+
+
+def _when(epoch: int) -> str:
+    from datetime import UTC, datetime
+
+    return datetime.fromtimestamp(epoch, UTC).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _refresh_entitlement_if_stale() -> None:
+    """Before a run, fetch a fresh entitlement when signed in and the stored one is old or missing.
+
+    Best effort: offline, the stored entitlement (or the free baseline) applies.
+    """
+    from .entitlements import ENV_TOKEN
+    from .entitlements.store import cached_token_age
+
+    if os.environ.get(ENV_TOKEN):
+        return
+    age = cached_token_age()
+    if age is not None and age < _ENTITLEMENT_STALE_S:
+        return
+    cred = _load_credential_quietly()
+    if cred is None:
+        return
+    try:
+        with _sync_client(cred) as client:
+            client.refresh_entitlement()
+    except Exception:  # never block a run on the cloud
+        pass
 
 
 def _load(config: str):
