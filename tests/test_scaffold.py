@@ -20,6 +20,18 @@ def test_version() -> None:
     assert isinstance(__version__, str) and __version__
 
 
+@pytest.mark.parametrize("args", [["--version"], ["-V"], ["version"]])
+def test_cli_prints_the_version(args: list[str]) -> None:
+    # Issue #30: `modelwrecker --version` used to fail with "No such option".
+    from typer.testing import CliRunner
+
+    from modelwrecker.cli import app
+
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == f"modelwrecker {__version__}"
+
+
 # --- data models -----------------------------------------------------------------------------------
 
 

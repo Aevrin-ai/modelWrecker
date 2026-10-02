@@ -18,6 +18,15 @@ with confidence intervals, breakdowns by strategy and category, findings by seve
 model leaderboard. See [`../attack-engine/ANALYTICS.md`](../attack-engine/ANALYTICS.md). The dashboard
 reuses these outputs and prefers aggregates over raw data.
 
+### Reading the target leaderboard
+
+Each row shows the attack success rate (ASR) as "N of M worked", the 95% range (a Wilson interval),
+attempts, refusals, findings, and high plus critical findings. A target with fewer than 30 attempts is
+marked **small sample**: the range is wide because there is little evidence. For example, 0 of 4 gives
+a range of 0% to 49%: the target refused every attack tried, but that does not show it is safe. Run
+more objectives and strategies for a number you can compare. Each target name links to its latest
+campaign, where the Attack transcript (when transcript sync is on) shows every prompt and reply.
+
 ```mermaid
 flowchart TD
   A[Local campaign] --> B[Run metadata]
