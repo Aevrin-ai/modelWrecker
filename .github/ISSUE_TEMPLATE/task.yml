@@ -1,0 +1,20 @@
+name: Task
+description: Planned work, a roadmap item, cleanup, or a docs change.
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What will exist or be true when this is done.
+    validations:
+      required: true
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan
+      description: The steps, and the docs that will change (see docs/DOCUMENTATION.md).
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: How we check it, for example the tests or the live check that must pass.
