@@ -195,6 +195,10 @@ describe("result sync", () => {
     const analytics = (await json(await call("GET", "/analytics", { token: "token-a" }))) as any;
     expect(analytics.totalAttempts).toBe(20);
     expect(analytics.asr).toBeCloseTo(0.25);
+    // Issue #31: the leaderboard says how many worked and were refused, and links to the campaign.
+    expect(analytics.leaderboard).toHaveLength(1);
+    expect(analytics.leaderboard[0]).toMatchObject({ attempts: 20, successes: 5, refusals: 14, findings: 1, highCritical: 1 });
+    expect(analytics.leaderboard[0].latestCampaignId).toBe(f.campaignId);
   });
 
   it("refuses any field outside the contract, so sensitive content cannot be sent", async () => {

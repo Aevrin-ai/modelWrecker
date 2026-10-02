@@ -319,8 +319,14 @@ export interface AnalyticsSummary {
     ciLow: number;
     ciHigh: number;
     attempts: number;
+    /** Attacks that worked (the numerator of `asr`). */
+    successes: number;
+    /** Attempts the target refused. */
+    refusals: number;
     findings: number;
     highCritical: number;
+    /** The most recent campaign against this target, where its attempts can be read. */
+    latestCampaignId: string | null;
   }[];
 }
 

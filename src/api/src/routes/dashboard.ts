@@ -331,6 +331,7 @@ function analytics(w: World) {
       const s = runs.reduce((x, r) => x + num(r.successful_attacks), 0);
       const fs = w.findings.filter((f) => str(f.target_id) === str(t.id));
       const [lo, hi] = wilson(s, a);
+      const latest = [...runs].sort((x, y) => (str(x.started_at ?? x.created_at) < str(y.started_at ?? y.created_at) ? 1 : -1))[0];
       return {
         targetId: str(t.id),
         targetName: str(t.name),
@@ -338,8 +339,11 @@ function analytics(w: World) {
         ciLow: lo,
         ciHigh: hi,
         attempts: a,
+        successes: s,
+        refusals: runs.reduce((x, r) => x + num(r.refusals), 0),
         findings: fs.length,
         highCritical: fs.filter((f) => f.severity === "high" || f.severity === "critical").length,
+        latestCampaignId: latest ? str(latest.campaign_id) : null,
       };
     })
     .filter((r) => r.attempts > 0);

@@ -20,7 +20,7 @@ modelwrecker mcp        --runs-dir runs --config-dir .  # start the harness MCP 
 modelwrecker login      [--name my-laptop]         # connect this install to the dashboard as a device
 modelwrecker logout                                # remove the saved device credential
 modelwrecker sync       --runs-dir runs [--dry-run] [--resync] [--metadata-only]  # list, then send
-modelwrecker version
+modelwrecker version                               # same as: modelwrecker --version (or -V)
 ```
 
 `run` options: `--output md|json` (default `md`), `--out-dir runs` (where artifacts go). Campaign
