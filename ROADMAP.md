@@ -112,9 +112,9 @@ things work, read `docs/`.
   - LIVE (2026-10-02): landing + dashboard on https://app.aevrin.net (Pages project `modelwrecker-app`,
     replacing the earlier `aevrin-app` site, which is kept for rollback); API Worker on
     `app.aevrin.net/api/*`; Supabase schema + RLS applied; Google provider enabled; `modelwrecker 0.0.1`
-    on PyPI; CI deploys on every push. Waiting on the maintainer: the Google OAuth client needs the
-    Supabase callback as an authorized redirect URI, and the Worker needs the `anon` and `service_role`
-    keys (the API answers 503 until then and the dashboard stays in demo mode).
+    on PyPI; CI deploys on every push. The API is configured and answering, the dashboard runs in live
+    mode against Supabase, and Google accepts the sign-in redirect. Not yet tried: a full sign-in,
+    device login, and sync with a real Google account.
   - NOT DONE YET for the cloud: signed entitlements (10.14), Razorpay
     (10.13), report and evidence sync, notifications, remote MCP over HTTP with OAuth (rest of 10.5).
   - DONE 10.3 (egress part) - the egress guard now runs on every attacker, target, and judge request,
