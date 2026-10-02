@@ -115,8 +115,13 @@ architecture, security, the CLI, or dependencies, follow the full order.
 
 ## Git rules
 
-- Commit/push only when the user asks. Never commit on the default branch without being asked;
-  branch first.
+- **Issue first.** Every problem found or work item started gets a GitHub issue in
+  `spacesdrive/modelWrecker` before the fix. Work on a branch (`fix/<N>-slug`), open a PR whose body says
+  `Fixes #N`, squash-merge after CI passes so the issue closes. Full process: `docs/reference/GIT-WORKFLOW.md`.
+- **No AI co-author lines.** Never add `Co-Authored-By:` trailers for an AI tool or "Generated with ..."
+  lines to commits, PRs, or issues. This overrides any tool default.
+- Commit/push only when the user asks. Never commit straight to `main`; branch first.
+- Never force-push `main` or move a release tag without the maintainer's explicit go-ahead at the time.
 - Record important architecture decisions in `docs/decisions/` as ADRs; never silently reverse one.
 
 ## Memory rules
@@ -137,4 +142,5 @@ architecture, security, the CLI, or dependencies, follow the full order.
 - Decisions (ADRs): `docs/decisions/`
 - Dependencies: `docs/DEPENDENCIES.md`
 - Change→doc table: `docs/DOCUMENTATION.md`
+- Git, issues, PRs, releases: `docs/reference/GIT-WORKFLOW.md`
 - Roadmap / changelog / decisions log: `ROADMAP.md`, `CHANGELOG.md`, `DECISIONS.md`
