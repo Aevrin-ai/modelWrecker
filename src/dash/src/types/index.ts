@@ -328,6 +328,8 @@ export interface AnalyticsSummary {
     /** The most recent campaign against this target, where its attempts can be read. */
     latestCampaignId: string | null;
   }[];
+  /** True when the plan does not include the leaderboard (Pro). `leaderboard` is then empty. */
+  leaderboardLocked?: boolean;
 }
 
 // --- overview (dashboard home) --------------------------------------------------------
@@ -373,42 +375,108 @@ export type FeatureKey =
   | "evidence_storage"
   | "enterprise";
 
+export type BillingInterval = "month" | "year";
+
+/** An amount in the smallest unit (paise for INR). */
+export interface Money {
+  amount: number;
+  currency: string;
+}
+
 /**
- * A plan tier. Plans are CONFIGURATION (src/lib/plans.ts), never hard-coded in a
- * component. Real prices and limits are set by the billing config on the server.
+ * A plan tier. Plans are CONFIGURATION (src/shared/plans.json, served by GET /plans), never
+ * hard-coded in a component. Prices include GST and are set with a cost model (docs/billing/pricing.md).
  */
 export interface Plan {
   id: "free" | "pro" | "enterprise";
   name: string;
   blurb: string;
-  /** Display-only price text from config. No price is invented in the UI. */
+  /** Display text, e.g. "Free", "₹899 / month", "Contact sales". */
   priceLabel: string;
   highlighted?: boolean;
-  /** null = unlimited. Placeholder values - configurable. */
+  /** null = unlimited. */
   limits: Record<MeterKey, number | null>;
   features: Record<FeatureKey, boolean>;
+  /** Present only for a plan that can be bought online. */
+  prices: Record<BillingInterval, Money> | null;
+  taxNote: string | null;
 }
 
 export interface Subscription {
+  /** The plan in effect now. A paid plan past its paid-until date has lapsed to "free". */
   planId: Plan["id"];
   planName: string;
-  status: "active" | "trialing" | "past_due" | "canceled";
-  /** Payment status as reported by the verified billing webhook (server side). */
+  status: "active" | "expired" | "canceled";
+  /** Payment status, decided on the server only (docs/billing/razorpay.md). */
   paymentStatus: "not_required" | "paid" | "pending" | "failed";
+  /** The plan that lapsed, when status is expired or canceled. */
+  lapsedPlanId: Plan["id"] | null;
+  source: "free" | "payment" | "admin";
+  interval: BillingInterval | null;
+  /** The plan stays in effect until this time. null on Free, or an open-ended grant. */
+  paidUntil: string | null;
+  /** True within 7 days of paidUntil. */
+  renewalDue: boolean;
+  /** The usage period (calendar month, UTC). */
   periodStart: string;
   periodEnd: string;
   currency: string;
-  /** Usage this period, by meter. Limits come from the plan config. */
+  /** Account credit in paise, applied automatically at checkout. */
+  creditPaise: number;
+  /** Extra allowance granted by Aevrin, on top of the plan. */
+  bonus: (Record<MeterKey, number> & { expiresAt: string | null }) | null;
+  /** The plan's limits plus any bonus. null = unlimited. */
+  limits: Record<MeterKey, number | null>;
+  features: Record<FeatureKey, boolean>;
+  /** Usage this period, by meter. */
   usage: Record<MeterKey, number>;
+  /** False when online payment is not available right now. */
+  billingAvailable: boolean;
 }
 
 export interface Invoice {
   id: string;
   number: string;
+  /** Rupees charged through the payment provider. */
   amount: number;
+  listPrice: number;
+  creditApplied: number;
+  refunded: number;
   currency: string;
-  status: "paid" | "open" | "void";
+  status: "paid" | "open" | "refunded" | "partially_refunded" | "void";
+  plan: string;
+  interval: string;
+  method: string;
+  periodStart: string | null;
+  periodEnd: string | null;
   issuedAt: string;
+}
+
+/** POST /billing/checkout. Either an order to pay in Razorpay Checkout, or paid fully by credit. */
+export type CheckoutStart =
+  | {
+      paidWithCredit: false;
+      orderId: string;
+      amount: number;
+      currency: string;
+      creditApplied: number;
+      /** Razorpay's public key id. Never a secret. */
+      keyId: string;
+      description: string;
+      prefill: { email: string; name: string };
+    }
+  | { paidWithCredit: true; subscription: Subscription };
+
+/** What Razorpay Checkout hands the page on success. Only a hint: the server confirms with Razorpay. */
+export interface CheckoutSuccess {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+export interface PaymentConfirmation {
+  status: "paid" | "pending" | "failed";
+  subscription: Subscription;
 }
 
 // --- account / settings ---------------------------------------------------------------

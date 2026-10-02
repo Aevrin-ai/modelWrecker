@@ -6,6 +6,7 @@ import { Features } from "./sections/Features";
 import { Bento } from "./sections/Bento";
 import { Showcase } from "./sections/Showcase";
 import { Principles } from "./sections/Principles";
+import { Pricing } from "./sections/Pricing";
 import { FAQ } from "./sections/FAQ";
 import { Footer } from "./sections/Footer";
 
@@ -27,6 +28,7 @@ export default function App() {
         <Bento />
         <Showcase />
         <Principles />
+        <Pricing />
         <FAQ />
       </main>
       <Footer />

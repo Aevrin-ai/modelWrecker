@@ -1061,22 +1061,64 @@ export const overview: OverviewStats = {
 };
 
 // --- billing / entitlements -----------------------------------------------------------
-// Plans are configuration (src/lib/plans.ts), not mock data. Only the user's current
-// subscription and usage are mocked here. No prices are invented.
+// Plans and prices are configuration (src/shared/plans.json), not mock data. Only the demo
+// workspace's subscription, usage, and invoices are mocked here.
 
 export const subscription: Subscription = {
   planId: "pro",
   planName: "Pro",
   status: "active",
   paymentStatus: "paid",
+  lapsedPlanId: null,
+  source: "payment",
+  interval: "month",
+  paidUntil: daysAgo(-18),
+  renewalDue: false,
   periodStart: daysAgo(12),
   periodEnd: daysAgo(-18),
-  currency: "USD",
+  currency: "INR",
+  creditPaise: 25000,
+  bonus: null,
+  limits: { campaigns: 300, attacks: 100000, devices: 10, projects: 25 },
+  features: { advanced_strategies: true, mcp: true, analytics: true, evidence_storage: true, enterprise: false },
   usage: { campaigns: 9, attacks: 1761, devices: 3, projects: 3 },
+  billingAvailable: true,
 };
 
-// Paid billing is not live yet, so there are no invoices to show.
-export const invoices: Invoice[] = [];
+export const invoices: Invoice[] = [
+  {
+    id: "inv-demo-2",
+    number: "AEV-2026-000002",
+    amount: 899,
+    listPrice: 899,
+    creditApplied: 0,
+    refunded: 0,
+    currency: "INR",
+    status: "paid",
+    plan: "pro",
+    interval: "month",
+    method: "upi",
+    periodStart: daysAgo(12),
+    periodEnd: daysAgo(-18),
+    issuedAt: daysAgo(12),
+  },
+  {
+    id: "inv-demo-1",
+    number: "AEV-2026-000001",
+    amount: 899,
+    listPrice: 899,
+    creditApplied: 0,
+    refunded: 0,
+    currency: "INR",
+    status: "paid",
+    plan: "pro",
+    interval: "month",
+    method: "card",
+    periodStart: daysAgo(42),
+    periodEnd: daysAgo(12),
+    issuedAt: daysAgo(42),
+  },
+];
 
 // --- account / notifications ----------------------------------------------------------
 

@@ -192,7 +192,15 @@ describe("result sync", () => {
     const after = (await json(await call("GET", `/findings/${f.id}`, { token: "token-a" }))) as any;
     expect(after.status).toBe("triaged");
 
+    // The model leaderboard is a Pro feature; the totals are on every plan.
+    const free = (await json(await call("GET", "/analytics", { token: "token-a" }))) as any;
+    expect(free.totalAttempts).toBe(20);
+    expect(free.leaderboard).toEqual([]);
+    expect(free.leaderboardLocked).toBe(true);
+    await grantPro("token-a");
+
     const analytics = (await json(await call("GET", "/analytics", { token: "token-a" }))) as any;
+    expect(analytics.leaderboardLocked).toBe(false);
     expect(analytics.totalAttempts).toBe(20);
     expect(analytics.asr).toBeCloseTo(0.25);
     // Issue #31: the leaderboard says how many worked and were refused, and links to the campaign.
@@ -256,8 +264,18 @@ const TRANSCRIPT = {
   truncated: false,
 };
 
+/** Put an account on Pro until 2027, as a verified payment would. Detail sync is a Pro feature. */
+async function grantPro(token: string) {
+  const owner = USERS[token].id;
+  await db.table("subscriptions").upsert(
+    { owner_id: owner, plan: "pro", status: "active", source: "admin", current_period_end: "2027-01-01T00:00:00Z", credit_paise: 0, bonus: {} },
+    ["owner_id"],
+  );
+}
+
 async function setSync(token: string, sync: Record<string, boolean>) {
   await call("GET", "/me", { token }); // creates the profile row, as the signup trigger does in production
+  await grantPro(token);
   const res = await call("PATCH", "/settings", { token, body: { sync } });
   expect(res.status).toBe(200);
 }

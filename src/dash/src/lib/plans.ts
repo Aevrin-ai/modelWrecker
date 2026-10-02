@@ -1,92 +1,75 @@
 /*
-  PLAN CONFIGURATION - the single place plan tiers are defined for the dashboard.
+  PLAN CONFIGURATION for the dashboard.
 
-  Components never hard-code a plan, a limit, or a price. They read this file (through
-  the api layer for the user's current plan). Tiers follow docs/security/entitlements.md:
-  Free / Pro / Enterprise.
+  Tiers, limits, and prices come from src/shared/plans.json, the one file the API and the landing page
+  read too (docs/billing/pricing.md). In live mode the Billing page reads plans from GET /plans; mock mode
+  uses PLANS below, built from the same file. Components never hard-code a plan, a limit, or a price.
 
-  IMPORTANT:
-  - Every number below is a PLACEHOLDER and is configurable. The real limits are set by
-    the server-side billing config and delivered as a signed entitlement.
-  - No price is set here. Pricing is not decided; the UI shows `priceLabel` only.
-  - This is display only. Enforcement happens in the control-plane API and in the local
-    engine (signed entitlement check), never by hiding a button.
+  This is display only. Enforcement happens in the control-plane API and in the local engine (signed
+  entitlement check), never by hiding a button.
 */
 
-import type { FeatureKey, MeterKey, Plan } from "@/types";
+import config from "../../../shared/plans.json";
+import type { BillingInterval, FeatureKey, MeterKey, Plan } from "@/types";
 
-/** Shown next to any limit so nobody mistakes a placeholder for a commitment. */
-export const PLACEHOLDER_NOTE = "Placeholder limit - configurable";
+export const CURRENCY = config.currency;
+export const TAX_NOTE = config.taxNote;
 
 export const METER_LABEL: Record<MeterKey, { label: string; unit: string }> = {
-  campaigns: { label: "Campaigns this period", unit: "campaigns" },
-  attacks: { label: "Attack attempts this period", unit: "attempts" },
+  campaigns: { label: "Campaign runs this month", unit: "runs" },
+  attacks: { label: "Attack attempts this month", unit: "attempts" },
   devices: { label: "Connected devices", unit: "devices" },
-  projects: { label: "Projects", unit: "projects" },
+  projects: { label: "Active projects", unit: "projects" },
 };
 
 export const FEATURE_LABEL: Record<FeatureKey, string> = {
   advanced_strategies: "Advanced strategies (PyRIT, garak)",
   mcp: "MCP targets",
-  analytics: "Richer analytics and leaderboard",
-  evidence_storage: "Optional detailed evidence sync",
+  analytics: "Model leaderboard",
+  evidence_storage: "Evidence and transcript sync",
   enterprise: "Enterprise controls (SSO, policies, audit logs)",
 };
 
 export const METER_ORDER: MeterKey[] = ["campaigns", "attacks", "devices", "projects"];
-export const FEATURE_ORDER: FeatureKey[] = [
-  "advanced_strategies",
-  "mcp",
-  "analytics",
-  "evidence_storage",
-  "enterprise",
-];
+export const FEATURE_ORDER: FeatureKey[] = ["advanced_strategies", "mcp", "analytics", "evidence_storage", "enterprise"];
 
-export const PLANS: Plan[] = [
-  {
-    id: "free",
-    name: "Free",
-    blurb: "Local engine, core strategies, basic dashboard. Fully usable with free, self-hosted parts.",
-    priceLabel: "Free",
-    limits: { campaigns: 5, attacks: 1000, devices: 1, projects: 2 },
-    features: {
-      advanced_strategies: false,
-      mcp: false,
-      analytics: false,
-      evidence_storage: false,
-      enterprise: false,
-    },
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    blurb: "More campaigns and devices, advanced strategies, MCP targets, richer analytics.",
-    priceLabel: "Set in billing config",
-    highlighted: true,
-    limits: { campaigns: 50, attacks: 25000, devices: 10, projects: 25 },
-    features: {
-      advanced_strategies: true,
-      mcp: true,
-      analytics: true,
-      evidence_storage: true,
-      enterprise: false,
-    },
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    blurb: "Organizations, policy controls, audit logs, SSO, compliance.",
-    priceLabel: "Contact sales",
-    limits: { campaigns: null, attacks: null, devices: null, projects: null },
-    features: {
-      advanced_strategies: true,
-      mcp: true,
-      analytics: true,
-      evidence_storage: true,
-      enterprise: true,
-    },
-  },
-];
+export const INTERVAL_LABEL: Record<BillingInterval, string> = { month: "Monthly", year: "Yearly" };
+
+/** "₹899" from 89900 paise. */
+export function formatPaise(paise: number, currency = CURRENCY): string {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(paise / 100);
+}
+
+/** How much a yearly price saves against twelve monthly ones, in whole percent. */
+export function yearlySaving(plan: Plan): number {
+  if (!plan.prices) return 0;
+  const twelve = plan.prices.month.amount * 12;
+  return Math.round(((twelve - plan.prices.year.amount) / twelve) * 100);
+}
+
+interface PlanConfig {
+  id: Plan["id"];
+  name: string;
+  blurb: string;
+  highlighted?: boolean;
+  limits: Record<MeterKey, number | null>;
+  features: Record<FeatureKey, boolean>;
+  prices: Record<BillingInterval, number> | null;
+}
+
+export const PLANS: Plan[] = (config.plans as PlanConfig[]).map((p) => ({
+  id: p.id,
+  name: p.name,
+  blurb: p.blurb,
+  highlighted: p.highlighted ?? false,
+  priceLabel: p.id === "free" ? "Free" : p.prices ? `${formatPaise(p.prices.month)} / month` : "Contact sales",
+  limits: p.limits,
+  features: p.features,
+  prices: p.prices
+    ? { month: { amount: p.prices.month, currency: CURRENCY }, year: { amount: p.prices.year, currency: CURRENCY } }
+    : null,
+  taxNote: p.prices ? TAX_NOTE : null,
+}));
 
 export function planById(id: Plan["id"]): Plan {
   return PLANS.find((p) => p.id === id) ?? PLANS[0];

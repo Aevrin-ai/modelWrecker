@@ -12,6 +12,8 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  // The shared plan config (../shared/plans.json) sits outside this app folder.
+  server: { fs: { allow: [".", "../shared"] } },
   build: {
     outDir: "dist",
     sourcemap: false,

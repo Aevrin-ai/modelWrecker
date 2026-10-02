@@ -19,16 +19,20 @@
 import type {
   Account,
   AnalyticsSummary,
+  BillingInterval,
   Campaign,
   CampaignStats,
   CampaignTimelineEvent,
   CampaignTranscript,
+  CheckoutStart,
+  CheckoutSuccess,
   Device,
   Finding,
   FindingStatus,
   Invoice,
   NotificationItem,
   OverviewStats,
+  PaymentConfirmation,
   Plan,
   Project,
   Report,
@@ -145,10 +149,17 @@ export interface ApiClient {
   /** Export a synced report's metadata. Refuses reports that are local-only. */
   exportReport(id: string, format: ReportFormat): Promise<ExportedFile>;
 
-  // billing
+  // billing (docs/billing/razorpay.md)
   getSubscription(): Promise<Subscription>;
   listPlans(): Promise<Plan[]>;
   listInvoices(): Promise<Invoice[]>;
+  /** Create a Razorpay order for a prepaid period, or pay it fully from account credit. */
+  startCheckout(planId: "pro", interval: BillingInterval): Promise<CheckoutStart>;
+  /**
+   * Hand the ids Checkout returned to the server. The server checks the signature and asks Razorpay
+   * itself before anything changes; the browser's word is never proof of payment.
+   */
+  confirmPayment(result: CheckoutSuccess): Promise<PaymentConfirmation>;
 
   // settings
   getSettings(): Promise<WorkspaceSettings>;

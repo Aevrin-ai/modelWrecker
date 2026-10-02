@@ -22,12 +22,16 @@ import type {
 } from "./client";
 import type {
   AnalyticsSummary,
+  BillingInterval,
   Campaign,
   CampaignTranscript,
+  CheckoutStart,
+  CheckoutSuccess,
   Device,
   Finding,
   FindingStatus,
   OverviewStats,
+  PaymentConfirmation,
   Project,
   Report,
   ReportFormat,
@@ -500,6 +504,20 @@ export class MockApiClient implements ApiClient {
   }
   async listInvoices() {
     return list(mock.invoices);
+  }
+  // The demo never opens Razorpay: a purchase is "paid" from demo credit so the flow can be previewed.
+  async startCheckout(planId: "pro", interval: BillingInterval): Promise<CheckoutStart> {
+    const plan = PLANS.find((p) => p.id === planId)!;
+    const months = interval === "year" ? 12 : 1;
+    const base = mock.subscription.paidUntil ? new Date(mock.subscription.paidUntil) : new Date();
+    base.setMonth(base.getMonth() + months);
+    mock.subscription.paidUntil = base.toISOString();
+    mock.subscription.interval = interval;
+    mock.subscription.creditPaise = Math.max(0, mock.subscription.creditPaise - (plan.prices?.[interval].amount ?? 0));
+    return delay({ paidWithCredit: true as const, subscription: structuredClone(mock.subscription) }, 400);
+  }
+  async confirmPayment(_result: CheckoutSuccess): Promise<PaymentConfirmation> {
+    return delay({ status: "paid" as const, subscription: structuredClone(mock.subscription) });
   }
 
   // --- settings / account ---

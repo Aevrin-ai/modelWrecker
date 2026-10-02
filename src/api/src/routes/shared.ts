@@ -1,4 +1,5 @@
 import type { Db } from "../db";
+import { effectivePlan } from "../plans";
 
 export const DEFAULT_PROJECT_NAME = "Default project";
 
@@ -8,9 +9,16 @@ export interface SyncPolicy {
   transcripts: boolean;
 }
 
-/** Read the account's sync settings (Settings -> What syncs to Aevrin). Missing or odd values mean off. */
-export async function readSyncPolicy(db: Db, ownerId: string): Promise<SyncPolicy> {
-  const [profile] = await db.table("profiles").select({ eq: { id: ownerId } });
+/**
+ * Read the account's sync settings (Settings -> What syncs to Aevrin). Missing or odd values mean off.
+ * Detail is a Pro feature: on a plan without evidence storage both are off, whatever the settings say.
+ */
+export async function readSyncPolicy(db: Db, ownerId: string, now: Date = new Date()): Promise<SyncPolicy> {
+  const [[profile], [sub]] = await Promise.all([
+    db.table("profiles").select({ eq: { id: ownerId } }),
+    db.table("subscriptions").select({ eq: { owner_id: ownerId } }),
+  ]);
+  if (!effectivePlan(sub, now).features.evidence_storage) return { evidence: false, transcripts: false };
   const sync = ((profile?.settings as { sync?: Record<string, unknown> } | undefined)?.sync ?? {}) as Record<
     string,
     unknown

@@ -6,6 +6,29 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added
+- Prepaid billing with Razorpay (#12). Pro can be bought for a month or a year from the dashboard
+  Billing page. The server creates the order at the configured price, then confirms the payment by
+  checking Checkout's signature and fetching it from Razorpay; a signed webhook and reconciliation of
+  recent orders confirm it too, and a database function applies each payment exactly once. Account
+  credit is applied at checkout; full refunds take back the time bought. Invoices with printable
+  receipts. Migration `0004_billing.sql`. Decision: ADR-0019.
+- Prices (#42): Pro is 899 rupees a month or 9,899 rupees a year, including 18% GST, set from a written
+  cost model so every paid price keeps a 30-40% margin after GST and fees; a test enforces the band.
+  One file, `src/shared/plans.json`, feeds the checkout, the dashboard, and a new Pricing section on the
+  landing page. See `docs/billing/pricing.md`.
+- Signed entitlements (#11). The API signs what a plan allows with an Ed25519 key that only the Worker
+  holds and sends it with every device heartbeat; the engine verifies it offline before every run.
+  Without a valid one the engine runs the free baseline: PyRIT and garak strategies and MCP targets need
+  Pro, and campaign runs and attack attempts are capped per month. New `modelwrecker plan` command
+  (`--refresh` fetches a fresh entitlement) and `MODELWRECKER_ENTITLEMENT` for CI. New engine
+  dependency: `cryptography`.
+
+### Changed
+- Plan limits are enforced on the server: device approvals over the device limit, projects over the
+  project limit, and evidence or transcript sync without Pro are refused, and the model leaderboard is a
+  Pro feature. Free limits are now 20 campaign runs and 2,000 attempts a month, 1 device, 2 projects.
+
 ### Fixed
 - Billing highlighted the Pro plan card for every account; it now highlights the plan you are on (#39).
 - The dashboard build broke on `"ignoreDeprecations": "6.0"` with TypeScript 5.9. `baseUrl` is gone

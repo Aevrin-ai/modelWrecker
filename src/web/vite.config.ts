@@ -6,6 +6,8 @@ import tailwindcss from "@tailwindcss/vite";
 // https://app.aevrin.net/; the product dashboard lives under /dashboard/).
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // The shared plan config (../shared/plans.json) sits outside this app folder.
+  server: { fs: { allow: [".", "../shared"] } },
   build: {
     outDir: "dist",
     sourcemap: false,

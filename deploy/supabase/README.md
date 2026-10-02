@@ -11,7 +11,8 @@ Option A - SQL editor (simplest):
 2. Open the SQL editor.
 3. Run each migration in order: paste `deploy/supabase/migrations/0001_init.sql` and run it, then
    `0002_devices_and_sync.sql`, then `0003_evidence_and_transcripts.sql` (opt-in evidence and
-   transcript storage). All are safe to re-run. Apply a new migration **before** deploying the API
+   transcript storage), then `0004_billing.sql` (prepaid billing, credit, refunds; see
+   `docs/billing/razorpay.md`). All are safe to re-run. Apply a new migration **before** deploying the API
    that uses it.
 
 Option B - Supabase CLI:

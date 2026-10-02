@@ -72,7 +72,18 @@ npx wrangler deploy                                  # creates the Worker and it
 npx wrangler secret put SUPABASE_URL                 # paste each value when prompted; never commit them
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# Optional groups; each feature stays off safely until its secrets are set:
+npx wrangler secret put RAZORPAY_KEY_ID              # billing (docs/billing/razorpay.md)
+npx wrangler secret put RAZORPAY_KEY_SECRET
+npx wrangler secret put RAZORPAY_WEBHOOK_SECRET      # the same value goes into the Razorpay webhook
+npx wrangler secret put ENTITLEMENT_SIGNING_KEY      # Ed25519 PKCS#8 base64 (docs/security/entitlements.md)
+npx wrangler secret put ADMIN_TOTP_KEY               # 32 random bytes, base64 (docs/security/admin.md)
+npx wrangler secret put ANALYTICS_SALT               # random string (docs/analytics/page-analytics.md)
 ```
+
+The entitlement key id and public key are plain vars in `src/api/wrangler.toml`; the engine ships the same
+public key. Keep an offline copy of every generated secret in your own secret store: a lost signing key
+means a key rotation, and a lost `ADMIN_TOTP_KEY` means every admin enrolls their authenticator again.
 
 The route is already set in `src/api/wrangler.toml` (the aevrin.net zone is on Cloudflare), so
 `app.aevrin.net/api/*` reaches the Worker and everything else stays on Pages. Until the three secrets are

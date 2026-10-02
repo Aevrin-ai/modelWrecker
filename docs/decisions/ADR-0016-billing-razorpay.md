@@ -1,6 +1,7 @@
 # ADR-0016 - Billing provider is Razorpay
 
-- **Status:** Accepted
+- **Status:** Accepted; refined by [ADR-0019](ADR-0019-prepaid-billing.md) (prepaid orders, and payment
+  confirmed by fetching it from Razorpay as well as by the webhook)
 - **Date:** 2026-10-02
 
 ## Decision
