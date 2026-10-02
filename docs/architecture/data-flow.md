@@ -53,8 +53,24 @@ flowchart TD
 | success rate and counts | sensitive system prompts, documents, data |
 | evidence metadata and timestamps | |
 
-The engine never silently uploads sensitive model responses. The choice is explicit in the UI and in
-config. See [`../analytics/overview.md`](../analytics/overview.md).
+The engine never silently uploads sensitive model responses. The choice is explicit in the dashboard:
+Settings, What syncs to Aevrin, with two switches, both off by default:
+
+- **Detailed evidence**: per finding, the prompt sent, the model reply, and the judge's verdict.
+- **Full attack transcripts**: per run, every attempt (prompt, reply, result), and the turns of
+  multi-turn attacks.
+
+How it is enforced:
+
+- The engine asks the API which switches are on (the device heartbeat) and builds detail only then.
+  `modelwrecker sync --metadata-only` keeps detail local whatever the dashboard says.
+- Detail is redacted for secrets (API keys, bearer tokens, device tokens) and capped in size before it
+  leaves the machine. Prompts and replies are otherwise sent as they are: that is what the user opts in to.
+- The API stores detail only when the matching switch is on at sync time, in owner-only tables. It
+  never trusts the client's choice.
+- Turning a switch off deletes the copies already in the cloud. The local run folder keeps the originals.
+- Runs synced while detail was off are sent again with the detail on the next `modelwrecker sync`, so
+  older runs can be back-filled. See [`../analytics/overview.md`](../analytics/overview.md).
 
 ## Offline synchronization
 
@@ -83,7 +99,7 @@ run folders and talks HTTP to the routes in [`control-plane-api.md`](control-pla
 ```mermaid
 flowchart LR
   RUN[Run folder] --> SUM[summarize.py]
-  SUM --> BODY[Sync body, metadata only]
+  SUM --> BODY[Sync body, metadata plus opted-in detail]
   BODY --> CLI[client.py]
   CRED[credentials.py] --> CLI
   CLI --> API[POST sync]
@@ -94,13 +110,16 @@ flowchart LR
 | Module | Job |
 |--------|-----|
 | `credentials.py` | Load the device token from `MODELWRECKER_DEVICE_TOKEN` or the saved file; save it atomically with `0600` |
-| `client.py` | Call `device/code`, `device/token`, `device/heartbeat`, and `sync`; https only, no redirects, typed RFC 8628 results |
-| `summarize.py` | Build the `POST /sync` body by picking named fields from `events.jsonl`, `finding-*.json`, and the `reliability` and `judge_result.score` of each evidence file |
-| `outbox.py` | A run is pending until `.synced.json` exists; the marker is written only after a `200` |
+| `client.py` | Call `device/code`, `device/token`, `device/heartbeat` (which also returns the sync settings), and `sync`; https only, no redirects, typed RFC 8628 results |
+| `policy.py` | `SyncPolicy`: which detail (evidence, transcripts) the account allows |
+| `summarize.py` | Build the `POST /sync` body by picking named fields from `events.jsonl`, `finding-*.json`, and each evidence file; add redacted, capped detail only when the policy allows it |
+| `outbox.py` | A run is pending until `.synced.json` exists (written only after a `200`), or when the policy asks for detail the marker says was not sent |
 
-The summary never reads or copies an attack payload, a model response or reasoning, a system prompt,
-an endpoint URL, an API key, tool arguments, or the attack sequence. A test plants a secret in each of
-those places and checks the body carries none of it. The marker also records the size of
+With detail off, the summary never reads or copies an attack payload, a model response or reasoning, a
+system prompt, an endpoint URL, an API key, tool arguments, or the attack sequence. A test plants a
+secret in each of those places and checks the body carries none of it. With detail on, a second test
+checks that the endpoint URLs, the run configuration, the system prompt field, and the strategy
+parameters are still never sent. The marker also records the size of
 `events.jsonl`, so a run that grows after it synced becomes pending again. Commands: `login`,
 `logout`, `sync`, and auto-sync after `run`; see [`../reference/CLI.md`](../reference/CLI.md).
 
@@ -108,7 +127,8 @@ those places and checks the body carries none of it. The marker also records the
 
 - Default is local-heavy, cloud-light: compute and sensitive content stay on the machine.
 - The cloud receives minimal metadata.
-- Detailed evidence and full transcripts are an explicit opt-in, per campaign.
+- Detailed evidence and full transcripts are an explicit opt-in per account (dashboard Settings), with
+  a local override (`sync --metadata-only`).
 - This matters because users may test private prompts, source code, documents, credentials, and
   proprietary agent behavior. See the Phase 10 section of
   [`../security/THREAT-MODEL.md`](../security/THREAT-MODEL.md).

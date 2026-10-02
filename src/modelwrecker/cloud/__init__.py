@@ -34,12 +34,14 @@ from .outbox import (
     MARKER,
     RunPreview,
     SyncReport,
+    is_synced,
     mark_synced,
     pending_runs,
     preview_run,
     sync_pending,
     sync_run,
 )
+from .policy import METADATA_ONLY, SyncPolicy
 from .summarize import NotARunError, build_sync_body
 
 __all__ = [
@@ -47,6 +49,7 @@ __all__ = [
     "ENV_TOKEN",
     "ENV_URL",
     "MARKER",
+    "METADATA_ONLY",
     "CloudClient",
     "CloudError",
     "CredentialError",
@@ -56,12 +59,14 @@ __all__ = [
     "LoginOutcome",
     "NotARunError",
     "RunPreview",
+    "SyncPolicy",
     "SyncReport",
     "TokenResult",
     "TokenStatus",
     "build_sync_body",
     "credential_path",
     "delete_credential",
+    "is_synced",
     "load_credential",
     "mark_synced",
     "pending_runs",

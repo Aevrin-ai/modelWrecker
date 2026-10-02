@@ -154,7 +154,12 @@ PyRIT tests skip.
 | Live | full sign-in, device login, and sync with a real Google account | PASS (maintainer) | the maintainer signed in, approved a device with `modelwrecker login`, and synced (2026-10-02) |
 | Live | two campaigns through OpenRouter (targets openai/gpt-4o-mini and meta-llama/llama-3.1-8b-instruct, auto strategies, 5 replays) | PASS | 4 real attempts each, all refused, 0 findings; the API key appears in no run file |
 | Engine | `sync` lists pending runs before sending; `sync --dry-run` sends nothing and needs no sign-in | PASS | 3 tests in `tests/test_cloud_sync.py`; live `--dry-run` listed exactly the two OpenRouter runs |
-| Live | the two OpenRouter runs synced and shown in the dashboard | NOT TESTED | waiting for the maintainer's `modelwrecker sync` (#7) |
+| Live | the two OpenRouter runs synced and shown in the dashboard | PASS (maintainer) | synced by the maintainer; 2 campaigns, 8 attempts, 0 findings in the account |
+| Engine | opt-in evidence and transcripts: allowed fields only, never config or endpoint URLs; redacted then capped; size budget; back-fill of runs synced without detail; `--resync`; `--metadata-only`; metadata fallback when settings cannot be read | PASS | 11 tests in `tests/test_cloud_sync.py` (#28) |
+| API | detail kept only when the setting is on; shown on finding and campaign routes; metadata-only re-sync keeps it; turning off deletes it; other accounts get 404; strict schema; 4 MB sync cap | PASS | 5 tests in `src/api/test/api.test.ts` (#28) |
+| End to end | real `modelwrecker sync` of the 8 real local runs to the real API code (in-memory database) with both settings on | PASS | all 8 back-filled; 4 findings with evidence, 18 attempts in transcripts; second sync sent nothing; turning evidence off removed it; no API key in cloud data |
+| Dashboard | transcript card (on and off states), finding evidence view, settings copy | PASS | Chrome, mock mode |
+| Live | migration `0003` applied; `finding_evidence` and `run_transcripts` have RLS with owner read and delete policies only | PASS | checked with SQL after applying, 2026-10-02 |
 | Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
 | Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
 | Engine | evidence stores the strategy name, not the plan id | PASS | regression test `test_evidence_records_the_strategy_name_not_a_plan_id` |
