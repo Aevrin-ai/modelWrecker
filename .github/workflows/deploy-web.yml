@@ -18,6 +18,7 @@ on:
     paths:
       - "src/web/**"
       - "src/dash/**"
+      - "deploy/cloudflare/pages/**"
       - ".github/workflows/deploy-web.yml"
   workflow_dispatch: {}
 
@@ -60,9 +61,11 @@ jobs:
           cp -r src/web/dist/. deploy_out/
           mkdir -p deploy_out/dashboard
           cp -r src/dash/dist/. deploy_out/dashboard/
-          # SPA fallbacks: dashboard first, then landing. Rewrite to the folder, not index.html:
-          # Pages normalizes /x/index.html to /x/, so a rewrite to index.html never matches.
-          printf '/dashboard/* /dashboard/ 200\n/* / 200\n' > deploy_out/_redirects
+          # Deep links: no _redirects file, because Pages applies _redirects before static files and a
+          # catch-all rewrite would answer the JS and CSS with HTML. The Worker below sends dashboard page
+          # paths to /dashboard/; landing deep links use Pages' default single-page-app fallback.
+          cp deploy/cloudflare/pages/_worker.js deploy_out/_worker.js
+          rm -f deploy_out/_redirects deploy_out/dashboard/_redirects
 
       - name: Deploy to Cloudflare Pages
         env:

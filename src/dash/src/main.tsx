@@ -9,7 +9,7 @@ import { ConfigError } from "@/components/ConfigError";
 import { IS_CONFIGURED } from "@/lib/config";
 import "./index.css";
 
-// The dashboard is served under /dashboard/ (see vite.config base and public/_redirects).
+// The dashboard is served under /dashboard/ (see vite.config base and deploy/cloudflare/pages/_worker.js).
 // A live-API build with missing sign-in settings shows a configuration screen instead of the app.
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -14,8 +14,14 @@ npx wrangler pages project create modelwrecker-app --production-branch main
 ```
 
 The workflow `.github/workflows/deploy-web.yml` builds `src/web` (landing) and `src/dash`
-(dashboard), merges them (landing at `/`, dashboard at `/dashboard/`), writes `_redirects`
-for SPA fallback, and runs `wrangler pages deploy ... --project-name=modelwrecker-app`.
+(dashboard), merges them (landing at `/`, dashboard at `/dashboard/`), copies
+`deploy/cloudflare/pages/_worker.js` to the site root, and runs
+`wrangler pages deploy ... --project-name=modelwrecker-app`.
+
+Deep links: do not add a `_redirects` file. Pages applies `_redirects` rules before static files, so a
+catch-all rewrite answers the JS and CSS requests with HTML and the page loads blank. The small
+`_worker.js` sends dashboard page paths (no file extension) to `/dashboard/` and passes everything else to
+the static files. Landing deep links use the Pages default single-page-app fallback.
 
 ## 2. Add the custom domain + DNS for app.aevrin.net
 
