@@ -39,6 +39,8 @@ and update everything in the right column.
 | Anything tested or newly verified | `docs/testing/test-matrix.md` (honest PASS/FAIL/BLOCKED/NOT TESTED) |
 | A test report / run summary | `reports/` |
 | Getting-started / tutorial change | `docs/getting-started/` |
+| Git, issue, or release process change | `docs/reference/GIT-WORKFLOW.md`; `CLAUDE.md` Git rules |
+| A bug found or fixed | a GitHub issue (opened before the fix, closed by the PR); see `docs/reference/GIT-WORKFLOW.md` |
 
 ## Before a major phase is "complete"
 

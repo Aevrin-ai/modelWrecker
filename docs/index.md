@@ -45,10 +45,12 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | Which taxonomy a finding maps to | [`research/taxonomies.md`](research/taxonomies.md), [`architecture/TAXONOMY.md`](architecture/TAXONOMY.md) |
 | Driving modelWrecker from Claude Code / Codex | [`features/harness-integration.md`](features/harness-integration.md) |
 | How to write docs for this project | [`reference/WRITING-STANDARD.md`](reference/WRITING-STANDARD.md) |
+| Issues, branches, commits, pull requests, releases | [`reference/GIT-WORKFLOW.md`](reference/GIT-WORKFLOW.md) |
 
 ## Reference & process
 
 - [`reference/WRITING-STANDARD.md`](reference/WRITING-STANDARD.md) - how we write everything here.
+- [`reference/GIT-WORKFLOW.md`](reference/GIT-WORKFLOW.md) - issue first, branch, pull request, squash-merge.
 - [`DOCUMENTATION.md`](DOCUMENTATION.md) - the change→doc table. Check it before finishing a task.
 - [`DEPENDENCIES.md`](DEPENDENCIES.md) - every external dependency and why we keep it.
 - [`features/`](features/README.md) - cross-cutting user-facing features.
