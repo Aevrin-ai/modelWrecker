@@ -372,19 +372,42 @@ def logout() -> None:
 @app.command("sync")
 def sync_command(
     runs_dir: str = typer.Option("runs", help="directory that holds run folders"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run",
+        help="list the runs that would be sent and send nothing (no sign-in needed)",
+    ),
 ) -> None:
-    """Send every run that is not synced yet to the dashboard (summary metadata only)."""
-    from .cloud import CloudError, pending_runs, sync_pending
+    """Send every run that is not synced yet to the dashboard (summary metadata only).
 
-    cred = _load_credential_or_exit()
-    if cred is None:
-        typer.secho("not signed in. Run `modelwrecker login` or set MODELWRECKER_DEVICE_TOKEN.",
-                    fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+    The runs are listed before anything is sent. Use --dry-run to only list them.
+    """
+    from .cloud import CloudError, pending_runs, preview_run, sync_pending
+
+    cred = None
+    if not dry_run:
+        cred = _load_credential_or_exit()
+        if cred is None:
+            typer.secho("not signed in. Run `modelwrecker login` or set MODELWRECKER_DEVICE_TOKEN.",
+                        fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
     pending = pending_runs(runs_dir)
     if not pending:
         typer.echo(f"nothing to sync in {runs_dir}")
         return
+
+    verb = "would be sent" if dry_run else "to send"
+    typer.echo(f"{len(pending)} run(s) {verb} from {runs_dir} "
+               "(summary metadata only; evidence and transcripts stay on this machine):")
+    for preview in (preview_run(d) for d in pending):
+        if preview.problem:
+            typer.echo(f"  {preview.name}  {preview.problem}")
+            continue
+        typer.echo(f"  {preview.name}  {preview.target}  {preview.attempts} attempt(s)  "
+                   f"{preview.findings} finding(s)  started {preview.started_at}")
+    if dry_run:
+        typer.echo("dry run: nothing was sent. Run `modelwrecker sync` to send these.")
+        return
+
     try:
         client = _sync_client(cred)
     except CloudError as e:
