@@ -211,11 +211,56 @@ function mapFinding(f: Row, w: World) {
       backendPinned: false,
     },
     signals: [],
-    // Metadata only: detailed evidence stays on the device unless evidence sync is turned on.
+    // Metadata only in lists. The finding detail route adds the evidence when it was synced.
     evidence: { synced: Boolean(f.evidence_synced) },
     relatedFindingIds: [],
     discoveredAt: str(f.discovered_at ?? f.created_at),
     lastSeenAt: str(f.last_seen_at ?? f.created_at),
+  };
+}
+
+type Detail = {
+  objective?: { title?: string; category?: string; success_criteria?: string };
+  strategy?: string;
+  transforms?: string[];
+  payload?: string;
+  response?: string;
+  reasoning?: string;
+  tool_calls?: { name: string; args: string }[];
+  judge?: {
+    outcome?: string;
+    score?: number;
+    rationale?: string;
+    signals?: { signal: string; hit: boolean; score: number; detail: string }[];
+  };
+  conversation?: { role: string; text: string }[];
+};
+
+/** A finding with its synced evidence (dashboard `Evidence` type), or the metadata-only shape. */
+function withEvidence(finding: ReturnType<typeof mapFinding>, row: Row | undefined, runExternalId: string) {
+  if (!row) return { ...finding, evidence: { synced: false } };
+  const d = (row.detail ?? {}) as Detail;
+  return {
+    ...finding,
+    signals: (d.judge?.signals ?? []).map((s) => ({ signal: s.signal, hit: s.hit, score: s.score, detail: s.detail })),
+    evidence: {
+      synced: true,
+      strategy: d.strategy ?? finding.strategy,
+      payload: d.payload ?? "",
+      transformChain: d.transforms ?? [],
+      targetResponse: d.response ?? "",
+      targetReasoning: d.reasoning ?? "",
+      toolCalls: d.tool_calls ?? [],
+      attackSequence: (d.conversation ?? []).map((t, i) => ({ step: i + 1, role: t.role, text: t.text })),
+      objective: {
+        title: d.objective?.title ?? "",
+        category: d.objective?.category ?? "",
+        successCriteria: d.objective?.success_criteria ?? "",
+      },
+      judge: { outcome: d.judge?.outcome ?? "", score: d.judge?.score ?? 0, rationale: d.judge?.rationale ?? "" },
+      reproductionSteps: runExternalId ? `modelwrecker report runs/${runExternalId}` : undefined,
+      syncedAt: str(row.updated_at),
+    },
   };
 }
 
@@ -550,6 +595,40 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
     }
     return c.json({ campaignId: str(row.id), byStrategy: [...merged.values()] });
   });
+  // Every attempt of every run in the campaign, when transcript sync is on and the run was synced
+  // with it. Runs without a stored transcript are listed with `synced: false`.
+  app.get("/campaigns/:id/transcript", requireUser, async (c) => {
+    const { db, owner } = ctx(c);
+    const row = await one(db, "campaigns", c.req.param("id"), owner);
+    const runs = (await db.table("runs").select({ eq: { owner_id: owner, campaign_id: str(row.id) } })).sort((a, b) =>
+      str(a.started_at) < str(b.started_at) ? -1 : 1,
+    );
+    const out = [];
+    for (const r of runs) {
+      const [t] = await db.table("run_transcripts").select({ eq: { run_id: str(r.id), owner_id: owner } });
+      const attempts = ((t?.attempts as Record<string, unknown>[] | undefined) ?? []).map((a, i) => ({
+        index: i + 1,
+        at: iso(a.at),
+        objective: str(a.objective),
+        category: str(a.category),
+        strategy: str(a.strategy),
+        outcome: str(a.outcome),
+        score: num(a.score),
+        payload: str(a.payload),
+        response: str(a.response),
+      }));
+      out.push({
+        runId: str(r.id),
+        runName: str(r.external_id),
+        startedAt: iso(r.started_at),
+        attemptCount: num(r.attempts),
+        synced: Boolean(t),
+        truncated: Boolean(t?.truncated),
+        attempts,
+      });
+    }
+    return c.json({ campaignId: str(row.id), runs: out });
+  });
 
   // findings (lifecycle status only; evidence on the device is never touched)
   app.get("/findings", requireUser, async (c) => {
@@ -565,7 +644,10 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
   app.get("/findings/:id", requireUser, async (c) => {
     const { db, owner } = ctx(c);
     const f = await one(db, "findings", c.req.param("id"), owner);
-    return c.json(mapFinding(f, await loadWorld(db, owner)));
+    const w = await loadWorld(db, owner);
+    const [evidence] = await db.table("finding_evidence").select({ eq: { finding_id: str(f.id), owner_id: owner } });
+    const run = byId(w.runs).get(str(f.run_id));
+    return c.json(withEvidence(mapFinding(f, w), evidence, str(run?.external_id)));
   });
   app.patch("/findings/:id", requireUser, async (c) => {
     const { db, owner } = ctx(c);
@@ -648,6 +730,15 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
       notifications: { ...cur.notifications, ...(body.notifications ?? {}) },
     };
     await db.table("profiles").update({ id: owner }, { settings: next });
+    // Turning detail off removes the copies already in the cloud. The local runs folder keeps the
+    // originals, and turning it back on re-sends them on the next `modelwrecker sync`.
+    if (cur.sync.detailedEvidence && !next.sync.detailedEvidence) {
+      await db.table("finding_evidence").delete({ owner_id: owner });
+      await db.table("findings").update({ owner_id: owner, evidence_synced: true }, { evidence_synced: false });
+    }
+    if (cur.sync.transcripts && !next.sync.transcripts) {
+      await db.table("run_transcripts").delete({ owner_id: owner });
+    }
     return c.json(next);
   });
   app.get("/notifications", requireUser, (c) => c.json([])); // notifications are not built yet

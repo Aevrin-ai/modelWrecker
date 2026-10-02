@@ -38,7 +38,65 @@ export const DeviceApproveReq = z
 
 export const HeartbeatReq = z.object({ engine_version: z.string().trim().max(20).default("") }).strict();
 
-// --- result sync (metadata only; see docs/architecture/control-plane-api.md) ------------------------
+// --- result sync (see docs/architecture/control-plane-api.md) ---------------------------------------
+// Metadata always. Evidence and transcripts are optional detail, stored only when the account turned
+// them on in Settings (checked on the server, see ingestRun). The engine redacts secrets before sending.
+
+export const EVIDENCE_TEXT_MAX = 20_000;
+export const TRANSCRIPT_TEXT_MAX = 4_000;
+const body = (max: number) => z.string().max(max).default("");
+const label = (max: number) => z.string().trim().max(max).default("");
+
+const SyncEvidence = z
+  .object({
+    objective: z
+      .object({ title: label(300), category: label(80), success_criteria: body(2_000) })
+      .strict()
+      .default({}),
+    strategy: label(80),
+    transforms: z.array(label(80)).max(30).default([]),
+    payload: body(EVIDENCE_TEXT_MAX),
+    response: body(EVIDENCE_TEXT_MAX),
+    reasoning: body(EVIDENCE_TEXT_MAX),
+    tool_calls: z
+      .array(z.object({ name: label(120), args: body(4_000) }).strict())
+      .max(50)
+      .default([]),
+    judge: z
+      .object({
+        outcome: label(40),
+        score: z.number().int().min(0).max(10).default(0),
+        rationale: body(4_000),
+        signals: z
+          .array(
+            z
+              .object({ signal: label(60), hit: z.boolean(), score: z.number().min(0).max(1), detail: body(1_000) })
+              .strict(),
+          )
+          .max(20)
+          .default([]),
+      })
+      .strict()
+      .default({}),
+    conversation: z
+      .array(z.object({ role: label(20), text: body(TRANSCRIPT_TEXT_MAX) }).strict())
+      .max(100)
+      .default([]),
+  })
+  .strict();
+
+const SyncAttempt = z
+  .object({
+    at: isoOrNull,
+    objective: label(300),
+    category: label(80),
+    strategy: label(80),
+    outcome: label(40),
+    score: z.number().int().min(0).max(10).default(0),
+    payload: body(TRANSCRIPT_TEXT_MAX),
+    response: body(TRANSCRIPT_TEXT_MAX),
+  })
+  .strict();
 
 const SyncFinding = z
   .object({
@@ -58,6 +116,7 @@ const SyncFinding = z
     ci_high: rate,
     confidence: z.enum(["reliable", "flaky", "does_not_hold"]),
     discovered_at: isoOrNull,
+    evidence: SyncEvidence.optional(),
   })
   .strict();
 
@@ -96,12 +155,17 @@ export const SyncReq = z
           .max(100)
           .default([]),
         findings: z.array(SyncFinding).max(500).default([]),
+        transcript: z
+          .object({ attempts: z.array(SyncAttempt).max(2_000), truncated: z.boolean().default(false) })
+          .strict()
+          .optional(),
       })
       .strict(),
   })
   .strict();
 
 export type SyncBody = z.infer<typeof SyncReq>;
+export type SyncEvidenceBody = z.infer<typeof SyncEvidence>;
 
 // --- dashboard ------------------------------------------------------------------------------------
 

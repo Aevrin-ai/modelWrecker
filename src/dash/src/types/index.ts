@@ -195,9 +195,44 @@ export interface Evidence {
   transformChain?: string[];
   targetResponse?: string;
   targetReasoning?: string;
-  toolCalls?: { name: string; args: Record<string, unknown> }[];
-  reproductionSteps?: string; // e.g. "modelwrecker replay <evidence>"
+  /** `args` is the JSON text the engine sent (synced evidence) or an object (mock data). */
+  toolCalls?: { name: string; args: string | Record<string, unknown> }[];
+  reproductionSteps?: string; // e.g. "modelwrecker report runs/<run-id>"
   attackSequence?: { step: number; role: string; text: string }[];
+  objective?: { title: string; category: string; successCriteria: string };
+  judge?: { outcome: string; score: number; rationale: string };
+  syncedAt?: string;
+}
+
+/** One attack attempt as synced in a run transcript (only when transcript sync is on). */
+export interface TranscriptAttempt {
+  index: number;
+  at: string | null;
+  objective: string;
+  category: string;
+  strategy: string;
+  outcome: Outcome | string;
+  score: number; // 0..10
+  payload: string;
+  response: string;
+}
+
+export interface RunTranscript {
+  runId: string;
+  /** The local run folder name (runs/<runName>). */
+  runName: string;
+  startedAt: string | null;
+  attemptCount: number;
+  /** false when the run was synced without its transcript (the setting was off). */
+  synced: boolean;
+  /** true when the engine cut the list to stay under the size limit. */
+  truncated: boolean;
+  attempts: TranscriptAttempt[];
+}
+
+export interface CampaignTranscript {
+  campaignId: string;
+  runs: RunTranscript[];
 }
 
 export interface Finding {

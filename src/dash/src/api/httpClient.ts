@@ -28,6 +28,7 @@ import type {
   Campaign,
   CampaignStats,
   CampaignTimelineEvent,
+  CampaignTranscript,
   Device,
   Finding,
   FindingStatus,
@@ -224,6 +225,9 @@ export class HttpApiClient implements ApiClient {
   }
   getCampaignStats(id: string) {
     return this.getOrNull<CampaignStats>(`/campaigns/${enc(id)}/stats`);
+  }
+  getCampaignTranscript(id: string) {
+    return this.getOrNull<CampaignTranscript>(`/campaigns/${enc(id)}/transcript`);
   }
   createCampaign(input: NewCampaignInput) {
     return this.request<Campaign>("POST", "/campaigns", input);

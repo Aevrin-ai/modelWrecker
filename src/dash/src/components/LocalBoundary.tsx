@@ -9,19 +9,35 @@ import type { ReactNode } from "react";
 import { ArrowDownUp, Cloud, HardDrive, Lock, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Shown where evidence would be, when it has not been synced from the device. */
-export function EvidenceLocalNotice({ className }: { className?: string }) {
+/**
+ * Shown where evidence or a transcript would be, when it has not been synced from the device.
+ * Detail syncs only when it is on in Settings; runs synced earlier are sent again with it on the
+ * next `modelwrecker sync`.
+ */
+export function EvidenceLocalNotice({
+  className,
+  kind = "evidence",
+}: {
+  className?: string;
+  kind?: "evidence" | "transcript";
+}) {
+  const setting = kind === "evidence" ? "Detailed evidence" : "Full attack transcripts";
   return (
     <div className={cn("flex items-start gap-3 rounded-md border border-dashed bg-muted/40 p-5", className)}>
       <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
         <Lock className="size-4" />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-medium">Detailed evidence remains on your local machine.</p>
+        <p className="text-sm font-medium">
+          {kind === "evidence" ? "Detailed evidence" : "The attack transcript"} remains on your local machine.
+        </p>
         <p className="max-w-prose text-sm text-muted-foreground">
-          The cloud holds finding metadata only (severity, strategy, success rate, timestamps). The prompt
-          sent, the model reply, and the transcript live on the engine that produced this finding. Turn on
-          detailed evidence sync in Settings if you want them here.
+          {kind === "evidence"
+            ? "The cloud holds finding metadata only (severity, strategy, success rate, timestamps). The prompt sent and the model reply live on the engine that produced this finding."
+            : "The cloud holds counts only. Every prompt sent and every model reply live on the engine that ran this campaign."}{" "}
+          To see them here, turn on <span className="font-medium text-foreground">{setting}</span> in Settings, then run{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">modelwrecker sync</code> on that machine.
+          Runs synced earlier are sent again with the detail.
         </p>
       </div>
     </div>

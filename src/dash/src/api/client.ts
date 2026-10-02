@@ -22,6 +22,7 @@ import type {
   Campaign,
   CampaignStats,
   CampaignTimelineEvent,
+  CampaignTranscript,
   Device,
   Finding,
   FindingStatus,
@@ -107,6 +108,8 @@ export interface ApiClient {
   getCampaign(id: string): Promise<Campaign | null>;
   getCampaignTimeline(id: string): Promise<CampaignTimelineEvent[]>;
   getCampaignStats(id: string): Promise<CampaignStats | null>;
+  /** Every synced attempt per run. Runs synced without transcript sync come back with `synced: false`. */
+  getCampaignTranscript(id: string): Promise<CampaignTranscript | null>;
   createCampaign(input: NewCampaignInput): Promise<Campaign>;
   renameCampaign(id: string, name: string): Promise<Campaign>;
   /** draft -> ready. The local engine picks it up; the cloud never runs it. */

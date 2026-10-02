@@ -274,6 +274,15 @@ function EvidenceView({ finding }: { finding: Finding }) {
   const e = finding.evidence;
   return (
     <div className="space-y-4">
+      {e.objective && (e.objective.title || e.objective.successCriteria) && (
+        <div className="space-y-1 text-sm">
+          <p className="text-xs font-medium text-muted-foreground">Objective</p>
+          <p>{e.objective.title}</p>
+          {e.objective.successCriteria && (
+            <p className="text-xs text-muted-foreground">Counts as success when: {e.objective.successCriteria}</p>
+          )}
+        </div>
+      )}
       {e.transformChain && e.transformChain.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Transforms:</span>
@@ -289,6 +298,17 @@ function EvidenceView({ finding }: { finding: Finding }) {
       )}
       {e.targetResponse && (
         <CodeBlock label="Model reply" text={e.targetResponse} tone="reply" />
+      )}
+      {e.targetReasoning && <CodeBlock label="Model reasoning" text={e.targetReasoning} />}
+      {e.judge && (e.judge.rationale || e.judge.outcome) && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Judge verdict</p>
+          <p className="rounded-lg border p-3 text-sm">
+            <span className="font-medium capitalize">{e.judge.outcome || "unknown"}</span>
+            <span className="text-muted-foreground"> · score {e.judge.score}/10</span>
+            {e.judge.rationale && <span className="mt-1 block text-muted-foreground">{e.judge.rationale}</span>}
+          </p>
+        </div>
       )}
       {e.attackSequence && e.attackSequence.length > 0 && (
         <div className="space-y-2">
@@ -310,12 +330,15 @@ function EvidenceView({ finding }: { finding: Finding }) {
           <p className="text-xs font-medium text-muted-foreground">Observed tool calls</p>
           {e.toolCalls.map((tc, i) => (
             <pre key={i} className="overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs">
-              {tc.name}({JSON.stringify(tc.args)})
+              {tc.name}({typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args)})
             </pre>
           ))}
         </div>
       )}
-      {e.reproductionSteps && <CodeBlock label="Reproduce" text={e.reproductionSteps} tone="cmd" />}
+      {e.reproductionSteps && <CodeBlock label="Reproduce locally" text={e.reproductionSteps} tone="cmd" />}
+      <p className="text-xs text-muted-foreground">
+        Synced from your device{e.syncedAt ? ` ${formatDateTime(e.syncedAt)}` : ""}. Secrets were redacted before upload.
+      </p>
     </div>
   );
 }
