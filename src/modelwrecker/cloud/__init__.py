@@ -30,7 +30,16 @@ from .credentials import (
     load_credential,
     save_credential,
 )
-from .outbox import MARKER, SyncReport, mark_synced, pending_runs, sync_pending, sync_run
+from .outbox import (
+    MARKER,
+    RunPreview,
+    SyncReport,
+    mark_synced,
+    pending_runs,
+    preview_run,
+    sync_pending,
+    sync_run,
+)
 from .summarize import NotARunError, build_sync_body
 
 __all__ = [
@@ -46,6 +55,7 @@ __all__ = [
     "InsecureUrlError",
     "LoginOutcome",
     "NotARunError",
+    "RunPreview",
     "SyncReport",
     "TokenResult",
     "TokenStatus",
@@ -56,6 +66,7 @@ __all__ = [
     "mark_synced",
     "pending_runs",
     "poll_for_token",
+    "preview_run",
     "resolve_api_url",
     "save_credential",
     "sync_pending",

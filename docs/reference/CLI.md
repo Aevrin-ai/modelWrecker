@@ -19,7 +19,7 @@ modelwrecker transforms                            # list payload transforms (fi
 modelwrecker mcp        --runs-dir runs --config-dir .  # start the harness MCP server over stdio (ADR-0013)
 modelwrecker login      [--name my-laptop]         # connect this install to the dashboard as a device
 modelwrecker logout                                # remove the saved device credential
-modelwrecker sync       --runs-dir runs            # send every unsynced run summary to the dashboard
+modelwrecker sync       --runs-dir runs [--dry-run]  # list, then send, every unsynced run summary
 modelwrecker version
 ```
 
@@ -66,7 +66,10 @@ sequenceDiagram
 - `logout` deletes the saved credential file. It does not revoke the token on the server; revoke the
   device in the dashboard for that.
 - `sync` sends every run folder under `--runs-dir` (default `runs`) that is not synced yet, one run
-  at a time, and prints how many were synced, kept for retry, or refused. A run counts as synced only
+  at a time. It first lists each of those runs (folder, target model and provider, attempts, findings,
+  start time), then sends them and prints how many were synced, kept for retry, or refused.
+  `--dry-run` prints the same list and sends nothing; it needs no sign-in and makes no network call.
+  Check it before a first sync from a folder that may hold old or test runs. A run counts as synced only
   after the API answers `200`; it then gets a `.synced.json` marker in its folder. If the cloud is
   down or busy (network error, `5xx`, `429`), the run stays queued and the exit code is `0`. The exit
   code is `1` only when the API refused a run (another `4xx`, for example a revoked token) or when
@@ -85,6 +88,7 @@ if `MODELWRECKER_CLOUD_URL` points elsewhere, `sync` refuses and asks you to `lo
 ```bash
 modelwrecker login                 # open the printed link, check the code, approve
 modelwrecker run my.yaml           # results sync automatically while signed in
+modelwrecker sync --dry-run        # see which runs would be sent
 modelwrecker sync                  # push anything that was queued while offline
 ```
 
