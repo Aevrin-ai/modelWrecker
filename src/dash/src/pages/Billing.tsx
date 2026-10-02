@@ -112,7 +112,7 @@ export function Billing() {
         {(list) => (
           <div className="grid gap-4 lg:grid-cols-3">
             {list.map((p) => (
-              <Card key={p.id} className={cn("flex flex-col", p.highlighted && "border-foreground")}>
+              <Card key={p.id} className={cn("flex flex-col", sub.data?.planId === p.id && "border-foreground")}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{p.name}</CardTitle>
