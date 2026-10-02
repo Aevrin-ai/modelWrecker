@@ -113,13 +113,13 @@ things work, read `docs/`.
     Worker; `publish-pypi.yml` publishes on a `v*` tag. The GitHub secrets are set.
   - LIVE (2026-10-02): landing + dashboard on https://app.aevrin.net (Pages project `modelwrecker-app`,
     replacing the earlier `aevrin-app` site, which is kept for rollback); API Worker on
-    `app.aevrin.net/api/*`; Supabase schema + RLS applied; Google provider enabled; `modelwrecker 0.0.1`
+    `app.aevrin.net/api/*`; Supabase schema + RLS applied; Google provider enabled; `modelwrecker 0.0.2`
     on PyPI; CI deploys on every push. The API is configured and answering, the dashboard runs in live
     mode against Supabase. The maintainer signed in with Google, approved a device with
-    `modelwrecker login`, and synced. Two live OpenRouter campaigns are waiting for the maintainer's sync
-    (#7).
+    `modelwrecker login`, and synced real OpenRouter runs with evidence and transcripts (#7, #28).
+  - DONE opt-in evidence and transcript sync (#28, #19), with back-fill of runs synced earlier.
   - NOT DONE YET for the cloud (one GitHub issue each, label `roadmap`): signed entitlements (10.14, #11),
-    Razorpay (10.13, #12), opt-in report and evidence sync (#19), notifications (#20), remote MCP over
+    Razorpay (10.13, #12), opt-in report file sync, notifications (#20), remote MCP over
     HTTP with OAuth (rest of 10.5, #14), enterprise guardrails (10.15, #21).
   - DONE 10.3 (egress part) - the egress guard now runs on every attacker, target, and judge request,
     redirects are refused, `validate` checks endpoints offline, and a local model is a narrow opt-in via
