@@ -1,10 +1,11 @@
-import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { SkeletonCards } from "@/components/States";
 import { ActiveProjectProvider } from "@/hooks/useActiveProject";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, SignIn } from "@/pages/SignIn";
+import { sendPageView } from "@/lib/beacon";
 
 // Each page is its own chunk so the chart library only loads on pages that use it.
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
@@ -29,6 +30,10 @@ const NotFound = page(() => import("@/pages/NotFound"), "NotFound");
 
 export function App() {
   const { mode, session, loading } = useAuth();
+  const { pathname } = useLocation();
+
+  // One page view per route (docs/analytics/page-analytics.md). Ids are stripped on the server.
+  useEffect(() => sendPageView("dashboard", `/dashboard${pathname}`), [pathname]);
 
   // Live API: nothing but the sign-in screen until there is a session. Data providers mount only
   // after sign-in, so no API call is made without a token.

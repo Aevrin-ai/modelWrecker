@@ -179,6 +179,13 @@ PyRIT tests skip.
 | Live | migration `0004` applied; `payments` and `credit_ledger` owner read only, `billing_events` server only; `fulfil_payment`, `refund_payment`, `adjust_credit` executable by the server key only | PASS | checked with SQL after applying, 2026-10-02 |
 | Live | `fulfil_payment` (credit applied, invoice numbered, second call a no-op, 31 days of Pro), `refund_payment` (credit returned) on the real database | PASS | inside a block that always raised, so nothing was kept; invoice counter reset afterwards |
 | Live | Razorpay live key accepted (read-only orders listing) | PASS | 2026-10-02 |
+| API | staff access: only a verified email exactly on aevrin.net (look-alike domains refused); every admin route needs an admin session; 503 when not configured | PASS | `src/api/test/admin.test.ts` (#43) |
+| API | TOTP matches the RFC 6238 test vector; codes cannot be reused; 5 wrong codes lock for 15 minutes; recovery codes work once; secrets stored encrypted with a fresh IV; sessions bound to the staff member, ended after 30 idle minutes, 8 hours, or on request | PASS | `src/api/test/admin.test.ts` (#43) |
+| API | plan, bonus, credit, refund, device revoke, sync settings (deletes cloud copies), suspend and restore (user and device routes refused), delete with typed email (payments kept, audit kept, staff refused), reset another admin's authenticator; every change audited with its reason | PASS | `src/api/test/admin.test.ts` (#44) |
+| API | page beacon stores a cleaned path, referrer host, country, device, and a daily hash, never the IP or query; Do Not Track, Global Privacy Control, bots, bad bodies, and a missing salt are not counted | PASS | `src/api/test/admin.test.ts` (#45) |
+| Dashboard | admin console in mock mode: authenticator setup with a locally drawn QR code, recovery codes, Users, user detail and dialogs, Platform analytics, Page analytics | PASS | Chrome, local stand-in for the Pages worker |
+| Live | migration `0005` applied: admin tables and `page_views` have RLS on and no policies; admin functions executable by the server key only; payments keep their rows on user deletion (`ON DELETE SET NULL`); `admin_user_list`, `admin_metrics`, `admin_traffic` return live numbers | PASS | checked with SQL, 2026-10-02 |
+| Live | a staff member enrolling an authenticator and using the console | NOT TESTED | needs an @aevrin.net Google account (maintainer) |
 | Live | a real purchase, renewal, and refund on the live key | NOT TESTED | needs the maintainer to buy once and refund it from the admin console or Razorpay dashboard |
 
 ## Summary

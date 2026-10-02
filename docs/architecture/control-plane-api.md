@@ -259,6 +259,34 @@ What the schema refuses: any field not listed above, at any depth. There is no f
 URL, an API key, a system prompt as such, or the run's configuration, so the engine cannot send them by
 mistake. A payload and a model response can only appear inside the opt-in `evidence` and `transcript`.
 
+## Admin console (staff)
+
+Staff only; see [`../security/admin.md`](../security/admin.md). Every route needs a user token whose
+verified email is exactly on `aevrin.net`, and every route except the `mfa` ones also needs
+`X-Admin-Session: mwa_...`, issued after an authenticator code. Changes need a `reason` and are audited.
+
+| Method and path | Purpose |
+|-----------------|---------|
+| `GET /admin/mfa/status` | Enrolled, locked |
+| `POST /admin/mfa/enroll`, `POST /admin/mfa/activate` | Set up the authenticator; activate returns a session and 10 recovery codes once |
+| `POST /admin/mfa/verify` | `{ "code" }` or `{ "recoveryCode" }`; returns a session |
+| `POST /admin/session/end`, `GET /admin/me` | End the session; who is signed in |
+| `GET /admin/users?q=&plan=&page=` | Users with plan, usage, activity |
+| `GET /admin/users/:id` | Everything about one account, with its audit history |
+| `PATCH /admin/users/:id/plan`, `POST .../bonus`, `POST .../credit` | Plan and paid-until date, bonus allowance, account credit |
+| `POST /admin/users/:id/payments/:paymentId/refund` | Full refund through Razorpay |
+| `PATCH /admin/users/:id/settings`, `PATCH .../profile` | Sync settings, display name |
+| `POST /admin/users/:id/devices/:deviceId/revoke` | Revoke a device |
+| `POST /admin/users/:id/suspend`, `POST .../reset-mfa`, `DELETE /admin/users/:id` | Suspend or restore, reset a staff authenticator, delete (type the email) |
+| `GET /admin/payments`, `GET /admin/audit` | All payments; the audit log |
+| `GET /admin/metrics?days=`, `GET /admin/traffic?days=&site=` | Platform analytics; page analytics |
+
+A suspended account gets `403 account_suspended` on every user and device route.
+
+### `POST /collect` (public)
+
+First-party page-view beacon; always answers 204. What is kept: [`../analytics/page-analytics.md`](../analytics/page-analytics.md).
+
 ## Dashboard routes (user)
 
 Responses use the dashboard's types in `src/dash/src/types/index.ts`, so the dashboard's `HttpApiClient`
