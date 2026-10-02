@@ -145,11 +145,13 @@ PyRIT tests skip.
 | Engine 10.9 | secret planted in payload, response, reasoning, system prompt, URLs, tool args never in the sync body | PASS | with a calibration test that fails a leaky summarizer |
 | End to end | real `modelwrecker login` + `sync` against the real API code over local HTTP | PASS | in-memory database; the run's planted secret appeared in 3 local files and 0 cloud responses |
 | Live | Supabase migrations applied; 10 tables, RLS on every one; signup trigger present | PASS | checked with SQL after applying, 2026-10-02 |
-| Live | landing, dashboard, and dashboard deep links on https://app.aevrin.net | PASS | HTTP 200 with the right page for `/`, `/dashboard/`, `/dashboard/findings`, `/dashboard/campaigns/x`, `/dashboard/connect?code=` |
+| Live | landing, dashboard, and dashboard deep links on https://app.aevrin.net | PASS | right page for `/`, `/dashboard/`, `/dashboard/findings`, `/dashboard/campaigns/x`, `/dashboard/connect?code=`; JS, CSS, and images return their real types (an earlier `_redirects` fix returned HTML for them; caught and fixed 2026-10-02); rendered in a clean Chrome profile |
 | Live | `modelwrecker 0.0.1` installs from PyPI into a clean environment | PASS | `modelwrecker version` |
 | Live | CI, site deploy, API deploy, release workflows on GitHub | PASS | all green on `main` and `v0.0.1` |
-| Live | API Worker on `app.aevrin.net/api/*` | PARTIAL | deployed and routed; answers 503 until the anon and service_role keys are set |
-| Live | Google sign-in | FAIL (config) | Google returns `redirect_uri_mismatch`: the OAuth client must list the Supabase callback URI |
+| Live | API Worker on `app.aevrin.net/api/*` | PASS | `/api/v1/health` 200; `/api/v1/me` without a token 401 |
+| Live | dashboard built in live mode against the real Supabase project | PASS | sign-in screen shown instead of demo data |
+| Live | Google sign-in redirect | PASS | "Continue with Google" reaches the Google account screen with the Supabase callback, no `redirect_uri_mismatch` |
+| Live | full sign-in, device login, and sync with a real Google account | NOT TESTED | needs the maintainer's own Google account |
 | Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
 | Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
 | Engine | evidence stores the strategy name, not the plan id | PASS | regression test `test_evidence_records_the_strategy_name_not_a_plan_id` |
