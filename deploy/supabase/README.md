@@ -10,7 +10,9 @@ Option A - SQL editor (simplest):
 1. Open the modelWrecker project in the Supabase dashboard.
 2. Open the SQL editor.
 3. Run each migration in order: paste `deploy/supabase/migrations/0001_init.sql` and run it, then
-   `0002_devices_and_sync.sql`. Both are safe to re-run.
+   `0002_devices_and_sync.sql`, then `0003_evidence_and_transcripts.sql` (opt-in evidence and
+   transcript storage). All are safe to re-run. Apply a new migration **before** deploying the API
+   that uses it.
 
 Option B - Supabase CLI:
 

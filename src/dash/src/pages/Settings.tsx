@@ -84,21 +84,30 @@ export function Settings() {
                   />
                   <SyncRow
                     title="Detailed evidence"
-                    body="Payloads sent and target responses for each finding. Off means the evidence stays in the local runs folder."
+                    body="For each finding: the prompt sent, the model reply, and the judge's verdict, shown on the finding page. Off keeps it in the local runs folder, and turning it off deletes the copies already in the cloud."
                     checked={s.sync.detailedEvidence}
                     onChange={(v) => save({ sync: { ...s.sync, detailedEvidence: v } })}
                   />
                   <SyncRow
                     title="Full attack transcripts"
-                    body="Every turn of multi-turn attacks. These can contain your system prompts and private data."
+                    body="Every attempt of every run (prompt sent, model reply, result), shown on the campaign page, plus every turn of multi-turn attacks. These can contain your system prompts and private data. Turning it off deletes the copies already in the cloud."
                     checked={s.sync.transcripts}
                     onChange={(v) => save({ sync: { ...s.sync, transcripts: v } })}
                   />
                   {(s.sync.detailedEvidence || s.sync.transcripts) && (
-                    <p className="flex items-start gap-2 pt-4 text-sm text-amber-700 dark:text-amber-300">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      Sensitive content will leave your machine on the next sync. Turn this off to keep it local.
-                    </p>
+                    <div className="space-y-2 pt-4 text-sm">
+                      <p className="flex items-start gap-2 text-amber-700 dark:text-amber-300">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                        Sensitive content will leave your machine on the next sync. The engine redacts API keys and
+                        tokens first, but prompts and replies are sent as they are. Turn this off to keep it local.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Runs you already synced are sent again with the detail the next time you run{" "}
+                        <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">modelwrecker sync</code> on the
+                        machine that ran them. To keep one sync metadata only, use{" "}
+                        <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">modelwrecker sync --metadata-only</code>.
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>

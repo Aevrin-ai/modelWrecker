@@ -2,7 +2,7 @@
 // model or a target, runs a command, or fetches a URL. See docs/architecture/control-plane-api.md.
 import { Hono, type Context } from "hono";
 import { ZodError, type z } from "zod";
-import { parseBody } from "./body";
+import { MAX_SYNC_BODY_BYTES, parseBody } from "./body";
 import type { AuthUser, Db, Deps, Row } from "./db";
 import {
   ApiError,
@@ -13,9 +13,9 @@ import {
   sha256Hex,
   userCode,
 } from "./lib";
-import { DeviceApproveReq, DeviceCodeReq, DeviceTokenReq, HeartbeatReq, SyncReq } from "./schemas";
+import { DeviceApproveReq, DeviceCodeReq, DeviceTokenReq, HeartbeatReq, SyncReq, type SyncEvidenceBody } from "./schemas";
 import { registerDashboardRoutes } from "./routes/dashboard";
-import { ensureDefaultProject } from "./routes/shared";
+import { ensureDefaultProject, readSyncPolicy, type SyncPolicy } from "./routes/shared";
 
 export type AppEnv = {
   Variables: {
@@ -158,16 +158,22 @@ export function createApp(deps: Deps) {
     const patch: Row = { last_seen_at: deps.now().toISOString() };
     if (body.engine_version) patch.engine_version = body.engine_version;
     await deps.serviceDb.table("devices").update({ id: d.id }, patch);
-    return c.json({ ok: true });
+    // Tell the engine which detail the account allows, so it only sends what will be kept.
+    return c.json({ ok: true, sync: await devicePolicy(deps, d) });
   });
 
-  app.get("/device/me", deviceAuth, (c) => {
+  app.get("/device/me", deviceAuth, async (c) => {
     const d = c.get("device");
-    return c.json({ device_id: d.id, project_id: d.project_id ?? null, name: d.name });
+    return c.json({
+      device_id: d.id,
+      project_id: d.project_id ?? null,
+      name: d.name,
+      sync: await devicePolicy(deps, d),
+    });
   });
 
   app.post("/sync", deviceAuth, async (c) => {
-    const body = await parseBody(c, SyncReq);
+    const body = await parseBody(c, SyncReq, MAX_SYNC_BODY_BYTES);
     const result = await ingestRun(deps, c.get("device"), body);
     return c.json({ ok: true, ...result });
   });
@@ -232,6 +238,26 @@ export function userAuth(deps: Deps) {
   };
 }
 
+async function devicePolicy(deps: Deps, device: Row) {
+  const policy = await readSyncPolicy(deps.serviceDb, String(device.owner_id));
+  return { metadata: true, evidence: policy.evidence, transcripts: policy.transcripts };
+}
+
+/** The stored shape of one finding's evidence. Text was already redacted by the engine. */
+function evidenceDetail(e: SyncEvidenceBody) {
+  return {
+    objective: e.objective,
+    strategy: e.strategy,
+    transforms: e.transforms,
+    payload: e.payload,
+    response: e.response,
+    reasoning: e.reasoning,
+    tool_calls: e.tool_calls,
+    judge: e.judge,
+    conversation: e.conversation,
+  };
+}
+
 /** Store one synced run. Everything is pinned to the device's owner and project, never the body's. */
 async function ingestRun(deps: Deps, device: Row, body: z.infer<typeof SyncReq>) {
   const db = deps.serviceDb;
@@ -240,6 +266,8 @@ async function ingestRun(deps: Deps, device: Row, body: z.infer<typeof SyncReq>)
   if (!projectId) throw new ApiError(409, "no_project", "This device is not linked to a project.");
   const run = body.run;
   const now = deps.now().toISOString();
+  // Detail is kept only when the account allows it. The client's choice to send it is not enough.
+  const policy: SyncPolicy = await readSyncPolicy(db, owner);
 
   // Target: create on first sight; never overwrite a target the user registered in the dashboard.
   const targets = db.table("targets");
@@ -314,9 +342,12 @@ async function ingestRun(deps: Deps, device: Row, body: z.infer<typeof SyncReq>)
   );
 
   // Findings keyed by the engine's finding id. `status` is never sent, so a lifecycle status the user
-  // set in the dashboard survives a re-sync.
+  // set in the dashboard survives a re-sync. `evidence_synced` is only ever set here when evidence is
+  // stored, so a later metadata-only sync does not hide evidence that is already in the cloud.
+  let evidenceStored = 0;
   for (const f of run.findings) {
-    await db.table("findings").upsert(
+    const keep = policy.evidence && f.evidence !== undefined;
+    const row = await db.table("findings").upsert(
       {
         owner_id: owner,
         external_id: f.id,
@@ -335,14 +366,44 @@ async function ingestRun(deps: Deps, device: Row, body: z.infer<typeof SyncReq>)
         confidence_low: f.ci_low,
         confidence_high: f.ci_high,
         confidence: f.confidence,
-        evidence_synced: false,
         discovered_at: f.discovered_at,
         last_seen_at: now,
+        ...(keep ? { evidence_synced: true } : {}),
       },
       ["owner_id", "external_id"],
     );
+    if (keep && f.evidence) {
+      await db.table("finding_evidence").upsert(
+        { finding_id: row.id, owner_id: owner, detail: evidenceDetail(f.evidence), updated_at: now },
+        ["finding_id"],
+      );
+      evidenceStored += 1;
+    }
+  }
+
+  let transcriptStored = false;
+  if (policy.transcripts && run.transcript) {
+    await db.table("run_transcripts").upsert(
+      {
+        run_id: runRow.id,
+        owner_id: owner,
+        attempts: run.transcript.attempts,
+        truncated: run.transcript.truncated,
+        updated_at: now,
+      },
+      ["run_id"],
+    );
+    transcriptStored = true;
   }
 
   await db.table("devices").update({ id: device.id }, { last_seen_at: now });
-  return { campaign_id: String(campaign.id), run_id: String(runRow.id), findings: run.findings.length };
+  return {
+    campaign_id: String(campaign.id),
+    run_id: String(runRow.id),
+    findings: run.findings.length,
+    // What the account allows right now, and what was kept from this body. The engine records this
+    // so a run synced without detail is sent again once detail is turned on.
+    detail: { evidence: policy.evidence, transcripts: policy.transcripts },
+    stored: { evidence: evidenceStored, transcript: transcriptStored },
+  };
 }

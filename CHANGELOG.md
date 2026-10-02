@@ -6,9 +6,20 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added
+- Opt-in evidence and transcript sync (#28, #19). Turning on **Detailed evidence** or **Full attack
+  transcripts** in dashboard Settings now works: `sync` reads the setting, sends redacted, size-capped
+  detail, and the finding page shows the prompt sent, the model reply, and the judge verdict, while the
+  campaign page lists every attempt. Runs synced before are back-filled on the next `sync`. New flags:
+  `sync --resync` and `sync --metadata-only`. Turning a setting off deletes the cloud copies. New
+  Supabase migration `0003_evidence_and_transcripts.sql` (owner-only RLS; written by the server only).
+
 ### Changed
 - `modelwrecker sync` lists every run it is about to send (target, attempts, findings, start time)
   before sending, and `sync --dry-run` lists them and sends nothing (#3).
+
+### Fixed
+- The dashboard's sync settings for evidence and transcripts were saved but did nothing (#28).
 
 ### Added (Phase 10 - local-first product, first slice)
 - **Architecture for the local-first product.** Heavy red-team compute stays on the user's machine; the

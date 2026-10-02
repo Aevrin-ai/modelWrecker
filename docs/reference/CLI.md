@@ -19,7 +19,7 @@ modelwrecker transforms                            # list payload transforms (fi
 modelwrecker mcp        --runs-dir runs --config-dir .  # start the harness MCP server over stdio (ADR-0013)
 modelwrecker login      [--name my-laptop]         # connect this install to the dashboard as a device
 modelwrecker logout                                # remove the saved device credential
-modelwrecker sync       --runs-dir runs [--dry-run]  # list, then send, every unsynced run summary
+modelwrecker sync       --runs-dir runs [--dry-run] [--resync] [--metadata-only]  # list, then send
 modelwrecker version
 ```
 
@@ -38,9 +38,10 @@ files only - no server. See [`../attack-engine/ANALYTICS.md`](../attack-engine/A
 
 ## Dashboard sign-in and sync (Phase 10.4, 10.8, 10.9)
 
-These commands connect a local install to the dashboard. They only send summary metadata (counts,
-rates, finding titles, severity, taxonomy ids). Prompts, model responses, system prompts, endpoint
-URLs, and API keys never leave the machine. Code: `src/modelwrecker/cloud`. Contract:
+These commands connect a local install to the dashboard. By default they only send summary metadata
+(counts, rates, finding titles, severity, taxonomy ids). Prompts and model responses leave the machine
+only if you turn on evidence or transcript sync in the dashboard (see `sync` below). Endpoint URLs,
+API keys, and the run's configuration never leave the machine. Code: `src/modelwrecker/cloud`. Contract:
 [`../architecture/control-plane-api.md`](../architecture/control-plane-api.md).
 
 ```mermaid
@@ -68,13 +69,23 @@ sequenceDiagram
 - `sync` sends every run folder under `--runs-dir` (default `runs`) that is not synced yet, one run
   at a time. It first lists each of those runs (folder, target model and provider, attempts, findings,
   start time), then sends them and prints how many were synced, kept for retry, or refused.
-  `--dry-run` prints the same list and sends nothing; it needs no sign-in and makes no network call.
-  Check it before a first sync from a folder that may hold old or test runs. A run counts as synced only
+  `--dry-run` prints the same list and sends nothing. It needs no sign-in; when signed in it asks the
+  API which detail is on (one heartbeat) so the list is accurate. Check it before a first sync from a
+  folder that may hold old or test runs.
+- What `sync` sends: summary metadata always. Per finding evidence (prompt sent, model reply, judge
+  verdict) and per run transcripts (every attempt) only when they are turned on in the dashboard
+  (Settings, What syncs to Aevrin); `sync` reads that setting first and prints what it will include.
+  Detail is redacted for secrets and capped in size. When detail is turned on later, runs that were
+  synced without it are listed as `[synced before, sending again]` and sent again with it, so old runs
+  are back-filled.
+- `--resync` sends every run again, including runs already synced (safe: the API updates in place).
+  `--metadata-only` never sends evidence or transcripts, whatever the dashboard says. A run counts as synced only
   after the API answers `200`; it then gets a `.synced.json` marker in its folder. If the cloud is
   down or busy (network error, `5xx`, `429`), the run stays queued and the exit code is `0`. The exit
   code is `1` only when the API refused a run (another `4xx`, for example a revoked token) or when
   this install is not signed in.
-- `run` sends the new run's summary right after it finishes, if a credential exists. `--no-sync`
+- `run` sends the new run's summary right after it finishes, if a credential exists, with the same
+  detail rules as `sync`. `--no-sync`
   skips it; `--sync` asks for it and prints a note if you are not signed in. A sync failure after
   `run` prints a warning only: it never changes the exit code and the run stays queued for `sync`.
 

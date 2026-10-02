@@ -376,50 +376,77 @@ def sync_command(
         False, "--dry-run",
         help="list the runs that would be sent and send nothing (no sign-in needed)",
     ),
+    resync: bool = typer.Option(
+        False, "--resync", help="send every run again, including runs that were already synced",
+    ),
+    metadata_only: bool = typer.Option(
+        False, "--metadata-only",
+        help="send summary metadata only, even if evidence or transcripts are on in the dashboard",
+    ),
 ) -> None:
-    """Send every run that is not synced yet to the dashboard (summary metadata only).
+    """Send every run that is not synced yet to the dashboard.
 
+    Summary metadata always. Evidence and transcripts only when they are turned on in the dashboard
+    (Settings, What syncs to Aevrin); runs synced before that are sent again with the detail.
     The runs are listed before anything is sent. Use --dry-run to only list them.
     """
-    from .cloud import CloudError, pending_runs, preview_run, sync_pending
+    from contextlib import ExitStack
 
-    cred = None
-    if not dry_run:
+    from .cloud import METADATA_ONLY, CloudError, is_synced, pending_runs, preview_run, sync_pending
+
+    if dry_run:
+        cred = _load_credential_quietly()
+    else:
         cred = _load_credential_or_exit()
         if cred is None:
             typer.secho("not signed in. Run `modelwrecker login` or set MODELWRECKER_DEVICE_TOKEN.",
                         fg=typer.colors.RED, err=True)
             raise typer.Exit(code=1)
-    pending = pending_runs(runs_dir)
-    if not pending:
-        typer.echo(f"nothing to sync in {runs_dir}")
-        return
 
-    verb = "would be sent" if dry_run else "to send"
-    typer.echo(f"{len(pending)} run(s) {verb} from {runs_dir} "
-               "(summary metadata only; evidence and transcripts stay on this machine):")
-    for preview in (preview_run(d) for d in pending):
-        if preview.problem:
-            typer.echo(f"  {preview.name}  {preview.problem}")
-            continue
-        typer.echo(f"  {preview.name}  {preview.target}  {preview.attempts} attempt(s)  "
-                   f"{preview.findings} finding(s)  started {preview.started_at}")
-    if dry_run:
-        typer.echo("dry run: nothing was sent. Run `modelwrecker sync` to send these.")
-        return
+    with ExitStack() as stack:
+        client = None
+        if cred is not None:
+            try:
+                client = stack.enter_context(_sync_client(cred))
+            except CloudError as e:
+                if not dry_run:
+                    typer.secho(f"error: {e.message}", fg=typer.colors.RED, err=True)
+                    raise typer.Exit(code=2) from e
 
-    try:
-        client = _sync_client(cred)
-    except CloudError as e:
-        typer.secho(f"error: {e.message}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=2) from e
+        # Ask the dashboard which detail is turned on. This is also the device heartbeat.
+        policy = METADATA_ONLY
+        if client is not None:
+            try:
+                policy = client.sync_policy()
+            except CloudError:
+                typer.secho("note: could not read the dashboard's sync settings, so only summary "
+                            "metadata will be sent", fg=typer.colors.YELLOW)
+        if metadata_only:
+            policy = METADATA_ONLY
 
-    with client:
-        try:
-            client.heartbeat()
-        except CloudError:
-            pass  # informational only; the sync calls below report the real problem
-        report = sync_pending(client, runs_dir)
+        pending = pending_runs(runs_dir, policy, resync=resync)
+        if not pending:
+            typer.echo(f"nothing to sync in {runs_dir}")
+            return
+
+        verb = "would be sent" if dry_run else "to send"
+        what = ("summary metadata only; evidence and transcripts stay on this machine"
+                if not policy.any_detail else
+                f"{policy.describe()}, as set in the dashboard; secrets are redacted")
+        typer.echo(f"{len(pending)} run(s) {verb} from {runs_dir} ({what}):")
+        for d in pending:
+            preview = preview_run(d)
+            if preview.problem:
+                typer.echo(f"  {preview.name}  {preview.problem}")
+                continue
+            again = "  [synced before, sending again]" if is_synced(d) else ""
+            typer.echo(f"  {preview.name}  {preview.target}  {preview.attempts} attempt(s)  "
+                       f"{preview.findings} finding(s)  started {preview.started_at}{again}")
+        if dry_run:
+            typer.echo("dry run: nothing was sent. Run `modelwrecker sync` to send these.")
+            return
+
+        report = sync_pending(client, runs_dir, policy, resync=resync)
 
     typer.secho(f"synced {len(report.synced)} run(s)", fg=typer.colors.GREEN)
     if report.deferred:
@@ -533,6 +560,16 @@ def _load_credential_or_exit():
         raise typer.Exit(code=2) from e
 
 
+def _load_credential_quietly():
+    """The saved credential, or None if there is none or it can not be read (for --dry-run)."""
+    from .cloud import CredentialError, load_credential
+
+    try:
+        return load_credential()
+    except CredentialError:
+        return None
+
+
 def _sync_client(cred):
     """A client for device routes. A saved credential only talks to the URL it was issued for."""
     from .cloud import ENV_URL, CloudError, validate_api_url
@@ -554,7 +591,7 @@ def _auto_sync(run_dir: Path, wanted: bool | None) -> None:
     if wanted is False:
         return
     try:
-        from .cloud import load_credential, sync_run
+        from .cloud import METADATA_ONLY, CloudError, load_credential, sync_run
 
         cred = load_credential()
         if cred is None:
@@ -563,8 +600,13 @@ def _auto_sync(run_dir: Path, wanted: bool | None) -> None:
                             "login`, then `modelwrecker sync`.", fg=typer.colors.YELLOW, err=True)
             return
         with _sync_client(cred) as client:
-            sync_run(client, run_dir)
-        typer.secho("synced the run summary to the dashboard", fg=typer.colors.GREEN)
+            try:
+                policy = client.sync_policy()
+            except CloudError:
+                policy = METADATA_ONLY  # the sync below reports a real outage
+            sync_run(client, run_dir, policy)
+        extra = f" ({policy.describe()})" if policy.any_detail else ""
+        typer.secho(f"synced the run summary to the dashboard{extra}", fg=typer.colors.GREEN)
     except Exception as e:  # never let sync change the run's result
         from .security.redaction import redact_text
 
