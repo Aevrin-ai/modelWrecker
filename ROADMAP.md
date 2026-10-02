@@ -91,10 +91,11 @@ things work, read `docs/`.
     the default image (no PyRIT extra) crashed every run on an unguarded PyRIT import (regression test added).
   - DONE 10.5 (local part) - guardrail chain on the stdio MCP server: tool + argument allowlist, rate limit,
     path scope (`--config-dir`), target scope (`authorized: true` from config only), entitlement hook,
-    resource caps, structured redacted refusals. 42 MCP tests. Remaining: Streamable HTTP + OAuth 2.1.
+    resource caps, structured redacted refusals. 42 MCP tests. Remaining: Streamable HTTP + OAuth 2.1 (#14).
   - BUILT 10.4 (login part) - `modelwrecker login` (OAuth 2.0 device code), `logout`, `sync`; the token
     is saved with owner-only permissions and only ever sent to the URL it was issued for. PyPI publish is
-    staged. The API-key fallback for CI is not built yet.
+    staged. The API-key fallback for CI is not built yet (#15). `sync` lists runs before sending and has
+    `--dry-run` (#3).
   - BUILT 10.6 + 10.7 - control-plane API Worker at `src/api` (`app.aevrin.net/api/v1`, contract in
     `docs/architecture/control-plane-api.md`), Supabase migration `0002`, Google sign-in in the dashboard
     via Supabase Auth (PKCE). Dashboard queries run as the user so RLS applies, and the API also filters by
@@ -104,23 +105,31 @@ things work, read `docs/`.
     and synced against the real API code over HTTP (in-memory database); a secret planted in the local
     run never reached the cloud.
   - BUILT 10.10 - dashboard at `src/dash` (served at `/dashboard/`), Catmint visual system, all routes,
-    light + dark. Mock data stays the default; `VITE_API_MODE=http` switches to the real API.
+    light + dark. Local development defaults to mock data; the production build uses the real API
+    (`VITE_API_MODE=http`). Analytics still need checking against real synced data (#13).
   - BUILT 10.11 - landing page at `src/web`, Folio visual system + Nguyen feature section, real Aevrin logo.
-  - STAGED CI/CD - `.github/workflows/deploy-web.yml` redeploys both apps to Cloudflare Pages on any push
-    touching `src/web/**` or `src/dash/**`; `publish-pypi.yml` publishes on a `v*` tag. Both need the
-    maintainer to add GitHub secrets / a PyPI trusted publisher (see `deploy/`).
+  - LIVE CI/CD - `.github/workflows/deploy-web.yml` redeploys both apps to Cloudflare Pages on any push
+    touching `src/web/**`, `src/dash/**`, or `deploy/cloudflare/pages/**`; `deploy-api.yml` redeploys the
+    Worker; `publish-pypi.yml` publishes on a `v*` tag. The GitHub secrets are set.
   - LIVE (2026-10-02): landing + dashboard on https://app.aevrin.net (Pages project `modelwrecker-app`,
     replacing the earlier `aevrin-app` site, which is kept for rollback); API Worker on
     `app.aevrin.net/api/*`; Supabase schema + RLS applied; Google provider enabled; `modelwrecker 0.0.1`
     on PyPI; CI deploys on every push. The API is configured and answering, the dashboard runs in live
-    mode against Supabase, and Google accepts the sign-in redirect. Not yet tried: a full sign-in,
-    device login, and sync with a real Google account.
-  - NOT DONE YET for the cloud: signed entitlements (10.14), Razorpay
-    (10.13), report and evidence sync, notifications, remote MCP over HTTP with OAuth (rest of 10.5).
+    mode against Supabase. The maintainer signed in with Google, approved a device with
+    `modelwrecker login`, and synced. Two live OpenRouter campaigns are waiting for the maintainer's sync
+    (#7).
+  - NOT DONE YET for the cloud (one GitHub issue each, label `roadmap`): signed entitlements (10.14, #11),
+    Razorpay (10.13, #12), opt-in report and evidence sync (#19), notifications (#20), remote MCP over
+    HTTP with OAuth (rest of 10.5, #14), enterprise guardrails (10.15, #21).
   - DONE 10.3 (egress part) - the egress guard now runs on every attacker, target, and judge request,
     redirects are refused, `validate` checks endpoints offline, and a local model is a narrow opt-in via
-    `security.egress.allow_hosts`. Remaining for 10.3: DNS-rebinding address pinning, the code sandbox,
-    and the redaction audit.
+    `security.egress.allow_hosts`. Remaining for 10.3: DNS-rebinding address pinning (#16), the code
+    sandbox (#17), and the redaction audit (#18).
+  - Engine items not built or not tested yet: a live MCP-server target (#22), direct OpenAI and Anthropic
+    adapters (#23), a live Ollama run (#24), and cost budgets (#25). Lint cleanup and a CI lint step (#10).
+
+  Open work is tracked as GitHub issues; see `docs/reference/GIT-WORKFLOW.md` for how issues, branches,
+  and pull requests fit together.
 
   ### Task 10 - sub-phase order (implement -> test -> document -> review at each step)
 
