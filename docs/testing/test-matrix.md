@@ -162,6 +162,9 @@ PyRIT tests skip.
 | Live | maintainer's re-sync with detail on | PASS (maintainer) | all 8 runs have transcripts in the account (4 attempts each for the two OpenRouter runs); 4 findings have evidence |
 | Engine | `modelwrecker --version`, `-V`, and `version` print the version | PASS | `tests/test_scaffold.py` (#30) |
 | Dashboard | leaderboard shows "N of M worked", refusals, small-sample flag, and links to the latest campaign | PASS | API test plus Chrome check in mock mode (#31) |
+| Live | larger OpenRouter campaign: 7 strategies x 3 objectives (system prompt, customer PII, staff discount code) against each of openai/gpt-4o-mini and meta-llama/llama-3.1-8b-instruct | PASS | gpt-4o-mini: 0 of 39 attacks worked, 0 findings. Llama 3.1 8B: 12 of 39 worked, 4 findings, including a critical staff-code leak that held on 5 of 5 replays (prompt_extraction); prefill worked 3 of 3 but did not hold on replay, so no finding. Strategies send 1 to 3 attempts per objective, so wider comparisons need more objectives |
+| Live | `modelwrecker 0.0.2` from PyPI | PASS | clean Python 3.12 venv: installs, `--version` prints 0.0.2, `sync --help` lists `--dry-run`, `--resync`, `--metadata-only` |
+| Live | GitHub history without AI co-author lines; repository Contributors sidebar | PASS | 0 `Co-authored-by` lines on main; contributors API and the page widget list only the maintainer (#4, #34) |
 | Live | migration `0003` applied; `finding_evidence` and `run_transcripts` have RLS with owner read and delete policies only | PASS | checked with SQL after applying, 2026-10-02 |
 | Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
 | Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |

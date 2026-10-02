@@ -18,7 +18,7 @@ reliability (Wilson confidence intervals), evidence, findings (reports show the 
 pass/fail per attempt), the payload/transform engine, the campaign engine (parallel objectives, budgets,
 stop conditions, retries), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
 storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
-garak are integrated.** Live-verified against OpenRouter. 192 offline tests pass (1 skipped).
+garak are integrated.** Live-verified against OpenRouter. 206 offline tests pass (1 skipped).
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
 Run tests: `.venv\Scripts\python -m pytest -q`. Phase 10 (local-first product) is in progress: docs, the
