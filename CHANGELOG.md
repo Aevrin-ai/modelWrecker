@@ -20,6 +20,10 @@ happened - never invent historical entries.
 
 ### Fixed
 - The dashboard's sync settings for evidence and transcripts were saved but did nothing (#28).
+- `modelwrecker --version` (and `-V`) now prints the version instead of "No such option" (#30).
+- The analytics leaderboard read as "no data" for small runs. It now shows "N of M worked",
+  refusals, a small-sample flag with an explanation of the wide range, and links each target to its
+  latest campaign's attempts (#31).
 
 ### Added (Phase 10 - local-first product, first slice)
 - **Architecture for the local-first product.** Heavy red-team compute stays on the user's machine; the

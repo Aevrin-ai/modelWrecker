@@ -30,6 +30,23 @@ provider_app = typer.Typer(help="Provider connectivity checks.", no_args_is_help
 app.add_typer(provider_app, name="provider")
 
 
+def _print_version(value: bool) -> None:
+    if value:
+        typer.echo(f"modelwrecker {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    _version: Annotated[
+        bool,
+        typer.Option("--version", "-V", callback=_print_version, is_eager=True,
+                     help="Print the version and exit."),
+    ] = False,
+) -> None:
+    """modelWrecker - an AI red teaming engine. For authorized testing only."""
+
+
 @app.command()
 def version() -> None:
     """Print the version."""

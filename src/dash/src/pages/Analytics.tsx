@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Activity, BarChart3, Crosshair, ShieldAlert, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,9 @@ import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { formatNumber, formatPercent } from "@/lib/format";
+
+/** Below this many attempts the 95% range is too wide to compare targets; the page says so. */
+const SMALL_SAMPLE = 30;
 
 export function Analytics() {
   const { activeProjectId } = useActiveProject();
@@ -130,17 +134,21 @@ export function Analytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Target leaderboard</CardTitle>
-                <CardDescription>Most robust first. Lower attack success rate means a harder target.</CardDescription>
+                <CardDescription>
+                  Most robust first. Attack success rate (ASR) is the share of attacks that worked; lower means a
+                  harder target. Open a target to read every prompt and reply.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
+              <CardContent className="space-y-3 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>#</TableHead>
                       <TableHead>Target</TableHead>
                       <TableHead className="text-right">ASR</TableHead>
-                      <TableHead className="text-right">95% CI</TableHead>
+                      <TableHead className="text-right">95% range</TableHead>
                       <TableHead className="text-right">Attempts</TableHead>
+                      <TableHead className="text-right">Refused</TableHead>
                       <TableHead className="text-right">Findings</TableHead>
                       <TableHead className="text-right">High + critical</TableHead>
                     </TableRow>
@@ -151,18 +159,43 @@ export function Analytics() {
                       .map((r, i) => (
                         <TableRow key={r.targetId}>
                           <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                          <TableCell className="font-medium">{r.targetName}</TableCell>
-                          <TableCell className="text-right tabular-nums">{formatPercent(r.asr, 1)}</TableCell>
+                          <TableCell className="font-medium">
+                            {r.latestCampaignId ? (
+                              <Link to={`/campaigns/${r.latestCampaignId}`} className="hover:underline">
+                                {r.targetName}
+                              </Link>
+                            ) : (
+                              r.targetName
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatPercent(r.asr, 1)}
+                            <span className="block text-xs text-muted-foreground">
+                              {formatNumber(r.successes)} of {formatNumber(r.attempts)} worked
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right text-xs tabular-nums text-muted-foreground">
                             {formatPercent(r.ciLow, 0)} - {formatPercent(r.ciHigh, 0)}
+                            {r.attempts < SMALL_SAMPLE && (
+                              <span className="block text-amber-700 dark:text-amber-300">small sample</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{formatNumber(r.attempts)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatNumber(r.refusals)}</TableCell>
                           <TableCell className="text-right tabular-nums">{r.findings}</TableCell>
                           <TableCell className="text-right tabular-nums">{r.highCritical}</TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
                 </Table>
+                {d.leaderboard.some((r) => r.attempts < SMALL_SAMPLE) && (
+                  <p className="max-w-prose text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Small sample:</span> fewer than {SMALL_SAMPLE} attempts.
+                    The 95% range is wide because there is little evidence yet. For example, 0 of 4 means the target
+                    refused every attack that was tried, not that it is safe: the true rate could still be up to the top
+                    of the range. Run more objectives and strategies against it for a reliable number.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
