@@ -140,6 +140,15 @@ export function Analytics() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 overflow-x-auto">
+                {d.leaderboardLocked ? (
+                  <p className="text-sm text-muted-foreground">
+                    The model leaderboard is part of Pro. Every other chart on this page stays on your plan.{" "}
+                    <Link to="/billing" className="font-medium text-foreground underline underline-offset-4">
+                      See plans
+                    </Link>
+                  </p>
+                ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -195,6 +204,8 @@ export function Analytics() {
                     refused every attack that was tried, not that it is safe: the true rate could still be up to the top
                     of the range. Run more objectives and strategies against it for a reliable number.
                   </p>
+                )}
+              </>
                 )}
               </CardContent>
             </Card>

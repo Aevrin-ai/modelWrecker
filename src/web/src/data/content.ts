@@ -1,7 +1,8 @@
 // All landing-page copy lives here, separate from layout. Every claim maps to
 // something documented in docs/ (architecture, attack-engine, targets, judges,
 // campaigns, analytics, security, features/harness-integration). No invented
-// customers, prices, statistics, or integrations.
+// customers, statistics, or integrations. Prices are not written here: the Pricing
+// section reads src/shared/plans.json, the file the checkout charges from.
 
 export const hero = {
   badge: "Local-first AI red teaming",
@@ -226,6 +227,7 @@ export const footer = {
         { label: "Features", href: "#features" },
         { label: "How it works", href: "#how-it-works" },
         { label: "Engine", href: "#engine" },
+        { label: "Pricing", href: "#pricing" },
         { label: "Dashboard", href: "/dashboard/" },
       ],
     },

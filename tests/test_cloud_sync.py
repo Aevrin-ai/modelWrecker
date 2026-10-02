@@ -656,7 +656,7 @@ def fake_engine(monkeypatch):
     """Replace the attack loop with one that writes a tiny run folder, so `run` needs no model."""
     from modelwrecker.attacker import loop
 
-    async def fake_run_config(cfg, *, store=None, emit=None, run_id=None):
+    async def fake_run_config(cfg, *, store=None, emit=None, run_id=None, allowance=None):
         store.event("run_meta", target_model="llama3", target_provider="openai_compatible",
                     run_id=run_id, target_type="chat", project_name="local-smoke-test")
         store.event("attempt", objective="t0", strategy="direct_jailbreak", payload="p",

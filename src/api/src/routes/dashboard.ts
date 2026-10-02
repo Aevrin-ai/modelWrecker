@@ -6,7 +6,7 @@ import type { AppEnv } from "../app";
 import { parseBody as parse } from "../body";
 import type { Db, Deps, Row } from "../db";
 import { ApiError, displayEndpoint, wilson } from "../lib";
-import { PLANS, planById } from "../plans";
+import { PLANS, effectivePlan } from "../plans";
 import {
   CampaignCreate,
   FindingPatch,
@@ -386,6 +386,11 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
   // Every handler below runs behind requireUser; owner is always the verified user, never input.
   const ctx = (c: Context<AppEnv>) => ({ db: c.get("db"), owner: c.get("user").id, now: deps.now() });
   const q = (c: Context<AppEnv>, k: string) => c.req.query(k) || undefined;
+  // The plan in effect, read with the server key: a user can read but never write their subscription.
+  const planFor = async (owner: string, now: Date) => {
+    const [sub] = await deps.serviceDb.table("subscriptions").select({ eq: { owner_id: owner } });
+    return effectivePlan(sub, now);
+  };
   const one = async (db: Db, table: string, id: string, owner: string) => {
     const [row] = await db.table(table).select({ eq: { id, owner_id: owner } });
     if (!row) throw new ApiError(404, "not_found", "Not found, or you do not have access to it.");
@@ -441,8 +446,12 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
   });
 
   app.get("/analytics", requireUser, async (c) => {
-    const { db, owner } = ctx(c);
-    return c.json(analytics(scope(await loadWorld(db, owner), q(c, "projectId"))));
+    const { db, owner, now } = ctx(c);
+    const summary = analytics(scope(await loadWorld(db, owner), q(c, "projectId")));
+    // The model leaderboard is a Pro feature. The rest of the page stays on every plan.
+    const { features } = await planFor(owner, now);
+    if (!features.analytics) return c.json({ ...summary, leaderboard: [], leaderboardLocked: true });
+    return c.json({ ...summary, leaderboardLocked: false });
   });
 
   // projects
@@ -452,8 +461,13 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
     return c.json(w.projects.map((p) => mapProject(p, w)));
   });
   app.post("/projects", requireUser, async (c) => {
-    const { db, owner } = ctx(c);
+    const { db, owner, now } = ctx(c);
     const body = await parse(c, ProjectCreate);
+    const { limits } = await planFor(owner, now);
+    const active = (await db.table("projects").select({ eq: { owner_id: owner } })).filter((p) => !p.archived).length;
+    if (limits.projects !== null && active >= limits.projects) {
+      throw new ApiError(403, "plan_limit", `Your plan allows ${limits.projects} active projects. Archive one or upgrade.`);
+    }
     const p = await db.table("projects").insert({ owner_id: owner, name: body.name, description: body.description });
     return c.json(mapProject(p, await loadWorld(db, owner)), 201);
   });
@@ -690,31 +704,7 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
 
   // reports, billing, settings, notifications, search
   app.get("/reports", requireUser, (c) => c.json([])); // report files are not synced yet
-  app.get("/plans", requireUser, (c) => c.json(PLANS));
-  app.get("/invoices", requireUser, (c) => c.json([])); // no billing provider is live yet
-  app.get("/subscription", requireUser, async (c) => {
-    const { db, owner, now } = ctx(c);
-    const [sub] = await db.table("subscriptions").select({ eq: { owner_id: owner } });
-    const plan = planById(str(sub?.plan) || "free");
-    const w = await loadWorld(db, owner);
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = sub?.current_period_end ? new Date(str(sub.current_period_end)) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return c.json({
-      planId: plan.id,
-      planName: plan.name,
-      status: str(sub?.status) || "active",
-      paymentStatus: plan.id === "free" ? "not_required" : "pending",
-      periodStart: start.toISOString(),
-      periodEnd: end.toISOString(),
-      currency: "INR",
-      usage: {
-        campaigns: w.campaigns.length,
-        attacks: w.runs.filter((r) => Date.parse(str(r.created_at)) >= start.getTime()).reduce((a, r) => a + num(r.attempts), 0),
-        devices: w.devices.length,
-        projects: w.projects.filter((p) => !p.archived).length,
-      },
-    });
-  });
+  app.get("/plans", (c) => c.json(PLANS)); // public: the same prices the landing page shows
   const defaultSettings = { sync: { metadata: true, detailedEvidence: false, transcripts: false }, notifications: {} };
   const readSettings = async (db: Db, owner: string) => {
     const [p] = await db.table("profiles").select({ eq: { id: owner } });
@@ -729,6 +719,10 @@ export function registerDashboardRoutes(app: Hono<AppEnv>, deps: Deps, requireUs
     const { db, owner } = ctx(c);
     const body = await parse(c, SettingsPatch);
     const cur = await readSettings(db, owner);
+    const turningOn = (body.sync?.detailedEvidence === true && !cur.sync.detailedEvidence) || (body.sync?.transcripts === true && !cur.sync.transcripts);
+    if (turningOn && !(await planFor(owner, deps.now())).features.evidence_storage) {
+      throw new ApiError(403, "upgrade_required", "Evidence and transcript sync are part of Pro.");
+    }
     const next = {
       sync: { ...cur.sync, ...(body.sync ?? {}), metadata: true },
       notifications: { ...cur.notifications, ...(body.notifications ?? {}) },

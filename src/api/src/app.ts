@@ -14,7 +14,10 @@ import {
   userCode,
 } from "./lib";
 import { DeviceApproveReq, DeviceCodeReq, DeviceTokenReq, HeartbeatReq, SyncReq, type SyncEvidenceBody } from "./schemas";
+import { registerBillingRoutes } from "./routes/billing";
 import { registerDashboardRoutes } from "./routes/dashboard";
+import { issueEntitlement } from "./entitlements";
+import { effectivePlan } from "./plans";
 import { ensureDefaultProject, readSyncPolicy, type SyncPolicy } from "./routes/shared";
 
 export type AppEnv = {
@@ -64,6 +67,11 @@ export function createApp(deps: Deps) {
   app.notFound((c) => c.json({ error: "not_found", message: "No such route." }, 404));
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  // The public half of the entitlement signing key, so anyone can check a token the engine holds.
+  app.get("/entitlements/keys", (c) =>
+    c.json({ keys: deps.signer ? [{ kid: deps.signer.keyId, kty: "OKP", crv: "Ed25519", alg: "EdDSA", x: deps.signer.publicKey }] : [] }),
+  );
 
   // --- device sign-in (RFC 8628) --------------------------------------------------------------------
 
@@ -158,8 +166,9 @@ export function createApp(deps: Deps) {
     const patch: Row = { last_seen_at: deps.now().toISOString() };
     if (body.engine_version) patch.engine_version = body.engine_version;
     await deps.serviceDb.table("devices").update({ id: d.id }, patch);
-    // Tell the engine which detail the account allows, so it only sends what will be kept.
-    return c.json({ ok: true, sync: await devicePolicy(deps, d) });
+    // Tell the engine which detail the account allows, so it only sends what will be kept, and hand it a
+    // fresh signed entitlement.
+    return c.json({ ok: true, sync: await devicePolicy(deps, d), ...(await entitlementFor(deps, d)) });
   });
 
   app.get("/device/me", deviceAuth, async (c) => {
@@ -170,6 +179,12 @@ export function createApp(deps: Deps) {
       name: d.name,
       sync: await devicePolicy(deps, d),
     });
+  });
+
+  app.get("/device/entitlement", deviceAuth, async (c) => {
+    const ent = await entitlementFor(deps, c.get("device"));
+    if (!ent.entitlement) throw new ApiError(503, "entitlements_unavailable", "Entitlements are not available right now.");
+    return c.json(ent);
   });
 
   app.post("/sync", deviceAuth, async (c) => {
@@ -193,6 +208,15 @@ export function createApp(deps: Deps) {
       throw new ApiError(410, "expired_token", "That code has expired. Run modelwrecker login again.");
     }
     if (req.status !== "pending") throw new ApiError(409, "already_used", "That code was already used.");
+
+    if (body.approve) {
+      const [sub] = await deps.serviceDb.table("subscriptions").select({ eq: { owner_id: user.id } });
+      const max = effectivePlan(sub, deps.now()).limits.devices;
+      const linked = (await deps.serviceDb.table("devices").select({ eq: { owner_id: user.id } })).filter((d) => !d.revoked).length;
+      if (max !== null && linked >= max) {
+        throw new ApiError(403, "plan_limit", `Your plan allows ${max} connected device${max === 1 ? "" : "s"}. Revoke one in Devices, or upgrade.`);
+      }
+    }
 
     if (!body.approve) {
       await requests.update({ id: req.id, status: "pending" }, { status: "denied", owner_id: user.id });
@@ -219,6 +243,7 @@ export function createApp(deps: Deps) {
   // --- dashboard (user) routes --------------------------------------------------------------------
 
   registerDashboardRoutes(app, deps, requireUser);
+  registerBillingRoutes(app, deps, requireUser);
 
   return app;
 }
@@ -239,8 +264,15 @@ export function userAuth(deps: Deps) {
 }
 
 async function devicePolicy(deps: Deps, device: Row) {
-  const policy = await readSyncPolicy(deps.serviceDb, String(device.owner_id));
+  const policy = await readSyncPolicy(deps.serviceDb, String(device.owner_id), deps.now());
   return { metadata: true, evidence: policy.evidence, transcripts: policy.transcripts };
+}
+
+/** A fresh signed entitlement for a device, or nothing when signing is not configured (free baseline). */
+async function entitlementFor(deps: Deps, device: Row): Promise<{ entitlement?: string; plan?: string; expires_at?: string }> {
+  if (!deps.signer) return {};
+  const { token, payload } = await issueEntitlement(deps.signer, deps.serviceDb, deps.appOrigin, device, deps.now());
+  return { entitlement: token, plan: payload.plan, expires_at: new Date(payload.exp * 1000).toISOString() };
 }
 
 /** The stored shape of one finding's evidence. Text was already redacted by the engine. */
@@ -267,7 +299,7 @@ async function ingestRun(deps: Deps, device: Row, body: z.infer<typeof SyncReq>)
   const run = body.run;
   const now = deps.now().toISOString();
   // Detail is kept only when the account allows it. The client's choice to send it is not enough.
-  const policy: SyncPolicy = await readSyncPolicy(db, owner);
+  const policy: SyncPolicy = await readSyncPolicy(db, owner, deps.now());
 
   // Target: create on first sight; never overwrite a target the user registered in the dashboard.
   const targets = db.table("targets");

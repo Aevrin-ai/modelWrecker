@@ -27,6 +27,9 @@ export function Settings() {
   const { toast } = useToast();
   const { theme, toggle } = useTheme();
   const settings = useAsync(() => apiClient.getSettings(), []);
+  // Detail sync is a Pro feature; the API refuses to turn it on otherwise. This only explains why.
+  const sub = useAsync(() => apiClient.getSubscription(), []);
+  const detailLocked = sub.data ? !sub.data.features.evidence_storage : false;
   const [draft, setDraft] = useState<WorkspaceSettings | null>(null);
 
   useEffect(() => {
@@ -40,9 +43,9 @@ export function Settings() {
     try {
       await apiClient.updateSettings(patch);
       toast({ title: "Settings saved" });
-    } catch {
+    } catch (err) {
       setDraft(draft);
-      toast({ title: "Could not save settings", tone: "error" });
+      toast({ title: "Could not save settings", description: err instanceof Error ? err.message : undefined, tone: "error" });
     }
   }
 
@@ -86,14 +89,25 @@ export function Settings() {
                     title="Detailed evidence"
                     body="For each finding: the prompt sent, the model reply, and the judge's verdict, shown on the finding page. Off keeps it in the local runs folder, and turning it off deletes the copies already in the cloud."
                     checked={s.sync.detailedEvidence}
+                    locked={detailLocked && !s.sync.detailedEvidence}
                     onChange={(v) => save({ sync: { ...s.sync, detailedEvidence: v } })}
                   />
                   <SyncRow
                     title="Full attack transcripts"
                     body="Every attempt of every run (prompt sent, model reply, result), shown on the campaign page, plus every turn of multi-turn attacks. These can contain your system prompts and private data. Turning it off deletes the copies already in the cloud."
                     checked={s.sync.transcripts}
+                    locked={detailLocked && !s.sync.transcripts}
                     onChange={(v) => save({ sync: { ...s.sync, transcripts: v } })}
                   />
+                  {detailLocked && (
+                    <p className="pt-4 text-sm text-muted-foreground">
+                      Evidence and transcript sync are part of Pro. On Free only summary metadata is kept, whatever is switched on
+                      here.{" "}
+                      <Link to="/billing" className="font-medium text-foreground underline underline-offset-4">
+                        See plans
+                      </Link>
+                    </p>
+                  )}
                   {(s.sync.detailedEvidence || s.sync.transcripts) && (
                     <div className="space-y-2 pt-4 text-sm">
                       <p className="flex items-start gap-2 text-amber-700 dark:text-amber-300">
@@ -170,12 +184,15 @@ function SyncRow({
   body,
   checked,
   disabled,
+  locked,
   onChange,
 }: {
   title: string;
   body: string;
   checked: boolean;
   disabled?: boolean;
+  /** Not included in the plan: shown off and not switchable. */
+  locked?: boolean;
   onChange: (v: boolean) => void;
 }) {
   return (
@@ -183,10 +200,11 @@ function SyncRow({
       <div className="space-y-1">
         <p className="text-sm font-medium">
           {title} {disabled && <span className="text-xs font-normal text-muted-foreground">(required)</span>}
+          {locked && <span className="text-xs font-normal text-muted-foreground">(Pro)</span>}
         </p>
         <p className="text-sm text-muted-foreground">{body}</p>
       </div>
-      <Switch label={title} checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Switch label={title} checked={checked} disabled={disabled || locked} onCheckedChange={onChange} />
     </div>
   );
 }

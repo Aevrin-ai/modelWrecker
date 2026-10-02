@@ -116,11 +116,52 @@ SHA-256 hash. A second poll for the same code gets `expired_token`.
 Request: `{ "engine_version": "0.0.1" }`. Updates `last_seen_at`. Response:
 
 ```json
-{ "ok": true, "sync": { "metadata": true, "evidence": false, "transcripts": false } }
+{
+  "ok": true,
+  "sync": { "metadata": true, "evidence": false, "transcripts": false },
+  "entitlement": "<signed token>",
+  "plan": "free",
+  "expires_at": "2026-10-09T10:00:00.000Z"
+}
 ```
 
-`sync` is the account's choice in Settings (What syncs to Aevrin). The engine reads it before every
-sync and adds detail only when it is on. `GET /device/me` returns the same `sync` object.
+`sync` is the account's choice in Settings (What syncs to Aevrin). Evidence and transcripts are a Pro
+feature, so on Free both are `false` whatever the settings say. The engine reads `sync` before every sync
+and adds detail only when it is on. `GET /device/me` returns the same `sync` object.
+
+`entitlement` is a signed statement of what the plan allows (issue #11). The engine verifies and stores
+it; see [`../security/entitlements.md`](../security/entitlements.md). It is absent when signing is not
+configured, and the engine then runs the free baseline.
+
+### `GET /device/entitlement` (device)
+
+Returns `{ "entitlement": "<signed token>", "plan": "pro", "expires_at": "..." }`, or 503 when signing is
+not configured. `modelwrecker login`, `modelwrecker plan --refresh`, and `run` (when the stored token is
+over 12 hours old) call it.
+
+### `GET /entitlements/keys` (public)
+
+The public half of the signing key: `{ "keys": [{ "kid", "kty": "OKP", "crv": "Ed25519", "alg": "EdDSA",
+"x" }] }`. Anyone can verify a token with it; only the Worker can sign.
+
+## Billing (issue #12)
+
+Prepaid plans through Razorpay Orders. The full flow, failure cases, and webhook setup are in
+[`../billing/razorpay.md`](../billing/razorpay.md); prices in [`../billing/pricing.md`](../billing/pricing.md).
+
+| Method and path | Caller | Purpose |
+|-----------------|--------|---------|
+| `GET /plans` | public | Plans, limits, and prices from `src/shared/plans.json` |
+| `GET /subscription` | user | The plan in effect, paid-until date, credit, bonus, limits, features, this month's usage. Also reconciles recent unpaid orders with Razorpay |
+| `GET /invoices` | user | Confirmed purchases (paid, refunded) |
+| `POST /billing/checkout` | user | `{ "plan": "pro", "interval": "month" or "year" }`. Creates a Razorpay order for the configured price minus account credit, or pays fully from credit. The amount never comes from the client |
+| `POST /billing/verify` | user | The ids Checkout returned. Checks the signature with the key secret, fetches the payment from Razorpay, and applies it once |
+| `POST /billing/webhook` | Razorpay | HMAC-SHA256 of the raw body with the webhook secret. `payment.captured`, `order.paid`, `payment.failed`, `refund.processed`. Repeated event ids are skipped |
+
+Plan limits are enforced here too: `POST /device/approve` refuses a device over the plan's device limit,
+`POST /projects` refuses a project over the active-project limit, and `PATCH /settings` refuses to turn on
+evidence or transcript sync without Pro (`403`, `plan_limit` or `upgrade_required`). `GET /analytics`
+returns an empty leaderboard with `leaderboardLocked: true` without Pro.
 
 ## Result sync
 
@@ -242,7 +283,7 @@ sense) and only ever return the caller's rows.
 | `POST /devices/:id/revoke` | Revoke a device token |
 | `GET /analytics` | Aggregates over synced runs and findings |
 | `GET /reports` | Report records (empty until report sync exists) |
-| `GET /subscription`, `GET /plans`, `GET /invoices` | Plan state; plans come from configuration |
+| `GET /subscription`, `GET /invoices` | Plan state and purchases (see Billing above) |
 | `GET /settings`, `PATCH /settings` | Sync privacy settings, notification settings. Turning evidence or transcripts off deletes the copies already stored |
 | `GET /notifications` | Empty until notifications exist |
 | `GET /search?q=` | Search the caller's own records |
@@ -261,10 +302,16 @@ project-specific is in the public repo:
 | `SUPABASE_ANON_KEY` | secret | public key, used with the user's token so RLS applies |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | server key, used only for device routes and device sign-in |
 | `APP_ORIGIN` | var | `https://app.aevrin.net`, used for verification links and CORS |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | secret | Razorpay API keys. Without them billing routes answer 503 |
+| `RAZORPAY_WEBHOOK_SECRET` | secret | Checks webhook signatures. Without it the webhook answers 503 |
+| `ENTITLEMENT_SIGNING_KEY` | secret | Ed25519 private key (PKCS#8, base64). Without it no entitlement is issued |
+| `ENTITLEMENT_KEY_ID`, `ENTITLEMENT_PUBLIC_KEY` | var | Key id and public key, also shipped in the engine |
+| `ADMIN_TOTP_KEY` | secret | Encrypts admin authenticator secrets at rest (admin console) |
+| `ANALYTICS_SALT` | secret | Mixed into the daily visitor hash (page analytics) |
 
 ## Known limits
 
 - Rate limiting is best effort per Worker instance. A Cloudflare rate-limit binding is the upgrade path.
-- Entitlements are returned as plain plan data. Signing them for offline enforcement is ROADMAP 10.14.
+- Payment amounts are fixed by the server from `src/shared/plans.json`; a renewal is a new payment.
 - Report files are not synced yet; the dashboard says so instead of guessing. Evidence and transcripts
   sync only when turned on (tables `finding_evidence` and `run_transcripts`, migration `0003`).

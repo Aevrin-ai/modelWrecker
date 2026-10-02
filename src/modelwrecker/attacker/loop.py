@@ -54,17 +54,25 @@ async def run_config(
     store=None,
     emit=_emit_noop,
     run_id: str | None = None,
+    allowance=None,
 ) -> RunResult:
     """Run every objective in a config.
 
-    `store` is an optional RunStore; `emit` is a progress callback.
+    `store` is an optional RunStore; `emit` is a progress callback. `allowance` is the result of
+    `entitlements.check_run(config)`; when it is not given it is checked here, before any model
+    call, and a run the plan does not allow raises `EntitlementDenied` (a ConfigError).
     """
     config.require_full()
     config.require_authorized_target()
     config.require_objectives()
 
+    from ..entitlements import check_run, record_run
+
+    allowance = allowance or check_run(config)
+
     run_id = run_id or uuid.uuid4().hex
     result = RunResult(run_id=run_id)
+    result.notes.extend(allowance.notes)
     planner = Planner()
     config_snapshot = _config_snapshot(config)
 
@@ -95,6 +103,13 @@ async def run_config(
         from ..campaigns.engine import build_budget, execute_campaign
 
         budget = build_budget(config)
+        # The plan's monthly attempt allowance caps the campaign budget
+        # (docs/security/entitlements.md).
+        if allowance.remaining_attempts is not None:
+            if budget.max_attempts is None or allowance.remaining_attempts < budget.max_attempts:
+                budget.max_attempts = allowance.remaining_attempts
+                result.notes.append(f"plan: {allowance.remaining_attempts} attack attempts left "
+                                    "this month; the campaign stops there")
 
         async def run_one(objective: Objective):
             return await _run_objective(
@@ -110,16 +125,20 @@ async def run_config(
                 emit=emit,
                 config_snapshot=config_snapshot,
                 budget=budget,
+                allowance=allowance,
             )
 
-        await execute_campaign(
-            config=config,
-            objectives=config.objectives,
-            run_one=run_one,
-            result=result,
-            budget=budget,
-            emit=emit,
-        )
+        try:
+            await execute_campaign(
+                config=config,
+                objectives=config.objectives,
+                run_one=run_one,
+                result=result,
+                budget=budget,
+                emit=emit,
+            )
+        finally:
+            record_run(budget.attempts)
 
     return result
 
@@ -138,6 +157,7 @@ async def _run_objective(
     emit,
     config_snapshot: dict,
     budget=None,
+    allowance=None,
 ) -> tuple[Finding | None, list[AttemptRecord]]:
     records: list[AttemptRecord] = []
     sequence = planner.select_sequence(objective, config)
@@ -148,6 +168,9 @@ async def _run_objective(
             if exhausted:
                 emit(f"{objective.title}: stopping before {strategy_name} ({why})")
                 break
+        if allowance is not None and not allowance.strategy_allowed(strategy_name):
+            emit(f"skip {strategy_name}: not included in your plan (needs Pro)")
+            continue
         strategy = get_strategy(strategy_name)
         # Capability check: skip a strategy the target cannot support.
         if not strategy.required_target_capabilities.issubset(target.capabilities()):

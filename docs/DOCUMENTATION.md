@@ -25,6 +25,7 @@ and update everything in the right column.
 | Entitlement or plan change | `docs/security/entitlements.md` (plans are config, not engine code) |
 | MCP server tool or guardrail change | `docs/mcp/overview.md`; `docs/mcp/tools.md`; `docs/security/mcp.md` |
 | Billing change | `docs/billing/razorpay.md` |
+| Price, plan limit, or cost-model change | `src/shared/plans.json`, `docs/billing/pricing.md` (the margin test must pass) |
 | Dashboard analytics change | `docs/analytics/overview.md` |
 | New environment variable | `docs/reference/ENVIRONMENT.md` |
 | New config key | `docs/reference/CONFIGURATION.md` |

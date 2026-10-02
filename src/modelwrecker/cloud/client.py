@@ -1,9 +1,10 @@
 """A small HTTP client for the cloud control-plane API (docs/architecture/control-plane-api.md).
 
-It speaks four routes only: `device/code`, `device/token`, `device/heartbeat`, and `sync`. It never
-follows redirects (a redirect could carry the device token to another host), uses short timeouts,
-and refuses a non-https base URL unless the host is `localhost` or `127.0.0.1` (local Worker
-development). RFC 8628 polling errors are mapped to a typed `TokenStatus`.
+It speaks five routes only: `device/code`, `device/token`, `device/heartbeat`, `device/entitlement`,
+and `sync`. A signed entitlement in a heartbeat or entitlement reply is verified and stored (issue
+#11). It never follows redirects (a redirect could carry the device token to another host), uses
+short timeouts, and refuses a non-https base URL unless the host is `localhost` or `127.0.0.1`
+(local Worker development). RFC 8628 polling errors are mapped to a typed `TokenStatus`.
 """
 
 from __future__ import annotations
@@ -191,12 +192,29 @@ class CloudClient:
 
     def heartbeat(self, engine_version: str = __version__) -> bool:
         data = self._post("device/heartbeat", {"engine_version": engine_version}, auth=True)
+        _remember_entitlement(data)
         return bool(data.get("ok"))
 
     def sync_policy(self, engine_version: str = __version__) -> SyncPolicy:
         """Heartbeat, and read which detail the account allows. An older API means metadata only."""
         data = self._post("device/heartbeat", {"engine_version": engine_version}, auth=True)
+        _remember_entitlement(data)
         return SyncPolicy.from_api(data.get("sync"))
+
+    def refresh_entitlement(self):
+        """Fetch, verify, and store a fresh signed entitlement. Returns it, or raises."""
+        from ..entitlements import EntitlementError, save_token
+
+        resp = self._send_get("device/entitlement")
+        if resp.status_code != 200:
+            raise _error_from(resp)
+        token = _json(resp).get("entitlement")
+        if not isinstance(token, str) or not token:
+            raise CloudError("bad_response", "the entitlement response had no token", 200)
+        try:
+            return save_token(token)
+        except EntitlementError as e:
+            raise CloudError("invalid_entitlement", str(e), 200) from e
 
     def sync(self, body: dict) -> dict:
         """POST one run summary. Returns the 200 body; raises CloudError on anything else."""
@@ -212,6 +230,22 @@ class CloudClient:
         if resp.status_code != 200:
             raise _error_from(resp)
         return _json(resp)
+
+    def _send_get(self, path: str) -> httpx.Response:
+        if not self._token:
+            raise CloudError("not_logged_in", "no device credential; run `modelwrecker login`")
+        try:
+            resp = self._http.get(path, headers={"Authorization": f"Bearer {self._token}"})
+        except httpx.TimeoutException as e:
+            raise CloudError("timeout", "the cloud API did not answer in time") from e
+        except httpx.HTTPError as e:
+            raise CloudError("network_error",
+                             f"could not reach the cloud API: {type(e).__name__}") from e
+        if resp.is_redirect:
+            raise CloudError("redirect_refused",
+                             "the cloud API answered with a redirect; not followed",
+                             resp.status_code)
+        return resp
 
     def _send(self, path: str, body: dict, *, auth: bool) -> httpx.Response:
         headers = {}
@@ -231,6 +265,22 @@ class CloudClient:
                              "the cloud API answered with a redirect; not followed",
                              resp.status_code)
         return resp
+
+
+def _remember_entitlement(data: dict) -> None:
+    """Store a signed entitlement from a heartbeat reply.
+
+    A token that fails verification is ignored: the engine keeps what it had, or the free baseline.
+    """
+    token = data.get("entitlement")
+    if not isinstance(token, str) or not token:
+        return
+    from ..entitlements import EntitlementError, save_token
+
+    try:
+        save_token(token)
+    except (EntitlementError, OSError):
+        pass
 
 
 def _json(resp: httpx.Response) -> dict:
