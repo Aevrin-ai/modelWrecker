@@ -243,3 +243,55 @@ export const VerifyPaymentReq = z
     razorpay_signature: z.string().trim().regex(/^[a-f0-9]{64}$/i, "expected a hex signature"),
   })
   .strict();
+
+// --- admin console (docs/security/admin.md) ---------------------------------------------------------
+// Every change to a user needs a reason; it goes into the audit log.
+
+const reason = z.string().trim().min(3, "give a reason (it is kept in the audit log)").max(500);
+const meter = z.number().int().min(0).max(10_000_000);
+
+export const MfaCodeReq = z
+  .object({
+    code: z.string().trim().regex(/^\d{6}$/, "expected a 6-digit code").optional(),
+    recoveryCode: z.string().trim().min(8).max(32).optional(),
+  })
+  .strict()
+  .refine((b) => Boolean(b.code) !== Boolean(b.recoveryCode), "send either a code or a recovery code");
+
+export const AdminPlanPatch = z
+  .object({
+    plan: z.enum(["free", "pro", "enterprise"]),
+    paidUntil: z.string().datetime({ offset: true }).nullable(),
+    reason,
+  })
+  .strict();
+
+export const AdminBonus = z
+  .object({ campaigns: meter, attacks: meter, devices: meter, projects: meter, expiresAt: z.string().datetime({ offset: true }).nullable(), reason })
+  .strict();
+
+export const AdminCredit = z
+  .object({ deltaPaise: z.number().int().min(-10_000_000).max(10_000_000).refine((n) => n !== 0, "must not be zero"), reason })
+  .strict();
+
+export const AdminReason = z.object({ reason }).strict();
+
+export const AdminSuspend = z.object({ suspended: z.boolean(), reason }).strict();
+
+export const AdminDelete = z.object({ confirmEmail: z.string().trim().min(3).max(320), reason }).strict();
+
+export const AdminSettings = z
+  .object({ sync: z.object({ detailedEvidence: z.boolean(), transcripts: z.boolean() }).strict(), reason })
+  .strict();
+
+export const AdminProfile = z.object({ displayName: shortText(200), reason }).strict();
+
+// --- page analytics beacon (docs/analytics/page-analytics.md) --------------------------------------
+
+export const CollectReq = z
+  .object({
+    s: z.enum(["landing", "dashboard"]),
+    p: z.string().max(500),
+    r: z.string().max(1000).default(""),
+  })
+  .strict();

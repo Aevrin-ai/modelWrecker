@@ -1,5 +1,5 @@
 // Cloudflare Worker entry point. Wires the real Supabase-backed dependencies into the app.
-import { createApp } from "./app";
+import { createApp, runMaintenance } from "./app";
 import { supabaseDeps } from "./db/supabase";
 import { createSigner, type EntitlementSigner } from "./entitlements";
 import { HttpRazorpay, type BillingConfig } from "./razorpay";
@@ -46,17 +46,20 @@ function billingFor(env: Env): BillingConfig | undefined {
   };
 }
 
-async function build(env: Env): Promise<App> {
-  const base = supabaseDeps(env);
-  return createApp({
-    ...base,
+async function depsFor(env: Env) {
+  return {
+    ...supabaseDeps(env),
     appOrigin: env.APP_ORIGIN,
     now: () => new Date(),
     billing: billingFor(env),
     signer: await signerFor(env),
     admin: env.ADMIN_TOTP_KEY ? { totpKey: env.ADMIN_TOTP_KEY } : undefined,
     analyticsSalt: env.ANALYTICS_SALT || undefined,
-  });
+  };
+}
+
+async function build(env: Env): Promise<App> {
+  return createApp(await depsFor(env));
 }
 
 function appFor(env: Env): Promise<App> {
@@ -84,5 +87,16 @@ export default {
       return Response.json({ error: "unavailable", message: "The service is not configured." }, { status: 503 });
     }
     return app.fetch(request, env, ctx);
+  },
+
+  // Daily upkeep (wrangler.toml [triggers]): data retention and confirming recent unpaid orders.
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+    ctx.waitUntil(
+      depsFor(env)
+        .then(runMaintenance)
+        .then((r) => console.log("maintenance", JSON.stringify(r)))
+        .catch((err) => console.error("maintenance failed", err instanceof Error ? err.message : String(err))),
+    );
   },
 };

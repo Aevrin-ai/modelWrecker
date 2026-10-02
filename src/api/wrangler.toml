@@ -22,3 +22,7 @@ APP_ORIGIN = "https://app.aevrin.net"
 # src/modelwrecker/entitlements/token.py; GET /api/v1/entitlements/keys publishes it.
 ENTITLEMENT_KEY_ID = "2026-10-a"
 ENTITLEMENT_PUBLIC_KEY = "trSV1ue_ymSzW9Ga60p5rH2maEuebDE_Dk72NHicYp4"
+
+# Daily upkeep at 03:17 UTC: page-view and session retention, and confirming recent unpaid orders.
+[triggers]
+crons = ["17 3 * * *"]

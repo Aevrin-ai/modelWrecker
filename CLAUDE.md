@@ -26,7 +26,8 @@ hardened Docker product, egress enforcement, and local MCP guardrails are done; 
 (`src/web`), dashboard (`src/dash`), control-plane API (`src/api`, Cloudflare Worker + Supabase RLS), and
 device login + metadata sync are built and live on https://app.aevrin.net (`modelwrecker` is on PyPI).
 Prepaid Razorpay billing, prices (`src/shared/plans.json`, `docs/billing/pricing.md`), and signed
-entitlements the engine verifies offline (free baseline without one) are built (#11, #12, #42).
+entitlements the engine verifies offline (free baseline without one) are built (#11, #12, #42). The staff
+admin console at `/admin` (verified @aevrin.net + TOTP authenticator, audited) is built (#43, #44, #45).
 A live MCP-server target connection, any-llm, direct OpenAI/Anthropic adapters, Ollama, and money/cost
 budgets are not built/tested yet. Open work is tracked as GitHub issues (label `roadmap`). See
 `ROADMAP.md` and `docs/testing/test-matrix.md`.

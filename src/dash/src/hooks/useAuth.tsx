@@ -15,7 +15,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Session, User } from "@supabase/supabase-js";
-import { API_MODE, IS_HTTP_MODE } from "@/lib/config";
+import { API_MODE, APP_BASE, IS_HTTP_MODE } from "@/lib/config";
 import type { ApiMode } from "@/lib/config";
 import { getSupabase } from "@/lib/supabase";
 
@@ -33,7 +33,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const BASE_PATH = import.meta.env.BASE_URL; // "/dashboard/"
+const BASE_PATH = APP_BASE; // "/dashboard/", or "/admin/" for the admin console
 const RETURN_KEY = "aevrin-return-to";
 /** A device user code (XXXX-XXXX). Never mistake one for an OAuth code. */
 const USER_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/i;

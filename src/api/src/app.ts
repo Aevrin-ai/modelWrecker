@@ -14,7 +14,9 @@ import {
   userCode,
 } from "./lib";
 import { DeviceApproveReq, DeviceCodeReq, DeviceTokenReq, HeartbeatReq, SyncReq, type SyncEvidenceBody } from "./schemas";
-import { registerBillingRoutes } from "./routes/billing";
+import { reconcileOwner, registerBillingRoutes } from "./routes/billing";
+import { registerAdminRoutes } from "./routes/admin";
+import { registerCollectRoute } from "./routes/collect";
 import { registerDashboardRoutes } from "./routes/dashboard";
 import { issueEntitlement } from "./entitlements";
 import { effectivePlan } from "./plans";
@@ -25,6 +27,7 @@ export type AppEnv = {
     user: AuthUser;
     db: Db;
     device: Row;
+    adminSession: Row;
   };
 };
 
@@ -156,6 +159,7 @@ export function createApp(deps: Deps) {
       .table("devices")
       .select({ eq: { credential_hash: await sha256Hex(token) } });
     if (!row || row.revoked) throw new ApiError(401, "invalid_token", "This device token is not valid.");
+    await refuseSuspended(deps, String(row.owner_id));
     c.set("device", row);
     await next();
   };
@@ -244,6 +248,8 @@ export function createApp(deps: Deps) {
 
   registerDashboardRoutes(app, deps, requireUser);
   registerBillingRoutes(app, deps, requireUser);
+  registerAdminRoutes(app, deps, requireUser);
+  registerCollectRoute(app, deps);
 
   return app;
 }
@@ -257,10 +263,37 @@ export function userAuth(deps: Deps) {
     }
     const user = await deps.verifyUser(token);
     if (!user) throw new ApiError(401, "unauthenticated", "Your session has expired. Sign in again.");
+    await refuseSuspended(deps, user.id);
     c.set("user", user);
     c.set("db", deps.userDb(token));
     await next();
   };
+}
+
+/** A suspended account (admin console) cannot use the API or its devices until it is restored. */
+async function refuseSuspended(deps: Deps, ownerId: string) {
+  const [profile] = await deps.serviceDb.table("profiles").select({ eq: { id: ownerId } });
+  if (profile?.suspended_at) {
+    throw new ApiError(403, "account_suspended", "This account is suspended. Contact Aevrin support.");
+  }
+}
+
+/** Daily upkeep, run by the Worker's scheduled trigger: retention, and confirming recent unpaid orders. */
+export async function runMaintenance(deps: Deps): Promise<Record<string, unknown>> {
+  const out: Record<string, unknown> = {};
+  try {
+    out.retention = await deps.serviceDb.rpc("admin_maintenance", {});
+  } catch (err) {
+    out.retention = `failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
+  if (deps.billing) {
+    const since = new Date(deps.now().getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const open = await deps.serviceDb.table("payments").select({ eq: { status: "created" }, gte: { created_at: since }, limit: 200 });
+    const owners = [...new Set(open.map((p) => String(p.owner_id)).filter((o) => o && o !== "null"))];
+    for (const owner of owners) await reconcileOwner(deps, owner, 10);
+    out.reconciled = owners.length;
+  }
+  return out;
 }
 
 async function devicePolicy(deps: Deps, device: Row) {

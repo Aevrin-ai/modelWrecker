@@ -48,3 +48,11 @@ export const CONFIG_PROBLEMS: string[] = (() => {
 })();
 
 export const IS_CONFIGURED = CONFIG_PROBLEMS.length === 0;
+
+/**
+ * The admin console (docs/security/admin.md) is the same build served at /admin/ instead of /dashboard/.
+ * Assets always load from /dashboard/; only the router base and the sign-in return address differ.
+ */
+export const IS_ADMIN_APP = /^\/admin(\/|$)/.test(window.location.pathname);
+/** Router base and OAuth return path for this page: "/admin/" or "/dashboard/". */
+export const APP_BASE = IS_ADMIN_APP ? "/admin/" : env.BASE_URL;
