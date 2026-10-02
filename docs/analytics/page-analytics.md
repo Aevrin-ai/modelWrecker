@@ -6,7 +6,7 @@
 ## Purpose
 
 Know how many people visit the landing page and use the dashboard, which pages, and where visitors come
-from, without a third-party tracker and without collecting personal data.
+from, with our own beacon and without collecting personal data.
 
 ## What is sent
 
@@ -43,6 +43,15 @@ without the Worker secret `ANALYTICS_SALT`.
   beacons a minute from one address, and malformed bodies.
 
 The endpoint always answers `204`, so a beacon never shows an error or reveals whether it was counted.
+
+## Cloudflare Web Analytics
+
+Separately from this, app.aevrin.net also loads Cloudflare Web Analytics
+(`static.cloudflareinsights.com/beacon.min.js`). Cloudflare injects it because Web Analytics is turned on for
+the site in the Cloudflare dashboard. It sets no cookie, but it is a script from Cloudflare, which
+already serves the site. Its numbers appear in the Cloudflare dashboard, not in the admin console. To
+remove it, turn off Web Analytics for the site in the Cloudflare dashboard (Analytics and Logs, Web
+Analytics).
 
 ## Retention
 
