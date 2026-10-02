@@ -1,6 +1,6 @@
 [project]
 name = "modelwrecker"
-version = "0.0.1"
+version = "0.0.2"
 description = "An AI red teaming engine. Safely attacks AI systems and turns verified weaknesses into reproducible findings."
 readme = "README.md"
 requires-python = ">=3.12"

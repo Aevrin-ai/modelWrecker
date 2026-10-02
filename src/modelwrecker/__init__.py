@@ -8,4 +8,4 @@ security helpers, and CLI skeleton are in place; concrete provider/target/strate
 the attack loop are built next. See docs/ for the design, and docs/index.md for the map.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
