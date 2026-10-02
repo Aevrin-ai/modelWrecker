@@ -60,8 +60,9 @@ jobs:
           cp -r src/web/dist/. deploy_out/
           mkdir -p deploy_out/dashboard
           cp -r src/dash/dist/. deploy_out/dashboard/
-          # SPA fallbacks: dashboard first (more specific), then landing.
-          printf '/dashboard/* /dashboard/index.html 200\n/* /index.html 200\n' > deploy_out/_redirects
+          # SPA fallbacks: dashboard first, then landing. Rewrite to the folder, not index.html:
+          # Pages normalizes /x/index.html to /x/, so a rewrite to index.html never matches.
+          printf '/dashboard/* /dashboard/ 200\n/* / 200\n' > deploy_out/_redirects
 
       - name: Deploy to Cloudflare Pages
         env:
