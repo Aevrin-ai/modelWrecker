@@ -18,6 +18,14 @@ and update everything in the right column.
 | New or changed interface/contract | `docs/interfaces/`; `docs/architecture/PLUGIN-SYSTEM.md` |
 | Architecture change | `docs/architecture/OVERVIEW.md`; add an ADR in `docs/decisions/` and a row in `DECISIONS.md` |
 | Security behavior change | `docs/security/SECURITY.md`; `docs/security/THREAT-MODEL.md` if the threat set changed |
+| Local/cloud boundary change | `docs/architecture/local-cloud.md`; add/adjust an ADR and a `DECISIONS.md` row |
+| Docker image, mounts, or run shape change | `docs/architecture/docker.md`; `docs/deployment/docker.md`; `docs/security/docker.md` |
+| Cloud control plane or data layer change | `docs/architecture/cloud-control-plane.md`; `docs/architecture/data-flow.md`; `docs/deployment/cloudflare.md` |
+| Authentication, device, or sync change | `docs/security/authentication.md`; `docs/architecture/data-flow.md` |
+| Entitlement or plan change | `docs/security/entitlements.md` (plans are config, not engine code) |
+| MCP server tool or guardrail change | `docs/mcp/overview.md`; `docs/mcp/tools.md`; `docs/security/mcp.md` |
+| Billing change | `docs/billing/razorpay.md` |
+| Dashboard analytics change | `docs/analytics/overview.md` |
 | New environment variable | `docs/reference/ENVIRONMENT.md` |
 | New config key | `docs/reference/CONFIGURATION.md` |
 | New dependency (any) | `docs/DEPENDENCIES.md`; ADR if it is an architectural choice |

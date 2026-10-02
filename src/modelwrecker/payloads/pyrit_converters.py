@@ -43,7 +43,10 @@ class _PyRITConverterTransform(Transform):
 
 def pyrit_transforms() -> list[Transform]:
     """Build the PyRIT-backed transforms. Returns [] if PyRIT or a converter is unavailable."""
-    import pyrit.converter as conv
+    try:
+        import pyrit.converter as conv
+    except Exception:  # attacks extra not installed, or a broken transitive dep
+        return []
 
     out: list[Transform] = []
     for name, cls_name in _PYRIT_MAP.items():

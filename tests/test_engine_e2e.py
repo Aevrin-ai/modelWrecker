@@ -56,7 +56,7 @@ def _make_config() -> Config:
 
 
 def _patch_providers(monkeypatch, target_responder) -> None:
-    def fake_build(ep):
+    def fake_build(ep, egress=None):
         if ep.model == "target":
             return FakeProvider("target", target_responder)
         if ep.model == "judge":
@@ -124,3 +124,22 @@ def test_report_shows_failed_attempts(monkeypatch) -> None:
     report = render_markdown(result.findings, result.run_id, result.attempts)
     assert "FAILED (refused)" in report  # refusals are shown, not hidden
     assert "No findings" in report
+
+
+def test_evidence_records_the_strategy_name_not_a_plan_id(monkeypatch, tmp_path) -> None:
+    """Regression: evidence.strategy held the attack plan's random id, not the strategy name."""
+    import json
+
+    from modelwrecker.storage.store import RunStore
+    from modelwrecker.strategies.registry import list_strategies
+
+    _patch_providers(monkeypatch, _vulnerable_target_responder)
+    store = RunStore("evidence-strategy", base_dir=tmp_path)
+    result = asyncio.run(
+        loop_module.run_config(_make_config(), store=store, run_id="evidence-strategy")
+    )
+    assert result.findings
+    [evidence_file] = list(store.dir.glob("evidence-*.json"))
+    evidence = json.loads(evidence_file.read_text(encoding="utf-8"))
+    known = {s["name"] for s in list_strategies()}
+    assert evidence["strategy"] in known, evidence["strategy"]

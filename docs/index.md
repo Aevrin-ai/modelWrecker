@@ -28,6 +28,14 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | Transforming/encoding payloads | [`attack-engine/PAYLOAD-ENGINE.md`](attack-engine/PAYLOAD-ENGINE.md) |
 | Running many objectives at once | [`campaigns/OVERVIEW.md`](campaigns/OVERVIEW.md) |
 | ASR analytics, leaderboards, reports | [`attack-engine/ANALYTICS.md`](attack-engine/ANALYTICS.md) |
+| Local-first product: local vs cloud | [`architecture/local-cloud.md`](architecture/local-cloud.md), [`architecture/cloud-control-plane.md`](architecture/cloud-control-plane.md), [`architecture/data-flow.md`](architecture/data-flow.md) |
+| Running the engine in Docker | [`architecture/docker.md`](architecture/docker.md), [`deployment/docker.md`](deployment/docker.md), [`security/docker.md`](security/docker.md) |
+| The control-plane API (routes, device sign-in, sync) | [`architecture/control-plane-api.md`](architecture/control-plane-api.md) |
+| Hosting the cloud control plane | [`deployment/cloudflare.md`](deployment/cloudflare.md) |
+| Sign-in, devices, entitlements | [`security/authentication.md`](security/authentication.md), [`security/entitlements.md`](security/entitlements.md) |
+| Driving modelWrecker over MCP | [`mcp/overview.md`](mcp/overview.md), [`mcp/tools.md`](mcp/tools.md), [`security/mcp.md`](security/mcp.md) |
+| Billing | [`billing/razorpay.md`](billing/razorpay.md) |
+| The cloud dashboard and analytics | [`analytics/overview.md`](analytics/overview.md) |
 | Security / what we must never do | [`security/SECURITY.md`](security/SECURITY.md), [`security/THREAT-MODEL.md`](security/THREAT-MODEL.md) |
 | The CLI | [`reference/CLI.md`](reference/CLI.md) |
 | Configuration and env vars | [`reference/CONFIGURATION.md`](reference/CONFIGURATION.md), [`reference/ENVIRONMENT.md`](reference/ENVIRONMENT.md) |

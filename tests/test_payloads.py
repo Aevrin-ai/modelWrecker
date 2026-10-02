@@ -6,8 +6,8 @@ import asyncio
 
 import pytest
 
-from modelwrecker.payloads import PayloadEngine, apply_chain, get_transform, list_transforms
 from modelwrecker.data import Objective
+from modelwrecker.payloads import PayloadEngine, apply_chain, get_transform, list_transforms
 from modelwrecker.providers.fake import FakeProvider
 from modelwrecker.strategies.base import StrategyContext
 from modelwrecker.strategies.registry import get_strategy
@@ -70,3 +70,28 @@ def test_encoded_strategy_applies_and_records_chain() -> None:
 
 def test_apply_chain_helper() -> None:
     assert apply_chain("abc", ["reverse"]) == "cba"
+
+
+def test_payload_registry_loads_without_pyrit(monkeypatch) -> None:
+    """Regression: without the attacks extra, the payload registry must load with built-ins only.
+
+    Found by the Docker build (default image has no PyRIT): the registry imported PyRIT
+    unguarded and every run failed with "No module named 'pyrit'".
+    """
+    import importlib
+    import sys
+
+    from modelwrecker.payloads import pyrit_converters, registry
+
+    with monkeypatch.context() as m:
+        # A None entry in sys.modules makes `import pyrit` raise ImportError, as if not installed.
+        for mod in [k for k in sys.modules if k == "pyrit" or k.startswith("pyrit.")]:
+            m.delitem(sys.modules, mod)
+        m.setitem(sys.modules, "pyrit", None)
+        m.setitem(sys.modules, "pyrit.converter", None)
+        assert pyrit_converters.pyrit_transforms() == []
+        reloaded = importlib.reload(registry)
+        names = {t["name"] for t in reloaded.list_transforms()}
+        assert {"base64", "rot13", "reverse"} <= names
+        assert not any(n.startswith("pyrit_") for n in names)
+    importlib.reload(registry)  # restore the normal registry for later tests

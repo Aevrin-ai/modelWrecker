@@ -61,32 +61,118 @@ things work, read `docs/`.
 
 ## Later
 
-- **Phase 10 - Production hardening + authenticated surfaces.** This is where every network surface
-  and the hosted product live. One engine, many front doors, one shared auth layer:
-  - **Security hardening**: sandbox for attack-generated code (timeouts, memory/cpu limits, no host
-    reach), egress-guard audit under redirects/DNS-rebinding, redaction audit, threat-model pass
-    over the Phase 9 agent/RAG/MCP surface.
-  - **REST API backend** (in this repo): auth-by-default (OAuth 2.1 / bearer), anti-CSRF, refuses
-    non-loopback binds without auth. This is the one backend the UI, the CLI, and remote agents call.
-  - **Data layer**: a managed Postgres database with row-level security (RLS) enabled, so every row is
-    scoped to its owner/tenant and the auth identity decides what is visible. Table migrations are applied
-    there as part of this phase. Credentials are supplied out of band (local untracked files + the deploy
-    secret store), never in the repo. The project/database to use is recorded in the local project memory.
-  - **Auth provider**: Google sign-in (OAuth) issues the user identity that the API, the UI, and the CLI
-    all trust. Google Cloud Console setup (OAuth client, authorized redirect URIs, consent screen) is a
-    manual step the maintainer does; the build will call out exactly what values are needed when that
-    wiring starts.
-  - **Authenticated remote MCP for agents**: run the MCP server over Streamable HTTP with OAuth 2.1
-    bearer auth so Claude Code / Codex can use a hosted modelWrecker with authentication (local
-    stdio MCP stays available and needs no network auth). Shares the REST API's auth/token layer.
-  - **CLI authentication + distribution**: publish `modelwrecker` to PyPI so `pip install
-    modelwrecker` works; add `modelwrecker login` (OAuth 2.0 device-code flow against
-    app.aevrin.net, with an API-key fallback for CI) storing a `0600` token; `run --remote` then
-    calls the authenticated API.
-  - **Web UI + hosting (separate frontend surface, not this repo)**: a React + TypeScript + shadcn app
-    and a hero/landing page on app.aevrin.net, hosted on Cloudflare, that talk to the REST API (browsers
-    use REST, not MCP). The maintainer will provide the landing-page and dashboard design prompts when
-    this starts. shadcn MCP and chrome-devtools MCP are dev-time build helpers, not product code.
+- **Phase 10 - Local-first product: cloud control plane + authenticated surfaces.** The product shape
+  is now fixed by `.prompt/WORKFLOW.md`: **heavy red-team computation always runs on the user's machine**
+  (local engine in Docker), and the Aevrin cloud is a thin **control plane** only - identity, projects,
+  devices, entitlements, billing, and the dashboard that shows synced metadata. The cloud never runs
+  attacks, never runs LLM inference, and never becomes a hidden compute dependency. One engine, many
+  front doors (CLI, Docker, MCP, future REST API), one shared auth layer.
+
+  The product boundary:
+
+  ```text
+  Aevrin Cloud  = identity + control + billing + analytics + policy
+  User's Docker = computation + red teaming + attack engine + MCP + evidence
+  ```
+
+  **Data layer (decided 2026-10-02, ADR-0015):** Supabase Postgres + RLS for the data layer, Cloudflare
+  Pages for static hosting, Cloudflare Workers only for thin API/edge glue. Billing is **Razorpay**, kept
+  entirely in the cloud control plane (no Razorpay secret ever ships in Docker, MCP, CLI, or the engine).
+  Live cloud setup (DNS, Supabase schema apply, Google OAuth client, PyPI first publish) is **staged** in
+  `deploy/` and run by the maintainer; nothing irreversible is done automatically.
+
+  **Status (2026-10-02):**
+
+  - DONE 10.1 - architecture docs, security docs, MCP docs, billing/analytics/deployment docs, ADR-0014..0018.
+  - DONE 10.2 - hardened `Dockerfile` + `docker-compose.yml` + `.env.example`. Verified: image builds,
+    CLI runs, a full campaign runs via compose against a loopback stub (critical finding, replays, report),
+    uid 10001, read-only root filesystem, zero capabilities, cgroup limits, no Docker socket (see the test
+    matrix). Not tested: native Linux/macOS hosts and a live provider run. Fixed on the way:
+    the default image (no PyRIT extra) crashed every run on an unguarded PyRIT import (regression test added).
+  - DONE 10.5 (local part) - guardrail chain on the stdio MCP server: tool + argument allowlist, rate limit,
+    path scope (`--config-dir`), target scope (`authorized: true` from config only), entitlement hook,
+    resource caps, structured redacted refusals. 42 MCP tests. Remaining: Streamable HTTP + OAuth 2.1.
+  - BUILT 10.4 (login part) - `modelwrecker login` (OAuth 2.0 device code), `logout`, `sync`; the token
+    is saved with owner-only permissions and only ever sent to the URL it was issued for. PyPI publish is
+    staged. The API-key fallback for CI is not built yet.
+  - BUILT 10.6 + 10.7 - control-plane API Worker at `src/api` (`app.aevrin.net/api/v1`, contract in
+    `docs/architecture/control-plane-api.md`), Supabase migration `0002`, Google sign-in in the dashboard
+    via Supabase Auth (PKCE). Dashboard queries run as the user so RLS applies, and the API also filters by
+    owner. 13 API tests, including deliberate-break checks for account isolation and the strict sync schema.
+  - BUILT 10.8 + 10.9 - device registration (token minted on collection, shown once, stored hashed,
+    revocable) and metadata-only sync with an offline outbox. Verified end to end: the real CLI signed in
+    and synced against the real API code over HTTP (in-memory database); a secret planted in the local
+    run never reached the cloud.
+  - BUILT 10.10 - dashboard at `src/dash` (served at `/dashboard/`), Catmint visual system, all routes,
+    light + dark. Mock data stays the default; `VITE_API_MODE=http` switches to the real API.
+  - BUILT 10.11 - landing page at `src/web`, Folio visual system + Nguyen feature section, real Aevrin logo.
+  - STAGED CI/CD - `.github/workflows/deploy-web.yml` redeploys both apps to Cloudflare Pages on any push
+    touching `src/web/**` or `src/dash/**`; `publish-pypi.yml` publishes on a `v*` tag. Both need the
+    maintainer to add GitHub secrets / a PyPI trusted publisher (see `deploy/`).
+  - NOT DONE YET for the cloud: deploying (staged in `deploy/`), signed entitlements (10.14), Razorpay
+    (10.13), report and evidence sync, notifications, remote MCP over HTTP with OAuth (rest of 10.5).
+  - DONE 10.3 (egress part) - the egress guard now runs on every attacker, target, and judge request,
+    redirects are refused, `validate` checks endpoints offline, and a local model is a narrow opt-in via
+    `security.egress.allow_hosts`. Remaining for 10.3: DNS-rebinding address pinning, the code sandbox,
+    and the redaction audit.
+
+  ### Task 10 - sub-phase order (implement -> test -> document -> review at each step)
+
+  - **10.1 Architecture + docs (no code).** Write `docs/architecture/local-cloud.md`, `docker.md`,
+    `cloud-control-plane.md`, `data-flow.md`; `docs/security/{docker,mcp,authentication,entitlements}.md`
+    and a threat-model pass; `docs/mcp/{overview,tools}.md`; `docs/billing/razorpay.md`;
+    `docs/analytics/overview.md`; `docs/deployment/{docker,cloudflare}.md`. Small Mermaid diagrams per
+    WORKFLOW section 32. ADRs for: local/cloud boundary, data layer choice, billing provider, device
+    credential model, entitlement signing.
+  - **10.2 Local engine packaging + Docker product.** `Dockerfile`, `docker-compose.yml`, `.env.example`,
+    one-command setup. Least privilege (non-root, read-only mounts, resource limits, no host socket),
+    documented in `docs/security/docker.md`.
+  - **10.3 Security hardening.** Sandbox for attack-generated code (timeouts, memory/cpu caps, no host
+    reach); egress-guard audit under redirects/DNS-rebinding; redaction audit; threat-model pass over the
+    Phase 9 agent/RAG/MCP surface.
+  - **10.4 CLI auth + distribution.** Publish `modelwrecker` to PyPI (trusted publishing from the repo
+    via GitHub Actions on tag); `modelwrecker login` (OAuth 2.0 device-code flow against app.aevrin.net,
+    API-key fallback for CI) storing a `0600` token; `run --remote` calls the authenticated API.
+  - **10.5 Authenticated remote MCP.** Run the MCP server over Streamable HTTP with OAuth 2.1 bearer auth
+    (local stdio MCP stays available, no network auth). Safe high-level tools only (create_campaign,
+    list_targets, start_campaign, get_campaign, get_findings, replay_finding, stop_campaign, get_status).
+    Every request passes auth -> authorization -> target scope -> entitlement -> rate/resource limit ->
+    tool permission before the engine. No shell, no arbitrary network, no arbitrary filesystem.
+  - **10.6 Cloud control plane + REST API.** Auth-by-default (OAuth 2.1 / bearer), anti-CSRF, refuses
+    non-loopback binds without auth. Multi-tenant isolation enforced server-side (never trust client
+    role/plan/project/ownership). Entities: account, project, device, target metadata, campaign/run/
+    finding metadata, analytics, subscription, entitlement.
+  - **10.7 Google authentication.** OAuth/OIDC sign-in issues the identity the API, UI, and CLI trust.
+    Never store Google passwords; never put the Google token in Docker. Google Cloud Console setup
+    (OAuth client, consent screen, authorized JavaScript origins + redirect URIs) is a maintainer step;
+    exact values are called out when this wiring starts.
+  - **10.8 Device registration + local-to-cloud connection.** Each local install registers as a device
+    and receives a scoped device/project credential (not the user's Google token). Local engine stays
+    usable offline where practical; results sync when the cloud returns.
+  - **10.9 Results synchronization + privacy.** Sync summarized metadata only by default (campaign, run,
+    finding, severity, strategy, target, model, provider, success rate, evidence metadata, timestamps).
+    Detailed evidence and transcripts stay local unless the user explicitly opts in. The UI makes the
+    local/cloud boundary explicit; never silently upload sensitive model responses.
+  - **10.10 Dashboard (app.aevrin.net).** React + TypeScript + Vite + Tailwind + shadcn, Catmint visual
+    language (see `.prompt/DASHBOARD.md`). Management/monitoring/analytics only - it never executes
+    attacks. Mock data isolated in `src/data/mock/`, swappable for the real API without rewriting the UI.
+  - **10.11 Landing page (app.aevrin.net).** New Aevrin landing page derived only from `docs/` product
+    truth (see `.prompt/LANDING.md`), Folio + Nguyen design language, hero shows a real dashboard mockup.
+  - **10.12 Analytics.** Dashboard views over synced metadata: ASR, findings by severity/taxonomy, trends,
+    campaign activity, model leaderboard. Reuses the existing `analyze` outputs; prefers aggregates.
+  - **10.13 Razorpay billing.** Checkout + server-verified webhooks in the cloud control plane only.
+    Never trust the browser for payment success.
+  - **10.14 Entitlements.** A configuration-driven entitlement layer (free/pro/enterprise). The engine
+    asks "can this operation run?"; the entitlement service answers allowed/denied. Enforced outside the
+    UI (signed/scoped entitlement the local engine checks); no easy client-side bypass; no pricing logic
+    inside the attack engine.
+  - **10.15 Enterprise guardrails + integrity.** Org policies, approved targets/providers/strategies,
+    campaign caps, audit logs, device controls, evidence retention; signed-release / image-digest / signed
+    MCP integrity controls after a threat model (no blanket checksum gate in normal dev, per ADR-0010).
+
+  Hosting: Cloudflare Pages (static dashboard + landing) + minimal Workers; document each service and its
+  current free-tier limits (Workers 100k req/day; Pages static assets free) and fail gracefully at quota.
+  The architecture must allow a later move to paid infra without rewriting the local engine.
 
 ## Known problems / risks
 

@@ -1,9 +1,15 @@
-# Keep the build context small and secret-free.
+# Keep the build context small and secret-free. Only pyproject.toml, README.md, and src/ are copied in.
 .git
+.github
 .prompt
 .env
 .env.*
 *.key
+*-key
+*-keys
+.secrets/
+config.local.*
+/config/
 runs/
 sessions/
 evidence/
@@ -22,3 +28,10 @@ build/
 docs/
 reports/
 tests/
+examples/
+deploy/
+src/web/
+src/dash/
+**/node_modules/
+docker-compose.yml
+Dockerfile

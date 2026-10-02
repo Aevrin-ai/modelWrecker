@@ -55,8 +55,9 @@ campaign:                     # how the run schedules its objectives (see campai
 
 security:
   egress:
-    allowed_schemes: [https]
+    allowed_schemes: [https]  # add http only for an opted-in local model
     block_private: true       # loopback/link-local/RFC1918/metadata
+    allow_hosts: []           # narrow opt-in, e.g. [localhost] for a local model
   redact: true
 
 payloads:

@@ -56,11 +56,14 @@ def build_evidence(
     reliability: ReliabilityResult,
     target_meta: dict,
     config_snapshot: dict,
+    strategy: str,
+    strategy_params: dict | None = None,
 ) -> Evidence:
     return Evidence(
         target=target_meta,
         objective=objective,
-        strategy=attempt.plan_id,  # plan links back to the strategy; kept for traceability
+        strategy=strategy,  # the strategy name, as documented in DATA-MODEL.md
+        strategy_params=strategy_params or {},
         payload=attempt.payload,
         transform_chain=attempt.transform_chain,
         target_response=observation.response,

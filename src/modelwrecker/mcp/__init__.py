@@ -5,6 +5,20 @@ docs/features/harness-integration.md. The `service` module holds the plain, test
 `server` module wraps them as MCP tools.
 """
 
-from .service import GuardrailError, McpService
+from .guardrails import (
+    EntitlementChecker,
+    EntitlementDecision,
+    GuardrailError,
+    LocalEntitlements,
+    McpLimits,
+)
+from .service import McpService
 
-__all__ = ["McpService", "GuardrailError"]
+__all__ = [
+    "McpService",
+    "GuardrailError",
+    "McpLimits",
+    "EntitlementChecker",
+    "EntitlementDecision",
+    "LocalEntitlements",
+]

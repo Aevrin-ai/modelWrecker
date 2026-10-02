@@ -30,29 +30,20 @@ flowchart TD
 ## Docker
 
 A `Dockerfile` builds a self-contained image from the same source as the pip package (one engine, many
-distributions). It:
-
-- installs the engine with the `mcp` extra, so the container can also serve the harness MCP tools;
-- runs as a **non-root** user (`wrecker`, uid 10001);
-- uses `/work` as the working dir for mounted configs and run artifacts.
+distributions), and `docker-compose.yml` runs it with the hardening flags already set: non-root uid
+10001, read-only root filesystem, all capabilities dropped, `no-new-privileges`, memory/CPU/process caps,
+config mounted read-only, and one writable `runs/` folder. Keys come from `.env` (copied from
+`.env.example`), never from the image.
 
 ```bash
-docker build -t modelwrecker:dev .
-# help:
-docker run --rm modelwrecker:dev --help
-# run a config you mount in (keep secrets in the environment, not the image):
-docker run --rm -v "$PWD:/work" -e OPENROUTER_API_KEY modelwrecker:dev run /work/my.yaml
+cp .env.example .env
+docker compose build
+docker compose run --rm modelwrecker run /config/campaign.yaml
 ```
 
-Security notes (enforced by how you run it, not just the image):
-
-- No secrets are baked into the image; pass keys at runtime with `-e`.
-- Do not mount the Docker socket. Do not run with `--privileged`.
-- Mount only the directory with your config and run output.
-- Add resource limits for long runs, e.g. `--memory=1g --cpus=1`.
-
-Status: the Dockerfile is written; building/running it was not verified in the current environment
-(the Docker daemon was not running). See `docs/testing/test-matrix.md`.
+Steps, the plain `docker run` form, extras, and troubleshooting: [`../deployment/docker.md`](../deployment/docker.md).
+Why each flag is there: [`../security/docker.md`](../security/docker.md). Verified status:
+[`../testing/test-matrix.md`](../testing/test-matrix.md).
 
 ## Supply-chain hygiene
 

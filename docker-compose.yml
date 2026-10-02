@@ -1,0 +1,70 @@
+# modelWrecker local engine, hardened by default. See docs/deployment/docker.md for the how-to and
+# docs/security/docker.md for why each setting is here.
+#
+#   cp .env.example .env              # then fill in the provider key(s) your config names
+#   mkdir config runs                 # config/ holds YAML (read-only), runs/ receives results
+#   cp examples/openrouter.yaml config/campaign.yaml
+#   docker compose build
+#   docker compose run --rm modelwrecker run /config/campaign.yaml
+#
+# `docker compose up` runs /config/campaign.yaml too. Any other command works the same way:
+#   docker compose run --rm modelwrecker --help
+#   docker compose run --rm modelwrecker validate /config/campaign.yaml
+
+name: modelwrecker
+
+services:
+  modelwrecker:
+    build:
+      context: .
+      args:
+        # Extras baked into the image. Add `attacks` for PyRIT strategies, `scan` for garak.
+        EXTRAS: ${MODELWRECKER_EXTRAS:-mcp}
+    image: modelwrecker:local
+    command: ["run", "/config/campaign.yaml"]
+    working_dir: /work
+
+    # --- least privilege ---
+    # Non-root. On Linux, set MODELWRECKER_UID/GID in .env to your own ids so ./runs stays writable.
+    user: "${MODELWRECKER_UID:-10001}:${MODELWRECKER_GID:-10001}"
+    read_only: true                  # root filesystem is read-only
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m
+    cap_drop: [ALL]                  # no Linux capabilities at all
+    security_opt:
+      - no-new-privileges:true       # setuid binaries cannot raise privileges
+    privileged: false
+    init: true                       # tiny init as PID 1 so signals reach the engine
+
+    # --- resource limits (second backstop after the campaign engine's own budgets) ---
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: 2
+    pids_limit: 256
+
+    # --- explicit environment only ---
+    env_file:
+      - path: .env
+        required: false              # `--help` works before you create .env
+    environment:
+      HOME: /tmp                     # writable home on a read-only root filesystem
+
+    # --- explicit mounts only: config read-only, results read-write. Nothing else from the host. ---
+    # Never add the Docker socket, ~/.ssh, ~/.aws, ~/.config, or your home directory here.
+    volumes:
+      - type: bind
+        source: ./config
+        target: /config
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ./runs
+        target: /work/runs
+        bind:
+          create_host_path: true
+
+    # Lets a config reach a model served on this machine (for example Ollama) at
+    # http://host.docker.internal:11434/v1. Inside the container, `localhost` is the container itself.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

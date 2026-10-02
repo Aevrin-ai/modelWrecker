@@ -49,6 +49,52 @@ flowchart TD
 | T8 | Attack code damaging the host | sandbox with isolation + limits; no-execute default | general |
 | T9 | Lost settings / torn state | atomic writes, lock/merge, no silent `{}` reset | Aevrin security research |
 
+## Phase 10 additions: local-first product and cloud control plane
+
+Phase 10 adds a thin cloud control plane, a Docker-distributed local engine, device sync, remote MCP,
+billing, and entitlements. This adds new actors and assets. The boundary that contains most of the risk is
+in [`../architecture/local-cloud.md`](../architecture/local-cloud.md): heavy compute and sensitive content
+stay local; the cloud is control only.
+
+New assets:
+
+- The scoped device or project token on each install.
+- The signed entitlement the local engine trusts.
+- The cloud control plane's data (accounts, projects, metadata) and its multi-tenant isolation.
+- Billing secrets (Razorpay keys and webhook secret), cloud-only.
+
+New actors:
+
+- **A malicious or buggy MCP client** that tries to drive attacks beyond its scope.
+- **Another tenant** in the shared control plane trying to read data that is not theirs.
+- **A manipulated browser** claiming a payment succeeded.
+
+```mermaid
+flowchart TD
+  P1[Sensitive attack content leaks to cloud] --> Q1[Metadata-only sync by default, explicit opt-in for detail]
+  P2[Client-side bypass of plan limits] --> Q2[Signed scoped entitlement verified by the local engine]
+  P3[Google token exposed on device] --> Q3[Scoped device token only, never the Google token]
+  P4[MCP becomes an unrestricted bridge] --> Q4[Ordered guardrail chain, safe tools only, bearer auth]
+  P5[Cross-tenant data read in cloud] --> Q5[Server-side checks plus row-level security]
+  P6[Fake payment grants a plan] --> Q6[Server-verified Razorpay webhook, never trust the browser]
+  P7[Modified engine image] --> Q7[Pinned image digest and signed releases after a threat model]
+```
+
+| # | Threat | Control | Source doc |
+|---|--------|---------|------------|
+| T10 | Sensitive attack content uploaded to the cloud | metadata-only sync by default; detail is explicit opt-in; never silently upload responses | [`../architecture/data-flow.md`](../architecture/data-flow.md) |
+| T11 | Client-side bypass of plan limits | signed, scoped entitlement the local engine verifies; denied by default on failure | [`entitlements.md`](entitlements.md) |
+| T12 | Google token exposed inside Docker | scoped device or project token only; Google token never in the engine | [`authentication.md`](authentication.md) |
+| T13 | MCP server used as an unrestricted bridge | auth, authorization, target scope, entitlement, rate, resource, tool-permission chain; safe tools only | [`mcp.md`](mcp.md) |
+| T14 | Cross-tenant data access in the control plane | server-side ownership checks on every request plus row-level security | [`../architecture/cloud-control-plane.md`](../architecture/cloud-control-plane.md) |
+| T15 | Forged payment success | Razorpay webhook verified server-side with HMAC SHA256; browser never trusted | [`../billing/razorpay.md`](../billing/razorpay.md) |
+| T16 | Tampered or substituted engine image | pinned image digest and signed releases after a threat model; no blanket checksum gate in dev | [`docker.md`](docker.md) |
+| T17 | Host harm via the container | non-root, no host Docker socket, read-only mounts, resource limits, egress guard | [`docker.md`](docker.md) |
+
+Partly mitigated and stated honestly: integrity controls (T16) are designed in Phase 10.15 but not yet
+built; multi-tenant isolation (T14) is a new surface that gets its own review when the control plane is
+implemented. The existing engine threats T1 through T9 still apply inside the container.
+
 ## Explicitly out of scope (for now, stated honestly)
 
 - Hardening the *targets* we test (that's the customer's job; we report).
