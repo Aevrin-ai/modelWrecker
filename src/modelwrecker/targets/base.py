@@ -8,4 +8,5 @@ class UnsupportedCapability(Exception):
 
 
 class UnauthorizedTarget(Exception):
-    """Raised when a target is not explicitly marked authorized. modelWrecker refuses to attack it."""
+    """Raised when a target is not explicitly marked authorized. modelWrecker refuses to attack
+    it."""

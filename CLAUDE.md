@@ -86,6 +86,7 @@ architecture, security, the CLI, or dependencies, follow the full order.
 
 ## Testing rules
 
+- Lint must stay clean (CI enforces it): `.venv\Scripts\python -m ruff check src tests`.
 - Tests are the contract. Run them before calling anything done: `.venv\Scripts\python -m pytest -q`
   (offline, no API key). Never mark something PASS without actually running it; use PASS / FAIL /
   BLOCKED / NOT TESTED honestly. See `docs/testing/test-matrix.md`.

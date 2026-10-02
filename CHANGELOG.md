@@ -6,6 +6,12 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Changed
+- Lint is clean and enforced: the 95 existing `ruff` errors are fixed (no behavior change; every
+  string constant is identical before and after), and CI now runs `ruff check src tests` with a
+  pinned ruff version (#10). The result enums (`Outcome`, `Confidence`, `Severity`, `FindingStatus`,
+  `Capability`) are now `StrEnum`, so `str()` of a member is its value.
+
 ## [0.0.2] - 2026-10-02
 
 ### Added

@@ -1,10 +1,11 @@
 """Taxonomy tables and validation.
 
-Only verified entries from the official sources (see docs/research/taxonomies.md). A mapping to an unknown
-id is rejected, so a finding can never ship an invented mapping (see docs/architecture/TAXONOMY.md).
+Only verified entries from the official sources (see docs/research/taxonomies.md). A mapping to an
+unknown id is rejected, so a finding can never ship an invented mapping (see
+docs/architecture/TAXONOMY.md).
 
-Note: OWASP Agentic (ASI) exact titles for ASI02-ASI09 must be filled from the official 2026 PDF before
-those mappings are used; only the confirmed endpoints are included here for now.
+Note: OWASP Agentic (ASI) exact titles for ASI02-ASI09 must be filled from the official 2026 PDF
+before those mappings are used; only the confirmed endpoints are included here for now.
 """
 
 from __future__ import annotations
@@ -94,7 +95,9 @@ def validate_ref(ref: TaxonomyRef) -> TaxonomyRef:
     """Return the ref with its official title filled in, or raise if the id is not verified."""
     table = _table_for(ref.framework, ref.edition)
     if ref.id not in table:
-        raise UnknownTaxonomyEntry(f"{ref.framework} {ref.id} (edition {ref.edition}) is not a known entry")
+        raise UnknownTaxonomyEntry(
+            f"{ref.framework} {ref.id} (edition {ref.edition}) is not a known entry"
+        )
     return ref.model_copy(update={"title": table[ref.id]})
 
 

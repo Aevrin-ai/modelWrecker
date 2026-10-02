@@ -7,9 +7,8 @@ import asyncio
 import pytest
 
 from modelwrecker.config import Endpoint
-from modelwrecker.data import Confidence, Objective, Severity
+from modelwrecker.data import Confidence, Severity, TaxonomyRef
 from modelwrecker.findings.engine import _severity, resolve_taxonomy
-from modelwrecker.data import TaxonomyRef
 from modelwrecker.providers.base import ProviderError
 from modelwrecker.providers.factory import build_provider
 from modelwrecker.providers.openai_compatible import _parse_chat_completion

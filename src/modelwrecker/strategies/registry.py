@@ -41,7 +41,8 @@ if pyrit_available()[0]:
     for _cls in (PyRITPromptSending, PyRITPair, PyRITTap):
         _REGISTRY[_cls.name] = _cls
 
-# garak-backed strategy registers only when the optional `modelwrecker[scan]` dependency is importable.
+# garak-backed strategy registers only when the optional `modelwrecker[scan]` dependency is
+# importable.
 from .garak_adapter import garak_available  # noqa: E402
 
 if garak_available()[0]:

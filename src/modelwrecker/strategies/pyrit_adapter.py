@@ -2,8 +2,8 @@
 
 PyRIT (MIT) is reused behind our Strategy interface. The actual wrappers live in `pyrit_attacks.py`
 (PAIR, TAP, prompt-sending) and the provider bridge in `pyrit_bridge.py`. This module only reports
-whether a working PyRIT (1.1+) is importable, so the registry can register the PyRIT strategies when the
-optional `modelwrecker[attacks]` dependency is installed and skip them cleanly when it is not.
+whether a working PyRIT (1.1+) is importable, so the registry can register the PyRIT strategies when
+the optional `modelwrecker[attacks]` dependency is installed and skip them cleanly when it is not.
 See docs/decisions/ADR-0006-reuse-pyrit-garak.md.
 """
 

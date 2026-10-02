@@ -1,8 +1,8 @@
 """Attack planner: decide which strategy/strategies to try for an objective.
 
 The planner is the attacker's brain in code form. It does NOT let the provider choose the attack
-(see docs/attack-engine/ATTACK-PLANNER.md). If the user names a strategy, it respects it; otherwise it
-picks an order based on the objective category.
+(see docs/attack-engine/ATTACK-PLANNER.md). If the user names a strategy, it respects it; otherwise
+it picks an order based on the objective category.
 """
 
 from __future__ import annotations

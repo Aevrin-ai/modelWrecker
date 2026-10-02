@@ -1,7 +1,8 @@
 """Chat/completions API target: the Phase 4 baseline target.
 
-Wraps a provider and presents the Target interface. It is the system under test, not a provider - the
-engine attacks a Target. Responses are returned as data, never executed (see docs/security/SECURITY.md).
+Wraps a provider and presents the Target interface. It is the system under test, not a provider -
+the engine attacks a Target. Responses are returned as data, never executed (see
+docs/security/SECURITY.md).
 """
 
 from __future__ import annotations

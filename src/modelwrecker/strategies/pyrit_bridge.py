@@ -1,8 +1,8 @@
 """Bridge modelWrecker providers into PyRIT, so PyRIT attack executors can drive our targets.
 
-PyRIT (MIT) is reused behind our Strategy interface (ADR-0006). This module wraps a modelWrecker provider
-as a PyRIT `PromptTarget` and converts a PyRIT `AttackResult` back into our shapes. PyRIT is an optional
-dependency (`modelwrecker[attacks]`); import errors are handled by the caller.
+PyRIT (MIT) is reused behind our Strategy interface (ADR-0006). This module wraps a modelWrecker
+provider as a PyRIT `PromptTarget` and converts a PyRIT `AttackResult` back into our shapes. PyRIT
+is an optional dependency (`modelwrecker[attacks]`); import errors are handled by the caller.
 """
 
 from __future__ import annotations
@@ -30,7 +30,9 @@ async def ensure_pyrit() -> None:
         _PYRIT_READY = True
 
 
-def make_target(provider: BaseProvider, system: str | None = None, *, multi_turn: bool = False) -> Any:
+def make_target(
+    provider: BaseProvider, system: str | None = None, *, multi_turn: bool = False
+) -> Any:
     """Return a PyRIT PromptTarget that sends through a modelWrecker provider.
 
     `multi_turn=True` declares the multi-turn / editable-history / system-prompt capabilities that
@@ -73,8 +75,8 @@ def make_target(provider: BaseProvider, system: str | None = None, *, multi_turn
 def make_threshold_scorer(judge_provider: BaseProvider, threshold: float = 0.7) -> Any:
     """Build the FloatScaleThresholdScorer that PAIR/TAP require, backed by a modelWrecker provider.
 
-    Wraps a PyRIT SelfAskScaleScorer (using PyRIT's Tree-of-Attacks scale) in a threshold scorer, with
-    the scale judge routed through our judge provider.
+    Wraps a PyRIT SelfAskScaleScorer (using PyRIT's Tree-of-Attacks scale) in a threshold scorer,
+    with the scale judge routed through our judge provider.
     """
     from pyrit.score import FloatScaleThresholdScorer, SelfAskScaleScorer
 

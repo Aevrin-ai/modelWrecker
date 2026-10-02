@@ -15,9 +15,9 @@ from ..security.egress import EgressPolicy
 from .base import BaseProvider, ProviderError
 from .openai_compatible import OpenAICompatibleProvider
 
-# Protocols that are served by the OpenAI-compatible wire adapter today.
-# any_llm is the documented default multiplexer; until the any-llm SDK adapter lands it falls back to
-# the OpenAI-compatible wire, which already reaches OpenRouter/Ollama/vLLM/OpenAI (see ADR-0003).
+# Protocols that are served by the OpenAI-compatible wire adapter today. any_llm is the documented
+# default multiplexer; until the any-llm SDK adapter lands it falls back to the OpenAI-compatible
+# wire, which already reaches OpenRouter/Ollama/vLLM/OpenAI (see ADR-0003).
 _OPENAI_WIRE = {"openai", "openai_compatible", "any_llm", "openrouter", "litellm", "portkey"}
 
 _bucket: ContextVar[list[BaseProvider] | None] = ContextVar("mw_provider_bucket", default=None)
@@ -32,7 +32,8 @@ def build_provider(endpoint: Endpoint, egress: EgressPolicy | None = None) -> Ba
         base_url = endpoint.base_url or _default_base_url(endpoint.protocol)
         if not base_url:
             raise ProviderError(
-                f"protocol {endpoint.protocol!r} needs a base_url (e.g. an OpenRouter or Ollama URL)"
+                f"protocol {endpoint.protocol!r} needs a base_url "
+                "(e.g. an OpenRouter or Ollama URL)"
             )
         provider: BaseProvider = OpenAICompatibleProvider(
             model=endpoint.model,
