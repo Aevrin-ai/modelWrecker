@@ -19,6 +19,7 @@ import httpx
 
 from .. import __version__
 from ..security.redaction import redact_text
+from .policy import SyncPolicy
 
 DEFAULT_API_URL = "https://app.aevrin.net/api/v1"
 ENV_URL = "MODELWRECKER_CLOUD_URL"
@@ -191,6 +192,11 @@ class CloudClient:
     def heartbeat(self, engine_version: str = __version__) -> bool:
         data = self._post("device/heartbeat", {"engine_version": engine_version}, auth=True)
         return bool(data.get("ok"))
+
+    def sync_policy(self, engine_version: str = __version__) -> SyncPolicy:
+        """Heartbeat, and read which detail the account allows. An older API means metadata only."""
+        data = self._post("device/heartbeat", {"engine_version": engine_version}, auth=True)
+        return SyncPolicy.from_api(data.get("sync"))
 
     def sync(self, body: dict) -> dict:
         """POST one run summary. Returns the 200 body; raises CloudError on anything else."""

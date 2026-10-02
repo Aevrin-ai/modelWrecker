@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, Pencil, Play, ShieldAlert, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Clock, ListOrdered, Pencil, Play, ShieldAlert, Trash2, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { DataState, EmptyState, ErrorState, SkeletonCards } from "@/components/S
 import { ConfirmDialog, RenameDialog } from "@/components/dialogs";
 import { ControlPlaneCallout, EvidenceLocalNotice } from "@/components/LocalBoundary";
 import { SeverityBar } from "@/components/charts";
+import { RunTranscripts } from "@/components/RunTranscripts";
 import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { useToast } from "@/hooks/useToast";
@@ -27,6 +28,7 @@ export function CampaignDetail() {
   const timeline = useAsync(() => apiClient.getCampaignTimeline(id), [id]);
   const stats = useAsync(() => apiClient.getCampaignStats(id), [id]);
   const findings = useAsync(() => apiClient.listFindings({ campaignId: id }), [id]);
+  const transcript = useAsync(() => apiClient.getCampaignTranscript(id), [id]);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -283,10 +285,33 @@ export function CampaignDetail() {
                 </div>
               )}
             </DataState>
-            <EvidenceLocalNotice />
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ListOrdered className="size-4 text-brand" />
+            Attack transcript
+          </CardTitle>
+          <CardDescription>
+            Every attempt the engine made: the prompt sent, the model reply, and the result. Open an attempt to read it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataState
+            loading={transcript.loading}
+            error={transcript.error}
+            data={transcript.data}
+            onRetry={transcript.refetch}
+            isEmpty={() => false}
+            empty={<EvidenceLocalNotice kind="transcript" />}
+          >
+            {(t) => <RunTranscripts runs={t.runs} />}
+          </DataState>
+        </CardContent>
+      </Card>
 
       <RenameDialog
         open={renaming}

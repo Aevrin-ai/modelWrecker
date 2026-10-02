@@ -77,6 +77,8 @@ const UNIQUES: Record<string, string[][]> = {
   findings: [["owner_id", "external_id"]],
   targets: [["owner_id", "project_id", "name"]],
   subscriptions: [["owner_id"]],
+  finding_evidence: [["finding_id"]],
+  run_transcripts: [["run_id"]],
 };
 
 export class MemoryDb implements Db {

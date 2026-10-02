@@ -113,7 +113,14 @@ SHA-256 hash. A second poll for the same code gets `expired_token`.
 
 ### `POST /device/heartbeat` (device)
 
-Request: `{ "engine_version": "0.0.1" }`. Response: `{ "ok": true }`. Updates `last_seen_at`.
+Request: `{ "engine_version": "0.0.1" }`. Updates `last_seen_at`. Response:
+
+```json
+{ "ok": true, "sync": { "metadata": true, "evidence": false, "transcripts": false } }
+```
+
+`sync` is the account's choice in Settings (What syncs to Aevrin). The engine reads it before every
+sync and adds detail only when it is on. `GET /device/me` returns the same `sync` object.
 
 ## Result sync
 
@@ -164,10 +171,52 @@ The engine sends one finished run at a time. Sending the same run again is safe:
 
 `score` is the judge's 0 to 10 severity-of-bypass score from the finding's evidence (`judge_result.score`).
 
-Response `200`: `{ "ok": true, "campaign_id": "<uuid>", "run_id": "<uuid>", "findings": 1 }`.
+#### Optional detail (issue #28)
 
-What the schema refuses: any field not listed above. There is no field for a payload, a model response,
-a system prompt, an endpoint URL, or an API key, so the engine cannot send them by mistake.
+Only when the account turned it on, the engine adds detail. Each finding may carry `evidence`, and the
+run may carry `transcript`:
+
+```json
+"evidence": {
+  "objective": { "title": "...", "category": "system_prompt_leak", "success_criteria": "..." },
+  "strategy": "crescendo",
+  "transforms": ["base64"],
+  "payload": "the prompt sent",
+  "response": "the model reply",
+  "reasoning": "",
+  "tool_calls": [{ "name": "refund", "args": "{\"order_id\": 1182}" }],
+  "judge": { "outcome": "success", "score": 9, "rationale": "...",
+             "signals": [{ "signal": "llm_judge", "hit": true, "score": 0.9, "detail": "..." }] },
+  "conversation": [{ "role": "user", "text": "..." }]
+},
+"transcript": {
+  "attempts": [{ "at": "2026-10-02T02:08:51Z", "objective": "...", "category": "...", "strategy": "...",
+                 "outcome": "refused", "score": 0, "payload": "...", "response": "..." }],
+  "truncated": false
+}
+```
+
+- `conversation` (multi-turn turns) is filled only when transcripts are on.
+- Limits: evidence text 20,000 characters per field, transcript text 4,000, up to 2,000 attempts, and
+  4 MB per `/sync` body (other routes stay at 256 KB). The engine redacts secrets, then caps, then
+  stops adding detail before the body would pass the limit (`truncated: true` for a cut transcript).
+- The server keeps detail only when the matching setting is on **at the time of the sync**. A client
+  that sends detail while the setting is off gets a `200` with nothing stored.
+
+Response `200`:
+
+```json
+{ "ok": true, "campaign_id": "<uuid>", "run_id": "<uuid>", "findings": 1,
+  "detail": { "evidence": true, "transcripts": true },
+  "stored": { "evidence": 1, "transcript": true } }
+```
+
+`detail` is what the account allows right now. The engine records it in `.synced.json`, so a run synced
+without detail is sent again once detail is turned on.
+
+What the schema refuses: any field not listed above, at any depth. There is no field for an endpoint
+URL, an API key, a system prompt as such, or the run's configuration, so the engine cannot send them by
+mistake. A payload and a model response can only appear inside the opt-in `evidence` and `transcript`.
 
 ## Dashboard routes (user)
 
@@ -186,13 +235,15 @@ sense) and only ever return the caller's rows.
 | `GET`, `PATCH`, `DELETE /campaigns/:id` | Read, rename, delete |
 | `POST /campaigns/:id/ready`, `POST /campaigns/:id/draft` | Flag for the local engine, or take it back |
 | `GET /campaigns/:id/timeline`, `GET /campaigns/:id/stats` | Synced progress and per-strategy counts |
-| `GET /findings`, `GET /findings/:id`, `PATCH /findings/:id` | Findings and lifecycle status only |
+| `GET /campaigns/:id/transcript` | Every synced attempt per run (`synced: false` for runs sent without it) |
+| `GET /findings`, `PATCH /findings/:id` | Findings (metadata only) and lifecycle status |
+| `GET /findings/:id` | One finding, with its evidence when evidence sync is on and it was sent |
 | `GET /devices`, `GET /devices/:id`, `PATCH /devices/:id` | Devices, rename |
 | `POST /devices/:id/revoke` | Revoke a device token |
 | `GET /analytics` | Aggregates over synced runs and findings |
 | `GET /reports` | Report records (empty until report sync exists) |
 | `GET /subscription`, `GET /plans`, `GET /invoices` | Plan state; plans come from configuration |
-| `GET /settings`, `PATCH /settings` | Sync privacy settings, notification settings |
+| `GET /settings`, `PATCH /settings` | Sync privacy settings, notification settings. Turning evidence or transcripts off deletes the copies already stored |
 | `GET /notifications` | Empty until notifications exist |
 | `GET /search?q=` | Search the caller's own records |
 
@@ -215,4 +266,5 @@ project-specific is in the public repo:
 
 - Rate limiting is best effort per Worker instance. A Cloudflare rate-limit binding is the upgrade path.
 - Entitlements are returned as plain plan data. Signing them for offline enforcement is ROADMAP 10.14.
-- Report files and detailed evidence are not synced yet; the dashboard says so instead of guessing.
+- Report files are not synced yet; the dashboard says so instead of guessing. Evidence and transcripts
+  sync only when turned on (tables `finding_evidence` and `run_transcripts`, migration `0003`).
