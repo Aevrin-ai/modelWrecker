@@ -6,6 +6,10 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Changed
+- `modelwrecker sync` lists every run it is about to send (target, attempts, findings, start time)
+  before sending, and `sync --dry-run` lists them and sends nothing (#3).
+
 ### Added (Phase 10 - local-first product, first slice)
 - **Architecture for the local-first product.** Heavy red-team compute stays on the user's machine; the
   Aevrin cloud is a thin control plane. New docs under `docs/architecture/` (local-cloud, docker,
