@@ -18,7 +18,9 @@ hash and no IP address stored.
   with every authenticator app, needs no SMS or paid service, and fits the "free, self-hostable" rule.
 - One build keeps the look identical to the dashboard and needs no second deploy target; the admin code
   is a separate chunk that only loads under `/admin/`.
-- First-party analytics keep visitor data out of third-party hands and avoid a consent banner.
+- First-party analytics keep visitor data out of third-party hands and avoid a consent banner. (Cloudflare
+  Web Analytics, turned on separately at the Cloudflare level, is documented in
+  `docs/analytics/page-analytics.md`.)
 
 ## Alternatives
 - **An allow-list of admin emails** - possible later as an extra check; the domain rule was requested.
