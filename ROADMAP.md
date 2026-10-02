@@ -109,7 +109,13 @@ things work, read `docs/`.
   - STAGED CI/CD - `.github/workflows/deploy-web.yml` redeploys both apps to Cloudflare Pages on any push
     touching `src/web/**` or `src/dash/**`; `publish-pypi.yml` publishes on a `v*` tag. Both need the
     maintainer to add GitHub secrets / a PyPI trusted publisher (see `deploy/`).
-  - NOT DONE YET for the cloud: deploying (staged in `deploy/`), signed entitlements (10.14), Razorpay
+  - LIVE (2026-10-02): landing + dashboard on https://app.aevrin.net (Pages project `modelwrecker-app`,
+    replacing the earlier `aevrin-app` site, which is kept for rollback); API Worker on
+    `app.aevrin.net/api/*`; Supabase schema + RLS applied; Google provider enabled; `modelwrecker 0.0.1`
+    on PyPI; CI deploys on every push. Waiting on the maintainer: the Google OAuth client needs the
+    Supabase callback as an authorized redirect URI, and the Worker needs the `anon` and `service_role`
+    keys (the API answers 503 until then and the dashboard stays in demo mode).
+  - NOT DONE YET for the cloud: signed entitlements (10.14), Razorpay
     (10.13), report and evidence sync, notifications, remote MCP over HTTP with OAuth (rest of 10.5).
   - DONE 10.3 (egress part) - the egress guard now runs on every attacker, target, and judge request,
     redirects are refused, `validate` checks endpoints offline, and a local model is a narrow opt-in via
