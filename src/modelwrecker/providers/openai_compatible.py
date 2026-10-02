@@ -11,6 +11,7 @@ import time
 
 import httpx
 
+from ..security.egress import EgressBlocked, EgressPolicy
 from .base import BaseProvider, Completion, ProviderCapabilities, ProviderError, Usage
 
 _DEFAULT_TIMEOUT = 120.0
@@ -28,9 +29,12 @@ class OpenAICompatibleProvider(BaseProvider):
         api_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
+        egress: EgressPolicy | None = None,
     ) -> None:
         super().__init__(model)
         self.base_url = base_url.rstrip("/")
+        # Strict by default: without an explicit policy a provider may only reach public HTTPS.
+        self._egress = egress or EgressPolicy()
         self._api_key = api_key
         self._timeout = timeout or _DEFAULT_TIMEOUT
         self._extra_headers = extra_headers or {}
@@ -41,7 +45,10 @@ class OpenAICompatibleProvider(BaseProvider):
             headers = {"Content-Type": "application/json", **self._extra_headers}
             if self._api_key:
                 headers["Authorization"] = f"Bearer {self._api_key}"
-            self._client = httpx.AsyncClient(timeout=self._timeout, limits=_POOL, headers=headers)
+            # Redirects are never followed: a 3xx could point at a blocked address after the check.
+            self._client = httpx.AsyncClient(
+                timeout=self._timeout, limits=_POOL, headers=headers, follow_redirects=False
+            )
         return self._client
 
     async def generate(self, messages: list[dict], **params: object) -> Completion:
@@ -51,6 +58,10 @@ class OpenAICompatibleProvider(BaseProvider):
             if k in params and params[k] is not None:
                 body[k] = params[k]
         url = f"{self.base_url}/chat/completions"
+        try:
+            self._egress.check(url)  # re-checked on every request (DNS can change between calls)
+        except EgressBlocked as e:
+            raise ProviderError(f"egress blocked: {e}") from e
         client = self._get_client()
         start = time.perf_counter()
         try:
@@ -61,6 +72,11 @@ class OpenAICompatibleProvider(BaseProvider):
             raise ProviderError(f"network error calling {url}: {e}") from e
         latency = int((time.perf_counter() - start) * 1000)
 
+        if 300 <= resp.status_code < 400:
+            # Never follow: the redirect target has not passed the egress guard.
+            raise ProviderError(
+                f"HTTP {resp.status_code} redirect from {self.base_url} refused by the egress guard"
+            )
         if resp.status_code >= 400:
             # Keep the provider's error text (trimmed) but never leak our own auth header.
             detail = resp.text[:500]

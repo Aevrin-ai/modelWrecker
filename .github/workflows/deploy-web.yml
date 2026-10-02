@@ -1,0 +1,71 @@
+name: Deploy web (landing + dashboard) to Cloudflare Pages
+
+# Redeploys app.aevrin.net whenever the landing app (src/web) or the dashboard
+# app (src/dash) changes on the main branch. Landing is served at the domain
+# root; the dashboard is served under /dashboard/.
+#
+# Required GitHub repository secrets (add in Settings -> Secrets and variables -> Actions):
+#   CLOUDFLARE_API_TOKEN    - a token scoped to "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID   - the Cloudflare account id
+# These are never stored in the repo. See deploy/cloudflare/README.md.
+#
+# Required repository VARIABLES (public values, used at dashboard build time):
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/web/**"
+      - "src/dash/**"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build landing (src/web)
+        working-directory: src/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build dashboard (src/dash)
+        working-directory: src/dash
+        env:
+          # Public build-time values (RLS protects the data). Set as repository variables.
+          # Live mode only once the anon key variable exists; until then the dashboard ships in demo mode.
+          VITE_API_MODE: ${{ vars.VITE_SUPABASE_ANON_KEY != '' && 'http' || 'mock' }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble combined site
+        run: |
+          rm -rf deploy_out
+          mkdir -p deploy_out
+          cp -r src/web/dist/. deploy_out/
+          mkdir -p deploy_out/dashboard
+          cp -r src/dash/dist/. deploy_out/dashboard/
+          # SPA fallbacks: dashboard first (more specific), then landing.
+          printf '/dashboard/* /dashboard/index.html 200\n/* /index.html 200\n' > deploy_out/_redirects
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy deploy_out --project-name=modelwrecker-app --branch=main

@@ -13,6 +13,7 @@ import yaml
 from pydantic import BaseModel, Field, model_validator
 
 from .data import Objective
+from .security.egress import EgressBlocked, EgressPolicy
 
 PROTOCOLS = {
     "openai",
@@ -62,9 +63,24 @@ class Endpoint(BaseModel):
 
 
 class EgressConfig(BaseModel):
+    """Where the engine may send model traffic. Enforced on every provider request.
+
+    The default is strict: HTTPS only, and no loopback, link-local, RFC1918, or cloud-metadata
+    addresses. To test a local model on purpose, opt in narrowly with `allow_hosts` (and add "http"
+    to `allowed_schemes` if it has no TLS). Cloud metadata hosts are blocked even then.
+    """
+
     model_config = {"extra": "forbid"}
     allowed_schemes: list[str] = Field(default_factory=lambda: ["https"])
     block_private: bool = True  # loopback / link-local / RFC1918 / metadata
+    allow_hosts: list[str] = Field(default_factory=list)  # e.g. ["localhost"] for a local model
+
+    def policy(self) -> EgressPolicy:
+        return EgressPolicy(
+            allowed_schemes=tuple(s.lower() for s in self.allowed_schemes),
+            allow_private=not self.block_private,
+            allow_hosts=tuple(self.allow_hosts),
+        )
 
 
 class SecurityConfig(BaseModel):
@@ -160,6 +176,21 @@ class Config(BaseModel):
     def require_objectives(self) -> None:
         if not self.objectives:
             raise ConfigError("no objectives configured; add at least one under `objectives:`")
+
+    def require_egress_allowed(self) -> None:
+        """Every endpoint's base_url must pass the egress policy (static check, no DNS)."""
+        policy = self.security.egress.policy()
+        problems = []
+        for role in ("attacker", "target", "judge"):
+            ep = getattr(self, role)
+            if ep is None or not ep.base_url:
+                continue
+            try:
+                policy.static_check(ep.base_url)
+            except EgressBlocked as e:
+                problems.append(f"{role}.base_url: {e}")
+        if problems:
+            raise ConfigError("egress blocked: " + "; ".join(problems))
 
 
 def load_config(path: str | Path | None = None) -> Config:

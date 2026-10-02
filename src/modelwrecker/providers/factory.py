@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 
 from ..config import Endpoint
+from ..security.egress import EgressPolicy
 from .base import BaseProvider, ProviderError
 from .openai_compatible import OpenAICompatibleProvider
 
@@ -22,8 +23,11 @@ _OPENAI_WIRE = {"openai", "openai_compatible", "any_llm", "openrouter", "litellm
 _bucket: ContextVar[list[BaseProvider] | None] = ContextVar("mw_provider_bucket", default=None)
 
 
-def build_provider(endpoint: Endpoint) -> BaseProvider:
-    """Build a provider for an endpoint. Tracked for close if inside a provider_scope()."""
+def build_provider(endpoint: Endpoint, egress: EgressPolicy | None = None) -> BaseProvider:
+    """Build a provider for an endpoint. Tracked for close if inside a provider_scope().
+
+    `egress` is the run's policy from `security.egress`; without one the strict default applies.
+    """
     if endpoint.protocol in _OPENAI_WIRE:
         base_url = endpoint.base_url or _default_base_url(endpoint.protocol)
         if not base_url:
@@ -35,6 +39,7 @@ def build_provider(endpoint: Endpoint) -> BaseProvider:
             base_url=base_url,
             api_key=endpoint.resolve_key(),
             timeout=endpoint.timeout,
+            egress=egress,
         )
     elif endpoint.protocol == "anthropic":
         raise ProviderError(

@@ -6,6 +6,73 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added (Phase 10 - local-first product, first slice)
+- **Architecture for the local-first product.** Heavy red-team compute stays on the user's machine; the
+  Aevrin cloud is a thin control plane. New docs under `docs/architecture/` (local-cloud, docker,
+  cloud-control-plane, data-flow), `docs/security/` (docker, mcp, authentication, entitlements, threat-model
+  Phase 10 section), `docs/mcp/`, `docs/billing/`, `docs/analytics/`, `docs/deployment/`, and ADR-0014 to
+  ADR-0018 (data layer: Supabase Postgres + RLS with Cloudflare Pages/Workers, confirmed 2026-10-02).
+- **Docker product (10.2).** Hardened two-stage `Dockerfile`, `docker-compose.yml` (non-root, read-only root
+  filesystem, no capabilities, no-new-privileges, CPU/memory/pids limits, only `./config` read-only and
+  `./runs` mounted), and `.env.example`. Verified end to end with Docker Desktop on Windows.
+- **MCP guardrails (10.5, local part).** Every MCP tool call passes a guardrail chain: tool and argument
+  allowlist, per-process rate limit, path scope confined to `--config-dir` and the runs folder, target scope
+  requiring `authorized: true` from config, a pluggable entitlement hook, and resource caps. Refusals are
+  structured, logged with secrets redacted, and never partly run an attack. New `modelwrecker mcp --config-dir`.
+- **Landing page (`src/web`)** for app.aevrin.net, built on the Folio visual system with a Nguyen-style
+  feature section and the real Aevrin logo. All product claims come from `docs/`.
+- **Management dashboard (`src/dash`)**, served at `/dashboard/`, built on the Catmint visual system (light
+  and dark): overview, projects, targets, campaigns, findings, devices, connect-engine setup, analytics,
+  reports, settings (sync privacy controls), billing and entitlements, account. It is a control plane only:
+  it never runs attacks. It uses mock data behind a single `ApiClient` swap point until the real API exists.
+- **CI/CD (staged).** `.github/workflows/deploy-web.yml` rebuilds both web apps and redeploys them to one
+  Cloudflare Pages project on any push that touches `src/web/**` or `src/dash/**`;
+  `.github/workflows/publish-pypi.yml` runs the tests and publishes to PyPI on a `v*` tag via trusted
+  publishing. `deploy/` holds the step-by-step live setup (Supabase schema + RLS, Google OAuth values,
+  Cloudflare DNS, PyPI) with no secrets in the repo.
+
+- **Cloud control plane (10.6 to 10.9).**
+  - Control-plane API Worker in `src/api` (Hono on Cloudflare Workers, Supabase Postgres with RLS),
+    contract in `docs/architecture/control-plane-api.md`. No route runs an attack, calls a model, or
+    fetches a URL. Strict schemas reject unknown fields, so sync cannot carry prompts, responses, system
+    prompts, endpoints, or keys.
+  - Device sign-in with the OAuth 2.0 device authorization grant: `modelwrecker login`, `logout`, `sync`.
+    The device token is minted when the engine collects it, shown once, stored only as a hash, bound to
+    the API URL it was issued for, and revocable from the dashboard. `run` syncs automatically when
+    signed in (`--sync/--no-sync`); a sync failure never changes the run's exit code.
+  - Metadata-only sync with an offline outbox (`.synced.json` marker after a confirmed upload); re-sending
+    is safe and keeps a finding status set in the dashboard.
+  - Dashboard: Google sign-in through Supabase Auth (PKCE), a real `HttpApiClient` (`VITE_API_MODE=http`;
+    mock stays the default), a configuration error screen, real sign-out, and device approval on the
+    Connect page.
+  - Supabase migration `0002_devices_and_sync.sql`; new env vars `MODELWRECKER_CLOUD_URL` and
+    `MODELWRECKER_DEVICE_TOKEN`; the redactor masks `mwd_` device tokens.
+  - CI: `ci.yml` runs every test suite and build; `deploy-api.yml` redeploys the Worker after its tests.
+
+- **Packaging for PyPI.** Project URLs and classifiers in `pyproject.toml`; the source archive now holds
+  only the engine, its tests, and examples (not the web apps or deploy files). `python -m build` and
+  `twine check` pass, and the wheel installs and runs in a clean environment. The publish workflow uses a
+  `PYPI_API_TOKEN` secret when set, otherwise Trusted Publishing.
+- The API Worker reads all three Supabase values as Worker secrets, so no project-specific value is in
+  the public repo. Its `app.aevrin.net/api/*` route is enabled in `wrangler.toml`.
+
+### Fixed
+- Evidence recorded the attack plan's random id in `strategy` instead of the strategy name, contrary to
+  the data model. Evidence now stores the strategy name and its parameters (regression test added).
+- The default Docker image (no `attacks` extra) failed every run with `No module named 'pyrit'` because
+  the payload registry imported PyRIT unguarded. PyRIT transforms are now optional; regression test added.
+- MCP: `validate_config` could read files outside the project, a crafted `run_id` could write outside the
+  runs folder, and guardrail refusals reached clients as a generic error.
+
+- **Egress guard enforced (10.3).** The guard existed but no provider called it. Every model request now
+  passes the run's `security.egress` policy before it is sent, redirects are refused, and `validate`
+  checks each endpoint offline. New `security.egress.allow_hosts` for a narrow local-model opt-in.
+  **Behavior change:** a plain-HTTP or `localhost` endpoint is refused unless the config opts in;
+  `examples/local-model.yaml` now does. 20 new tests in `tests/test_egress_wiring.py`.
+
+### Known gaps
+- DNS rebinding between the egress check and the connection is not prevented yet (ROADMAP 10.3).
+
 ### Added (Phase 9 new target types)
 - **Agent, RAG, and MCP targets.** `config.target.type` (chat default | agent | rag | mcp) plus
   `target_options` select the target via a new `targets/factory.py`; the loop is unchanged.

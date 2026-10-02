@@ -68,7 +68,7 @@ def _config(objectives: int = 3, *, campaign: CampaignConfig | None = None) -> C
 
 
 def _patch(monkeypatch, target_responder) -> None:
-    def fake_build(ep):
+    def fake_build(ep, egress=None):
         if ep.model == "target":
             return FakeProvider("target", target_responder)
         if ep.model == "judge":
@@ -124,7 +124,7 @@ def test_objective_error_is_isolated_and_retried(monkeypatch) -> None:
 
     calls = {"n": 0}
 
-    def fake_build(ep):
+    def fake_build(ep, egress=None):
         if ep.model == "target":
             def counting(messages):
                 calls["n"] += 1

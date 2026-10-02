@@ -1,7 +1,7 @@
 # Test matrix
 
 Honest status of what has actually been tested. Legend: PASS (ran and verified), FAIL, BLOCKED,
-NOT TESTED. Last updated 2026-10-01.
+NOT TESTED. Last updated 2026-10-02.
 
 Run the automated suite in the project venv: `.venv\Scripts\python -m pytest -q` (offline, no API key;
 create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That gives **85 passing + 1
@@ -84,6 +84,15 @@ PyRIT tests skip.
 | MCP guardrails | only safe tools exposed (no shell/file/http) | PASS | round-trip asserts their absence |
 | MCP guardrails | unauthorized target rejected before any run | PASS | `tests/test_mcp.py` |
 | MCP guardrails | path traversal / out-of-scope run id rejected | PASS | `tests/test_mcp.py` |
+| MCP guardrails | registered tools equal the allowlist exactly; unknown tool refused | PASS | `tests/test_mcp.py` |
+| MCP guardrails | endpoint override in a tool argument refused (`base_url`, `target`, ...) | PASS | `tests/test_mcp.py` |
+| MCP guardrails | unknown target (none in config) refused | PASS | `tests/test_mcp.py` |
+| MCP guardrails | config path confined to `--config-dir` (traversal, absolute, URL, non-yaml) | PASS | symlink case SKIPPED on Windows without symlink rights |
+| MCP guardrails | oversized campaign refused; values exactly at each limit allowed (calibrated) | PASS | `tests/test_mcp.py` |
+| MCP guardrails | call rate, run rate, and one-active-run limits | PASS | `tests/test_mcp.py` |
+| MCP guardrails | entitlement hook: deny, error, and malformed answer all refuse (fail safe) | PASS | `tests/test_mcp.py` |
+| MCP guardrails | refusal is structured, logged with secrets redacted, engine never called | PASS | `tests/test_mcp.py`; mutation-checked |
+| MCP guardrails | denials reach a real in-process MCP client as `is_error` results | PASS | `tests/test_mcp.py` |
 | Packaging | `pip install .` in a clean venv | PASS | fresh venv install succeeded |
 | Packaging | console script runs (--help/version/validate/strategies) | PASS | clean-env run |
 | Packaging | `uv build` wheel + install in a fresh venv | PASS | wheel installs; contains findings/evidence/mcp |
@@ -93,6 +102,52 @@ PyRIT tests skip.
 | Docker | in-container full attack loop | PASS | critical finding vs host stub, 3/3 replays, transcript rendered |
 | Docker | security: runs as non-root | PASS | `id` -> uid=10001(wrecker) |
 | Docker | security: no socket/privileged by default | PASS (by run flags) | documented in deployment; no socket mounted |
+| Docker 10.2 | two-stage build, pinned base digest (`python:3.12.15-slim-bookworm`) | PASS | `docker compose build`, Docker Desktop 29.6 (Windows/WSL2), 2026-10-02; image 295 MB |
+| Docker 10.2 | `docker compose run --rm modelwrecker --help` / `version` / `validate` | PASS | exit 0; missing config exits 2 with a clean message |
+| Docker 10.2 | full campaign via compose vs loopback stub (no API key) | PASS | `run /config/campaign.yaml`: prompt_extraction, critical finding, 3/3 replays, artifacts in host `./runs`; `analyze` wrote HTML/JSON/CSV |
+| Docker 10.2 | `docker compose up` runs the mounted campaign | PASS | critical finding, container exited 0 |
+| Docker 10.2 | non-root uid 10001 | PASS | in-container `os.getuid()` = 10001 |
+| Docker 10.2 | read-only root fs; only `/tmp` and `/work/runs` writable; `/config` read-only | PASS | in-container write probes |
+| Docker 10.2 | no capabilities, no-new-privileges | PASS | `/proc/self/status`: CapEff and CapBnd 0, NoNewPrivs 1 |
+| Docker 10.2 | memory/CPU/pids limits applied | PASS | cgroup `memory.max` 2 GiB, `cpu.max` 200000/100000, `pids.max` 256 |
+| Docker 10.2 | no Docker socket in container | PASS | `/var/run/docker.sock` absent |
+| Docker 10.2 | `mcp,attacks` image (PyRIT) under plain `docker run` hardening flags | PASS | 1.56 GB; `pyrit_send` -> critical finding, 2/2 replays, read-only root fs |
+| Docker 10.2 | default image without PyRIT runs payload-using strategies | FIXED | was FAIL: every run errored `No module named 'pyrit'` (payload registry imported PyRIT unguarded); fixed + regression test `tests/test_payloads.py::test_payload_registry_loads_without_pyrit` |
+| Docker 10.2 | native Linux / macOS host, Linux `./runs` ownership | NOT TESTED | only Docker Desktop on Windows was available |
+| Docker 10.2 | egress guard enforced inside container | PASS (code path) | the guard now runs inside every provider request, in or out of the container; see the 10.3 rows |
+| Security 10.3 | egress guard enforced on every attacker, target, and judge request | PASS | `tests/test_egress_wiring.py`: blocked URL raises before any request leaves the process |
+| Security 10.3 | private, loopback, IPv6 loopback, and metadata blocked by default | PASS | parametrized over 8 URLs |
+| Security 10.3 | redirects refused (never followed) | PASS | 302 to the metadata address raises |
+| Security 10.3 | metadata blocked under every opt-in (`allow_private`, `allow_hosts`) | PASS | |
+| Security 10.3 | `allow_hosts` opens only the named host | PASS | `localhost` allowed, `127.0.0.1` still blocked |
+| Security 10.3 | attack loop passes the configured policy to all three providers | PASS | |
+| Security 10.3 | `validate` refuses a blocked endpoint offline (no DNS) | PASS | all four `examples/` configs still validate |
+| Security 10.3 | DNS rebinding between check and connect | NOT TESTED - known limit | address pinning is a later hardening step |
+| Landing `src/web` | `npm run build` (tsc + vite) | PASS | 0 TypeScript errors, 2026-10-02 |
+| Landing `src/web` | all sections render, no console errors (1440px) | PASS | checked in Chrome against the Folio and Nguyen references |
+| Landing `src/web` | no horizontal overflow at 390px (mobile emulation) | PASS | page scroll width equals viewport |
+| Landing `src/web` | deployed to app.aevrin.net | NOT TESTED | deploy is staged; needs the maintainer's Cloudflare secrets |
+| Dashboard `src/dash` | `npm run build` (tsc + vite), routes code-split | PASS | 0 TypeScript errors, no chunk-size warning |
+| Dashboard `src/dash` | all 16 routes render under `/dashboard/`, incl. 3 detail pages and 404 | PASS | client-side route sweep, 0 console errors |
+| Dashboard `src/dash` | light and dark themes match the Catmint reference | PASS | visual comparison in Chrome |
+| Dashboard `src/dash` | no horizontal overflow at 390px on every route | PASS | fixed grid min-width blowout and tab bar overflow during the check |
+| Dashboard `src/dash` | real control-plane API, auth, multi-tenant isolation | NOT TESTED - not built | the dashboard runs on mock data behind `src/api`; the real API is ROADMAP 10.6/10.7 |
+| CI `deploy-web.yml` / `publish-pypi.yml` | workflow runs on GitHub | NOT TESTED | staged; needs GitHub secrets and a PyPI trusted publisher |
+| API `src/api` | typecheck and Worker bundle (Wrangler 4 dry run) | PASS | 196 KB gzipped, nothing deployed |
+| API `src/api` | device sign-in: pending, slow_down, approve, token shown once, denial, expiry | PASS | `test/api.test.ts` (in-memory database) |
+| API `src/api` | no plaintext device token or device code stored anywhere | PASS | full database scan in the test |
+| API `src/api` | device and user credentials rejected on each other's routes | PASS | |
+| API `src/api` | sync is idempotent and keeps the user's finding status | PASS | |
+| API `src/api` | sync refuses any field outside the contract (payload, response, system prompt, owner, project) | PASS | deliberately loosening the schema makes this test fail |
+| API `src/api` | one account cannot read or change another's rows | PASS | deliberately removing the owner filter makes this test fail; Postgres RLS is a second layer not exercised offline |
+| API `src/api` | revoked device refused | PASS | |
+| Engine 10.4/10.8/10.9 | login, credential storage, client, summarizer, outbox | PASS | 46 tests in `tests/test_cloud_sync.py` (MockTransport) |
+| Engine 10.9 | secret planted in payload, response, reasoning, system prompt, URLs, tool args never in the sync body | PASS | with a calibration test that fails a leaky summarizer |
+| End to end | real `modelwrecker login` + `sync` against the real API code over local HTTP | PASS | in-memory database; the run's planted secret appeared in 3 local files and 0 cloud responses |
+| End to end | live Supabase, real Google sign-in, deployed Worker | NOT TESTED | needs the maintainer's live setup from `deploy/` |
+| Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
+| Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
+| Engine | evidence stores the strategy name, not the plan id | PASS | regression test `test_evidence_records_the_strategy_name_not_a_plan_id` |
 
 ## Summary
 

@@ -46,6 +46,16 @@ Everything crossing a boundary into the engine from a target or dataset is data,
 - All outbound HTTP the engine makes on behalf of an attack goes through one **egress guard**: block
   loopback, link-local, RFC1918, and cloud metadata (`169.254.169.254`); allow only permitted schemes;
   **re-check on every redirect** (SEC-4).
+- How it is enforced today: every model request (attacker, target, and judge) is checked against the
+  run's `security.egress` policy right before it is sent. Redirects are never followed, so a redirect
+  cannot reach an address that was not checked. `modelwrecker validate` does an offline version of the
+  check (no DNS) so a blocked endpoint fails before the run.
+- The default is strict: HTTPS only, no private or loopback addresses. A local model is a narrow opt-in
+  with `security.egress.allow_hosts` (for example `[localhost]`). Cloud metadata hosts are blocked even
+  with every opt-in.
+- Known limit: the address is resolved for the check and again by the HTTP client, so a hostile DNS
+  server could answer differently the second time (DNS rebinding). Pinning the checked address is a
+  later hardening step.
 - Provider discovery never attaches the operator's API key to a freshly-changed `base_url` (SEC-4).
 
 ### Secrets & logging
