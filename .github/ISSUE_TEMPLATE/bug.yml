@@ -1,0 +1,32 @@
+name: Bug
+description: Something is broken or behaves differently than the docs say.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Commands, config (with secrets removed), and the modelwrecker version (`modelwrecker version`).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Engine or CLI
+        - Cloud API, sign-in, or sync
+        - Landing page or dashboard
+        - Docker
+        - MCP server
+        - Docs
+  - type: markdown
+    attributes:
+      value: |
+        Never paste API keys, tokens, or model responses that contain private data.
+        For a security problem that could hurt users, do not open a public issue; contact the maintainer first.
