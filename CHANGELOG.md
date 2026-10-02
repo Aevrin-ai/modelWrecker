@@ -7,6 +7,16 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Added
+- Admin console at `app.aevrin.net/admin` (#43, #44, #45). Staff only: a verified `@aevrin.net` Google
+  sign-in plus an authenticator code (TOTP; encrypted secret, no code reuse, lockout, single-use recovery
+  codes), then a short admin session stored as a hash, all checked by the server on every request. Admins
+  can search users and change their plan and paid-until date, give bonus allowances and account credit,
+  refund purchases, revoke devices, change sync settings, rename, suspend or restore, and delete
+  accounts (payments are kept, detached). Every change needs a reason and goes to an audit log. Platform
+  analytics (users, active and paying accounts, revenue, plan mix, activity) and first-party, cookie-free
+  page analytics for the landing page and dashboard (no IP stored, Do Not Track honored). Migration
+  `0005_admin.sql`, a daily upkeep job, decision ADR-0020. New dashboard dependency: `qrcode`.
+- Suspended accounts are refused on every user and device route.
 - Prepaid billing with Razorpay (#12). Pro can be bought for a month or a year from the dashboard
   Billing page. The server creates the order at the configured price, then confirms the payment by
   checking Checkout's signature and fetching it from Razorpay; a signed webhook and reconciliation of

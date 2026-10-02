@@ -33,6 +33,7 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | The control-plane API (routes, device sign-in, sync) | [`architecture/control-plane-api.md`](architecture/control-plane-api.md) |
 | Hosting the cloud control plane | [`deployment/cloudflare.md`](deployment/cloudflare.md) |
 | Sign-in, devices, entitlements | [`security/authentication.md`](security/authentication.md), [`security/entitlements.md`](security/entitlements.md) |
+| The staff admin console | [`security/admin.md`](security/admin.md), [`analytics/page-analytics.md`](analytics/page-analytics.md) |
 | Driving modelWrecker over MCP | [`mcp/overview.md`](mcp/overview.md), [`mcp/tools.md`](mcp/tools.md), [`security/mcp.md`](security/mcp.md) |
 | Billing and prices | [`billing/razorpay.md`](billing/razorpay.md), [`billing/pricing.md`](billing/pricing.md) |
 | The cloud dashboard and analytics | [`analytics/overview.md`](analytics/overview.md) |

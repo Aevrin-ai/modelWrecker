@@ -87,9 +87,12 @@ flowchart TD
 | T12 | Google token exposed inside Docker | scoped device or project token only; Google token never in the engine | [`authentication.md`](authentication.md) |
 | T13 | MCP server used as an unrestricted bridge | auth, authorization, target scope, entitlement, rate, resource, tool-permission chain; safe tools only | [`mcp.md`](mcp.md) |
 | T14 | Cross-tenant data access in the control plane | server-side ownership checks on every request plus row-level security | [`../architecture/cloud-control-plane.md`](../architecture/cloud-control-plane.md) |
-| T15 | Forged payment success | Razorpay webhook verified server-side with HMAC SHA256; browser never trusted | [`../billing/razorpay.md`](../billing/razorpay.md) |
+| T15 | Forged payment success | signature checked with the key secret AND the payment fetched from Razorpay, or the webhook HMAC verified; applied once by a database function; the client never sets an amount | [`../billing/razorpay.md`](../billing/razorpay.md) |
 | T16 | Tampered or substituted engine image | pinned image digest and signed releases after a threat model; no blanket checksum gate in dev | [`docker.md`](docker.md) |
 | T17 | Host harm via the container | non-root, no host Docker socket, read-only mounts, resource limits, egress guard | [`docker.md`](docker.md) |
+| T18 | Takeover of the admin console | verified email exactly on aevrin.net, plus a TOTP code (encrypted secret, no replay, lockout, single-use recovery codes), plus a short hashed session bound to the staff member, checked on every request; every action audited | [`admin.md`](admin.md) |
+| T19 | Admin abuse or mistakes | reason required for every change, append-only audit log kept after user deletion, typed-email confirmation for deletion, staff accounts cannot be deleted or self-suspended | [`admin.md`](admin.md) |
+| T20 | Visitor tracking or personal data in analytics | first-party beacon, no cookie, no IP or user agent stored, daily salted hash, Do Not Track and Global Privacy Control honored | [`../analytics/page-analytics.md`](../analytics/page-analytics.md) |
 
 Partly mitigated and stated honestly: integrity controls (T16) are designed in Phase 10.15 but not yet
 built; multi-tenant isolation (T14) is a new surface that gets its own review when the control plane is

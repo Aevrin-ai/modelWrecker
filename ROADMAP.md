@@ -126,7 +126,10 @@ things work, read `docs/`.
   - BUILT 10.14 signed entitlements (#11): Ed25519-signed, 7-day tokens on every heartbeat; the engine
     verifies offline and runs the free baseline without one; server-side device, project, sync, and
     leaderboard limits.
-  - NEXT 10.16-10.18 admin console (#43, #44, #45), below.
+  - BUILT 10.16-10.18 admin console (#43, #44, #45) at `/admin`: verified @aevrin.net + TOTP, hashed
+    sessions, audit log; user management (plan, bonus, credit, refund, devices, sync, suspend, delete);
+    platform and first-party page analytics. Migration `0005` applied live. Enrolling a real staff
+    authenticator is done by the maintainer (needs an @aevrin.net Google account).
   - NOT DONE YET for the cloud (one GitHub issue each, label `roadmap`): opt-in report file sync,
     notifications (#20), remote MCP over HTTP with OAuth (rest of 10.5, #14), enterprise guardrails
     (10.15, #21).

@@ -27,6 +27,8 @@ and update everything in the right column.
 | Billing change | `docs/billing/razorpay.md` |
 | Price, plan limit, or cost-model change | `src/shared/plans.json`, `docs/billing/pricing.md` (the margin test must pass) |
 | Dashboard analytics change | `docs/analytics/overview.md` |
+| Admin console access or action change | `docs/security/admin.md`; `docs/security/THREAT-MODEL.md` |
+| Page analytics change (what is collected or kept) | `docs/analytics/page-analytics.md` |
 | New environment variable | `docs/reference/ENVIRONMENT.md` |
 | New config key | `docs/reference/CONFIGURATION.md` |
 | New dependency (any) | `docs/DEPENDENCIES.md`; ADR if it is an architectural choice |
