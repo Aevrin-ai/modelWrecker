@@ -48,6 +48,34 @@ def pending_runs(runs_dir: str | Path) -> list[Path]:
     return [d for d in sorted(base.iterdir()) if is_run_dir(d) and not is_synced(d)]
 
 
+@dataclass(frozen=True)
+class RunPreview:
+    """One pending run as `sync` lists it before sending: what the summary says, nothing more."""
+
+    name: str
+    target: str = ""
+    attempts: int = 0
+    findings: int = 0
+    started_at: str = ""
+    problem: str | None = None  # set when the run cannot be summarized; sync reports and skips it
+
+
+def preview_run(d: Path) -> RunPreview:
+    """Build the same summary `sync_run` would send and describe it. Sends nothing."""
+    try:
+        run = build_sync_body(d)["run"]
+    except (ValueError, OSError) as e:
+        return RunPreview(d.name, problem=f"unreadable run: {type(e).__name__}")
+    target = run["target"]
+    return RunPreview(
+        name=d.name,
+        target=f"{target['model']} via {target['provider']}",
+        attempts=run["attempts"],
+        findings=len(run["findings"]),
+        started_at=run["started_at"],
+    )
+
+
 def mark_synced(d: Path, response: dict) -> Path:
     """Write the marker. Call this only with the body of a 200 response."""
     record = {
