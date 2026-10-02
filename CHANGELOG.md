@@ -6,6 +6,11 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Fixed
+- Billing highlighted the Pro plan card for every account; it now highlights the plan you are on (#39).
+- The dashboard build broke on `"ignoreDeprecations": "6.0"` with TypeScript 5.9. `baseUrl` is gone
+  from the dashboard tsconfig instead, so it builds on TypeScript 5.9 and 6 without the override (#40).
+
 ### Changed
 - Lint is clean and enforced: the 95 existing `ruff` errors are fixed (no behavior change; every
   string constant is identical before and after), and CI now runs `ruff check src tests` with a
