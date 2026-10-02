@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"  # Wrangler 4 needs Node 22+
 
       - name: Build landing (src/web)
         working-directory: src/web
@@ -64,9 +64,7 @@ jobs:
           printf '/dashboard/* /dashboard/index.html 200\n/* /index.html 200\n' > deploy_out/_redirects
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          wranglerVersion: "4.146.0"  # match src/api; the action's default (3.x) clashes
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy deploy_out --project-name=modelwrecker-app --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.146.0 pages deploy deploy_out --project-name=modelwrecker-app --branch=main
