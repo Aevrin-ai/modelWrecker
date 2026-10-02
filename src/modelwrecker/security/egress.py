@@ -1,8 +1,8 @@
 """Egress guard: stop the engine from making requests to places it should not.
 
-Blocks loopback, link-local, private (RFC1918), and cloud-metadata addresses, and limits schemes. This
-guards against SSRF and credential theft (see docs/security/THREAT-MODEL.md, threat T2). It must be
-re-checked on every redirect by the caller.
+Blocks loopback, link-local, private (RFC1918), and cloud-metadata addresses, and limits schemes.
+This guards against SSRF and credential theft (see docs/security/THREAT-MODEL.md, threat T2). It
+must be re-checked on every redirect by the caller.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Direct single-shot jailbreak: send the objective's ask straight at the target.
 
-The simplest strategy and the Phase 4 baseline. It sends one payload and returns the result; the loop
-judges it. Maps to prompt injection / jailbreak taxonomy entries.
+The simplest strategy and the Phase 4 baseline. It sends one payload and returns the result; the
+loop judges it. Maps to prompt injection / jailbreak taxonomy entries.
 """
 
 from __future__ import annotations
@@ -26,4 +26,6 @@ class DirectJailbreak(BaseStrategy):
         attempt = self._attempt(ctx, payload)
         obs = await ctx.target.send_message(payload)
         obs.attempt_id = attempt.id
-        return StrategyResult(runs=[StrategyRun(attempt=attempt, observation=obs)], note="single-shot")
+        return StrategyResult(
+            runs=[StrategyRun(attempt=attempt, observation=obs)], note="single-shot"
+        )

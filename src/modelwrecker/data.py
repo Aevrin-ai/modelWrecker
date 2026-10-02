@@ -9,8 +9,8 @@ Objective -> AttackPlan -> Attempt -> Observation -> Verdict -> Confidence -> Fi
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -21,26 +21,26 @@ def _new_id() -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-# --- enums -----------------------------------------------------------------------------------------
+# --- enums ----------------------------------------------------------------------------------------
 
 
-class Outcome(str, Enum):
+class Outcome(StrEnum):
     REFUSED = "refused"
     PARTIAL = "partial"
     SUCCESS = "success"
     ERROR = "error"
 
 
-class Confidence(str, Enum):
+class Confidence(StrEnum):
     RELIABLE = "reliable"
     FLAKY = "flaky"
     DOES_NOT_HOLD = "does_not_hold"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     INFO = "info"
     LOW = "low"
     MEDIUM = "medium"
@@ -48,21 +48,21 @@ class Severity(str, Enum):
     CRITICAL = "critical"
 
 
-class FindingStatus(str, Enum):
+class FindingStatus(StrEnum):
     OPEN = "open"
     TRIAGED = "triaged"
     FIXED = "fixed"
     ACCEPTED_RISK = "accepted-risk"
 
 
-# --- taxonomy --------------------------------------------------------------------------------------
+# --- taxonomy -------------------------------------------------------------------------------------
 
 
 class TaxonomyRef(BaseModel):
     """One mapping to a standard security taxonomy entry.
 
-    Never invented: the taxonomy module validates each ref against the official tables before a finding
-    is written (see docs/architecture/TAXONOMY.md).
+    Never invented: the taxonomy module validates each ref against the official tables before a
+    finding is written (see docs/architecture/TAXONOMY.md).
     """
 
     framework: str  # e.g. "owasp_llm", "owasp_asi", "owasp_mcp", "mitre_atlas"
@@ -71,7 +71,7 @@ class TaxonomyRef(BaseModel):
     title: str | None = None
 
 
-# --- pipeline objects ------------------------------------------------------------------------------
+# --- pipeline objects -----------------------------------------------------------------------------
 
 
 class Objective(BaseModel):

@@ -1,7 +1,7 @@
 """PayloadEngine: apply, chain, and decode transforms.
 
-The planner decides whether to use this; it is never mandatory (ADR-0009). Every applied transform is
-recorded so a finding can be reproduced exactly.
+The planner decides whether to use this; it is never mandatory (ADR-0009). Every applied transform
+is recorded so a finding can be reproduced exactly.
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """Run storage: append-only JSONL event log + a SQLite index for findings.
 
 Atomic writes; the index is rebuildable from the JSONL (see docs/decisions/ADR-0011-storage.md).
-Artifacts can contain harmful content and redacted secrets, so files are written with tight permissions
-and live under a gitignored runs dir.
+Artifacts can contain harmful content and redacted secrets, so files are written with tight
+permissions and live under a gitignored runs dir.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import json
 import os
 import sqlite3
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..data import Evidence, Finding
@@ -63,7 +63,7 @@ class RunStore:
 
     def event(self, kind: str, **data: object) -> None:
         """Append one redacted event to the JSONL log."""
-        record = {"ts": datetime.now(timezone.utc).isoformat(), "kind": kind, **data}
+        record = {"ts": datetime.now(UTC).isoformat(), "kind": kind, **data}
         line = json.dumps(redact(record), ensure_ascii=False)
         with open(self.events_path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
@@ -71,12 +71,14 @@ class RunStore:
 
     def save_evidence(self, evidence: Evidence) -> Path:
         path = self.dir / f"evidence-{evidence.id}.json"
-        _atomic_write(path, json.dumps(redact(evidence.model_dump(mode="json")), ensure_ascii=False, indent=2))
+        data = redact(evidence.model_dump(mode="json"))
+        _atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
         return path
 
     def save_finding(self, finding: Finding) -> Path:
         path = self.dir / f"finding-{finding.id}.json"
-        _atomic_write(path, json.dumps(finding.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        data = finding.model_dump(mode="json")
+        _atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
         con = sqlite3.connect(self.db_path)
         try:
             con.execute(
@@ -104,4 +106,4 @@ class RunStore:
         finally:
             con.close()
         cols = ["id", "objective_id", "severity", "title", "taxonomy", "created_at"]
-        return [dict(zip(cols, r)) for r in rows]
+        return [dict(zip(cols, r, strict=True)) for r in rows]

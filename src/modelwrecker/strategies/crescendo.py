@@ -1,8 +1,8 @@
 """Crescendo: multi-turn escalation.
 
-Starts benign and escalates across a few turns toward the objective, carrying the conversation forward
-each turn. This v1 uses a fixed escalation ladder (deterministic and testable); a later version can let
-the attacker model generate each next turn from the target's replies.
+Starts benign and escalates across a few turns toward the objective, carrying the conversation
+forward each turn. This v1 uses a fixed escalation ladder (deterministic and testable); a later
+version can let the attacker model generate each next turn from the target's replies.
 """
 
 from __future__ import annotations

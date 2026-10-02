@@ -1,8 +1,9 @@
-"""Encoded jailbreak: obfuscate the ask with a transform chain, then tell the target to decode and comply.
+"""Encoded jailbreak: obfuscate the ask with a transform chain, then tell the target to decode and
+comply.
 
 Uses the payload engine (Phase 6). The transform chain comes from `params['transforms']` (default
-`["base64"]`); any registered transform name works, including the PyRIT-backed ones when installed. The
-applied chain is recorded on the attempt so the finding is reproducible.
+`["base64"]`); any registered transform name works, including the PyRIT-backed ones when installed.
+The applied chain is recorded on the attempt so the finding is reproducible.
 """
 
 from __future__ import annotations
@@ -32,7 +33,9 @@ class EncodedJailbreak(BaseStrategy):
         chain = list((ctx.params or {}).get("transforms") or ["base64"])
         ask = ctx.objective.description or ctx.objective.title
         encoded = ctx.payloads.chain(ask, chain) if ctx.payloads else ask
-        wrapper = _WRAPPERS.get(chain[-1], _DEFAULT_WRAPPER) if len(chain) == 1 else _DEFAULT_WRAPPER
+        wrapper = (
+            _WRAPPERS.get(chain[-1], _DEFAULT_WRAPPER) if len(chain) == 1 else _DEFAULT_WRAPPER
+        )
         payload = wrapper.format(enc=encoded)
 
         ctx.emit(f"[{self.name}] transforms={chain}")

@@ -1,8 +1,9 @@
 """First-party payload transforms.
 
-Each transform is a small, well-understood string operation. Reversible transforms implement `decode`.
-These are owned in-tree (ADR-0009) and kept deliberately simple; more can be added as plugins, and PyRIT
-converters are available through `pyrit_converters.py` when the attacks extra is installed.
+Each transform is a small, well-understood string operation. Reversible transforms implement
+`decode`. These are owned in-tree (ADR-0009) and kept deliberately simple; more can be added as
+plugins, and PyRIT converters are available through `pyrit_converters.py` when the attacks extra is
+installed.
 """
 
 from __future__ import annotations
@@ -18,7 +19,8 @@ _LEET = {"a": "4", "e": "3", "i": "1", "o": "0", "s": "5", "t": "7"}
 
 
 class Transform:
-    """Base transform. Subclasses set name/reversible and implement apply (+ decode if reversible)."""
+    """Base transform. Subclasses set name/reversible and implement apply (+ decode if
+    reversible)."""
 
     name: str = "base"
     version: str = "1"

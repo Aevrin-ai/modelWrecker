@@ -1,7 +1,7 @@
 """Configuration models and loader.
 
-Config is YAML, validated by Pydantic. Secrets are NEVER stored in config - only the NAME of the env var
-that holds them. See docs/reference/CONFIGURATION.md and docs/reference/ENVIRONMENT.md.
+Config is YAML, validated by Pydantic. Secrets are NEVER stored in config - only the NAME of the env
+var that holds them. See docs/reference/CONFIGURATION.md and docs/reference/ENVIRONMENT.md.
 """
 
 from __future__ import annotations

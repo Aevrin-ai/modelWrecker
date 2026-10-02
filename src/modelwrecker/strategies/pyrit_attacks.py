@@ -1,8 +1,9 @@
 """PyRIT-backed attack strategies (ADR-0006): PAIR, TAP, and a simple prompt-sending baseline.
 
-These wrap PyRIT attack executors behind our Strategy interface. Our provider is bridged into a PyRIT
-target (see pyrit_bridge), the attack runs, and its result is converted back to our shapes. PyRIT is an
-optional dependency; these strategies are only registered when PyRIT imports (see registry).
+These wrap PyRIT attack executors behind our Strategy interface. Our provider is bridged into a
+PyRIT target (see pyrit_bridge), the attack runs, and its result is converted back to our shapes.
+PyRIT is an optional dependency; these strategies are only registered when PyRIT imports (see
+registry).
 """
 
 from __future__ import annotations

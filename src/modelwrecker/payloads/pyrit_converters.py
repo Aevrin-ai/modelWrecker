@@ -1,9 +1,9 @@
 """Wrap PyRIT converters as modelWrecker transforms (ADR-0006 reuse).
 
-PyRIT ships a large, deterministic converter library (morse, binary, caesar, ...). We expose a few behind
-our Transform interface, so the payload engine gains them for free when the attacks extra is installed.
-PyRIT converters are async; since transforms run inside the engine's async loop, we bridge to them on a
-worker thread with its own event loop.
+PyRIT ships a large, deterministic converter library (morse, binary, caesar, ...). We expose a few
+behind our Transform interface, so the payload engine gains them for free when the attacks extra is
+installed. PyRIT converters are async; since transforms run inside the engine's async loop, we
+bridge to them on a worker thread with its own event loop.
 """
 
 from __future__ import annotations

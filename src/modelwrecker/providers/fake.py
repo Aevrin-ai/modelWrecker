@@ -1,8 +1,8 @@
 """A fake provider for offline tests.
 
-Lets the whole engine run without any network or API key, so unit/integration/e2e tests are fast, free,
-and deterministic (see docs/workflows/TESTING.md). A test supplies a `responder` that maps the messages
-to a reply string.
+Lets the whole engine run without any network or API key, so unit/integration/e2e tests are fast,
+free, and deterministic (see docs/workflows/TESTING.md). A test supplies a `responder` that maps the
+messages to a reply string.
 """
 
 from __future__ import annotations
