@@ -1032,12 +1032,13 @@ export const analytics: AnalyticsSummary = {
     successfulAttacks: [12, 4, 22, 18, 8, 2, 34, 14][i],
   })),
   leaderboard: [
-    { targetId: "tgt_atlas_search", targetName: "Atlas Search Assistant", asr: 0.049, ciLow: 0.012, ciHigh: 0.16, attempts: 41, findings: 0, highCritical: 0 },
-    { targetId: "tgt_local_llama", targetName: "Local Llama 3", asr: 0.06, ciLow: 0.03, ciHigh: 0.11, attempts: 120, findings: 1, highCritical: 0 },
-    { targetId: "tgt_prod_chat", targetName: "Production Support Chat", asr: 0.085, ciLow: 0.063, ciHigh: 0.113, attempts: 540, findings: 5, highCritical: 2 },
-    { targetId: "tgt_orbit_mcp", targetName: "Orbit MCP Agent", asr: 0.1, ciLow: 0.06, ciHigh: 0.16, attempts: 150, findings: 3, highCritical: 2 },
-    { targetId: "tgt_atlas_rag", targetName: "Atlas Knowledge RAG", asr: 0.109, ciLow: 0.079, ciHigh: 0.149, attempts: 312, findings: 4, highCritical: 2 },
-    { targetId: "tgt_support_agent", targetName: "Support Tool Agent", asr: 0.112, ciLow: 0.075, ciHigh: 0.164, attempts: 196, findings: 3, highCritical: 2 },
+    { targetId: "tgt_atlas_search", targetName: "Atlas Search Assistant", asr: 0.049, ciLow: 0.012, ciHigh: 0.16, attempts: 41, successes: 2, refusals: 37, findings: 0, highCritical: 0, latestCampaignId: "cmp_garak" },
+    { targetId: "tgt_local_llama", targetName: "Local Llama 3", asr: 0.06, ciLow: 0.03, ciHigh: 0.11, attempts: 120, successes: 7, refusals: 108, findings: 1, highCritical: 0, latestCampaignId: null },
+    { targetId: "tgt_prod_chat", targetName: "Production Support Chat", asr: 0.085, ciLow: 0.063, ciHigh: 0.113, attempts: 540, successes: 46, refusals: 470, findings: 5, highCritical: 2, latestCampaignId: "cmp_prod_jb" },
+    { targetId: "tgt_orbit_mcp", targetName: "Orbit MCP Agent", asr: 0.1, ciLow: 0.06, ciHigh: 0.16, attempts: 150, successes: 15, refusals: 128, findings: 3, highCritical: 2, latestCampaignId: "cmp_mcp_poison" },
+    { targetId: "tgt_atlas_rag", targetName: "Atlas Knowledge RAG", asr: 0.109, ciLow: 0.079, ciHigh: 0.149, attempts: 312, successes: 34, refusals: 266, findings: 4, highCritical: 2, latestCampaignId: "cmp_rag_inject" },
+    { targetId: "tgt_support_agent", targetName: "Support Tool Agent", asr: 0.112, ciLow: 0.075, ciHigh: 0.164, attempts: 196, successes: 22, refusals: 165, findings: 3, highCritical: 2, latestCampaignId: "cmp_agent_tools" },
+    { targetId: "tgt_openrouter_mini", targetName: "openai/gpt-4o-mini", asr: 0, ciLow: 0, ciHigh: 0.49, attempts: 4, successes: 0, refusals: 4, findings: 0, highCritical: 0, latestCampaignId: null },
   ],
 };
 

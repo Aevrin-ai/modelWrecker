@@ -159,6 +159,9 @@ PyRIT tests skip.
 | API | detail kept only when the setting is on; shown on finding and campaign routes; metadata-only re-sync keeps it; turning off deletes it; other accounts get 404; strict schema; 4 MB sync cap | PASS | 5 tests in `src/api/test/api.test.ts` (#28) |
 | End to end | real `modelwrecker sync` of the 8 real local runs to the real API code (in-memory database) with both settings on | PASS | all 8 back-filled; 4 findings with evidence, 18 attempts in transcripts; second sync sent nothing; turning evidence off removed it; no API key in cloud data |
 | Dashboard | transcript card (on and off states), finding evidence view, settings copy | PASS | Chrome, mock mode |
+| Live | maintainer's re-sync with detail on | PASS (maintainer) | all 8 runs have transcripts in the account (4 attempts each for the two OpenRouter runs); 4 findings have evidence |
+| Engine | `modelwrecker --version`, `-V`, and `version` print the version | PASS | `tests/test_scaffold.py` (#30) |
+| Dashboard | leaderboard shows "N of M worked", refusals, small-sample flag, and links to the latest campaign | PASS | API test plus Chrome check in mock mode (#31) |
 | Live | migration `0003` applied; `finding_evidence` and `run_transcripts` have RLS with owner read and delete policies only | PASS | checked with SQL after applying, 2026-10-02 |
 | Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
 | Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
