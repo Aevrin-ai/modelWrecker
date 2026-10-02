@@ -151,7 +151,10 @@ PyRIT tests skip.
 | Live | API Worker on `app.aevrin.net/api/*` | PASS | `/api/v1/health` 200; `/api/v1/me` without a token 401 |
 | Live | dashboard built in live mode against the real Supabase project | PASS | sign-in screen shown instead of demo data |
 | Live | Google sign-in redirect | PASS | "Continue with Google" reaches the Google account screen with the Supabase callback, no `redirect_uri_mismatch` |
-| Live | full sign-in, device login, and sync with a real Google account | NOT TESTED | needs the maintainer's own Google account |
+| Live | full sign-in, device login, and sync with a real Google account | PASS (maintainer) | the maintainer signed in, approved a device with `modelwrecker login`, and synced (2026-10-02) |
+| Live | two campaigns through OpenRouter (targets openai/gpt-4o-mini and meta-llama/llama-3.1-8b-instruct, auto strategies, 5 replays) | PASS | 4 real attempts each, all refused, 0 findings; the API key appears in no run file |
+| Engine | `sync` lists pending runs before sending; `sync --dry-run` sends nothing and needs no sign-in | PASS | 3 tests in `tests/test_cloud_sync.py`; live `--dry-run` listed exactly the two OpenRouter runs |
+| Live | the two OpenRouter runs synced and shown in the dashboard | NOT TESTED | waiting for the maintainer's `modelwrecker sync` (#7) |
 | Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
 | Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
 | Engine | evidence stores the strategy name, not the plan id | PASS | regression test `test_evidence_records_the_strategy_name_not_a_plan_id` |
