@@ -1,0 +1,44 @@
+name: Deploy control-plane API (Cloudflare Worker)
+
+# Redeploys the API Worker (served at app.aevrin.net/api/*) whenever src/api changes on main.
+# Typecheck and tests must pass first.
+#
+# Required GitHub repository secrets (Settings -> Secrets and variables -> Actions):
+#   CLOUDFLARE_API_TOKEN   - token with "Workers Scripts: Edit" (and "Pages: Edit" for deploy-web)
+#   CLOUDFLARE_ACCOUNT_ID  - the Cloudflare account id
+# The Worker's own server key is set once with `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY`
+# and never passes through GitHub. See deploy/cloudflare/README.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/api/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: src/api
+          command: deploy

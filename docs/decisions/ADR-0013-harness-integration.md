@@ -31,6 +31,14 @@ transport, recorded authorization).
 - **Expose the full tool registry over MCP** - rejected; that is exactly the unauthenticated-host-tool
   mistake the security model forbids. Only safe orchestration tools are exposed.
 
+## Update - 2026-10-02 (guardrails)
+This refines the decision; it does not reverse it. The "define a target" tool is not offered: a target
+comes only from a config file inside the server's config folder, marked `authorized: true`, and no tool
+argument can name or change a target or endpoint. Every tool call passes the MCP guardrail chain (tool
+and argument allowlist, rate limits, path scope, target scope, entitlement hook, resource limits). The
+built tool list is in [`../mcp/tools.md`](../mcp/tools.md); the guardrails are in
+[`../security/mcp.md`](../security/mcp.md).
+
 ## Trade-offs
 - One more surface to maintain and secure. Mitigated by reusing the MCP SDK, exposing a deliberately small
   safe tool set, and routing everything through the existing security layer. See

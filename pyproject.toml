@@ -7,6 +7,14 @@ requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Aevrin" }]
 keywords = ["ai", "security", "red-teaming", "llm", "jailbreak", "owasp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
 
 # Core runtime dependencies. Kept small on purpose (see docs/DEPENDENCIES.md).
 # Provider breadth comes from any-llm (the default multiplexer); direct SDKs stay first-class.
@@ -17,6 +25,12 @@ dependencies = [
     "pyyaml>=6.0",
     "jinja2>=3.1",
 ]
+
+[project.urls]
+Homepage = "https://app.aevrin.net"
+Repository = "https://github.com/spacesdrive/modelWrecker"
+Documentation = "https://github.com/spacesdrive/modelWrecker/tree/main/docs"
+Issues = "https://github.com/spacesdrive/modelWrecker/issues"
 
 [project.optional-dependencies]
 # Provider adapters beyond the OpenAI-compatible baseline.
@@ -43,6 +57,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/modelwrecker"]
+
+# The source archive carries only the Python engine, its tests, and the docs it points to. The web apps
+# (src/web, src/dash, src/api) and deploy files are not part of the Python package.
+[tool.hatch.build.targets.sdist]
+include = ["/src/modelwrecker", "/tests", "/examples", "/README.md", "/CHANGELOG.md", "/pyproject.toml"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

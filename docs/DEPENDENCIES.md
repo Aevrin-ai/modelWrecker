@@ -41,6 +41,31 @@ Status/versions verified 2026-10-01; re-check before adopting.
 | litellm | multiplexer adapter | MIT core (enterprise/ dir separate) | some teams standardize on it | **high**: enterprise split + Mar-2026 supply-chain incident → optional only, pin via Docker |
 | Portkey gateway | external gateway adapter | MIT | teams already running it | medium: TS service, not a Python lib fit |
 
+## Web apps and cloud control plane (TypeScript, Phase 10)
+
+These live in `src/web` (landing), `src/dash` (dashboard), and `src/api` (control-plane Worker). None of
+them is in the engine's path: the local engine runs fully without the cloud, so the "free and
+self-hostable" rule holds for red teaming itself. Versions are pinned by each app's `package-lock.json`.
+
+| Name | Used in | Purpose | License | Why | Alternative | Risk | Replace difficulty |
+|------|---------|---------|---------|-----|-------------|------|--------------------|
+| React 18, Vite, TypeScript | web, dash | UI and build | MIT / Apache-2.0 | standard, fast static builds for Cloudflare Pages | Svelte, plain HTML | low | hard (UI rewrite) |
+| Tailwind CSS (v4 web, v3 dash) | web, dash | styling with design tokens | MIT | tokens map 1:1 to the measured reference styles | CSS modules | low | medium |
+| motion | web | entrance and scroll animation | MIT | small, respects reduced motion | CSS only | low | easy |
+| lucide-react | web, dash | icons | ISC | tree-shaken icons | heroicons | low | easy |
+| react-router-dom | dash | routing under `/dashboard/` | MIT | standard | TanStack Router | low | medium |
+| Recharts | dash | charts (code-split per page) | MIT | simple, themeable | visx, hand SVG | low | medium |
+| zod | dash, api | schema validation | MIT | strict request schemas reject unknown fields | valibot | low | easy |
+| clsx, tailwind-merge | dash | class name helpers | MIT | tiny | hand-rolled | low | easy |
+| @supabase/supabase-js | dash, api | Google sign-in (dash); token verification and RLS-scoped queries (api) | MIT | official client; RLS applies when queries carry the user's token | raw PostgREST + GoTrue over fetch | low | medium |
+| Hono | api | request routing on Cloudflare Workers | MIT | tiny, built for Workers, testable with `app.request` | hand-written router | low | easy |
+| Wrangler | api | build, local dev, deploy of the Worker | MIT / Apache-2.0 | official Cloudflare CLI | Cloudflare dashboard upload | low | easy |
+| vitest, @cloudflare/workers-types | api | tests, Worker types | MIT / Apache-2.0 | offline tests against an in-memory database | jest | low | easy |
+
+Platform services (not packages): Supabase (managed Postgres + Auth, Apache-2.0 open source and
+self-hostable), Cloudflare Pages and Workers (free tiers, see `deployment/cloudflare.md`), Google OAuth.
+Decision record: ADR-0015.
+
 ## Explicitly NOT used
 
 | Rejected | Why |

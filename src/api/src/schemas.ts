@@ -1,0 +1,162 @@
+// Request schemas. Every body is strict: unknown fields are rejected, so a client cannot slip in an
+// owner id, a project id it does not own, or sensitive content the contract does not allow.
+import { z } from "zod";
+
+const shortText = (max: number) => z.string().trim().min(1).max(max);
+const isoOrNull = z.string().datetime({ offset: true }).nullable();
+const rate = z.number().min(0).max(1);
+const count = z.number().int().min(0).max(10_000_000);
+
+export const SEVERITIES = ["info", "low", "medium", "high", "critical"] as const;
+export const FINDING_STATUSES = ["open", "triaged", "fixed", "accepted-risk"] as const;
+export const TARGET_TYPES = ["chat", "agent", "rag", "mcp"] as const;
+
+// --- device sign-in ---------------------------------------------------------------------------
+
+export const DeviceCodeReq = z
+  .object({
+    name: shortText(80),
+    os: z.string().trim().max(60).default(""),
+    engine_version: z.string().trim().max(20).default(""),
+  })
+  .strict();
+
+export const DeviceTokenReq = z.object({ device_code: z.string().min(20).max(128) }).strict();
+
+export const DeviceApproveReq = z
+  .object({
+    user_code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{4}-?[A-Z]{4}$/, "expected a code like WDJB-MJHT")
+      .transform((v) => (v.includes("-") ? v : `${v.slice(0, 4)}-${v.slice(4)}`)),
+    project_id: z.string().uuid().nullable().default(null),
+    approve: z.boolean().default(true),
+  })
+  .strict();
+
+export const HeartbeatReq = z.object({ engine_version: z.string().trim().max(20).default("") }).strict();
+
+// --- result sync (metadata only; see docs/architecture/control-plane-api.md) ------------------------
+
+const SyncFinding = z
+  .object({
+    id: shortText(64),
+    title: shortText(300),
+    severity: z.enum(SEVERITIES),
+    score: z.number().int().min(0).max(10).default(0),
+    strategy: z.string().trim().max(80).default(""),
+    taxonomy: z
+      .array(z.object({ framework: shortText(40), id: shortText(40) }).strict())
+      .max(20)
+      .default([]),
+    replays: count,
+    successes: count,
+    success_rate: rate,
+    ci_low: rate,
+    ci_high: rate,
+    confidence: z.enum(["reliable", "flaky", "does_not_hold"]),
+    discovered_at: isoOrNull,
+  })
+  .strict();
+
+export const SyncReq = z
+  .object({
+    schema: z.literal(1),
+    engine_version: z.string().trim().max(20).default(""),
+    run: z
+      .object({
+        run_id: shortText(80),
+        campaign: z.object({ external_id: shortText(120), name: shortText(200) }).strict(),
+        target: z
+          .object({
+            name: shortText(120),
+            type: z.enum(TARGET_TYPES),
+            model: z.string().trim().max(120).default(""),
+            provider: z.string().trim().max(80).default(""),
+          })
+          .strict(),
+        started_at: isoOrNull,
+        completed_at: isoOrNull,
+        attempts: count,
+        successes: count,
+        partials: count,
+        refusals: count,
+        errors: count,
+        asr: rate,
+        asr_ci_low: rate,
+        asr_ci_high: rate,
+        by_strategy: z
+          .array(
+            z
+              .object({ strategy: shortText(80), attempts: count, successes: count, partials: count })
+              .strict(),
+          )
+          .max(100)
+          .default([]),
+        findings: z.array(SyncFinding).max(500).default([]),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type SyncBody = z.infer<typeof SyncReq>;
+
+// --- dashboard ------------------------------------------------------------------------------------
+
+export const ProjectCreate = z
+  .object({ name: shortText(120), description: z.string().trim().max(2000).default("") })
+  .strict();
+
+export const ProjectPatch = z
+  .object({
+    name: shortText(120).optional(),
+    description: z.string().trim().max(2000).optional(),
+    archived: z.boolean().optional(),
+  })
+  .strict();
+
+export const TargetCreate = z
+  .object({
+    name: shortText(120),
+    type: z.enum(TARGET_TYPES),
+    provider: z.string().trim().max(80).default(""),
+    endpoint: z.string().trim().max(500).default(""),
+    model: z.string().trim().max(120).default(""),
+    projectId: z.string().uuid(),
+    // The user must confirm they may test this system. Anything but `true` is refused.
+    authorized: z.literal(true),
+  })
+  .strict();
+
+export const CampaignCreate = z
+  .object({
+    name: shortText(200),
+    projectId: z.string().uuid(),
+    targetId: z.string().uuid(),
+    strategies: z.array(shortText(80)).min(1).max(30),
+    objectiveCount: z.number().int().min(1).max(1000),
+    stopCondition: z.enum(["complete", "first_finding", "budget"]),
+    concurrency: z.number().int().min(1).max(64),
+    maxAttempts: z.number().int().min(1).max(1_000_000).nullable(),
+  })
+  .strict();
+
+export const NamePatch = z.object({ name: shortText(200) }).strict();
+
+export const FindingPatch = z.object({ status: z.enum(FINDING_STATUSES) }).strict();
+
+export const SettingsPatch = z
+  .object({
+    sync: z
+      .object({
+        metadata: z.literal(true).optional(),
+        detailedEvidence: z.boolean().optional(),
+        transcripts: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+    notifications: z.record(z.string().max(40), z.boolean()).optional(),
+  })
+  .strict();

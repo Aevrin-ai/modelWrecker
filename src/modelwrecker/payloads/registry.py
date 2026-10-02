@@ -6,17 +6,21 @@ installed (see pyrit_converters). New transforms plug in without the engine chan
 
 from __future__ import annotations
 
-from .transforms import Transform, _BUILTINS
+from .transforms import _BUILTINS, Transform
 
 _REGISTRY: dict[str, Transform] = {cls.name: cls() for cls in _BUILTINS}
 
 
 def _maybe_register_pyrit() -> None:
+    # The engine must run without the optional attacks extra, so any PyRIT failure means "no PyRIT
+    # transforms", never a crashed run.
     try:
         from .pyrit_converters import pyrit_transforms
+
+        transforms = pyrit_transforms()
     except Exception:
         return
-    for t in pyrit_transforms():
+    for t in transforms:
         _REGISTRY.setdefault(t.name, t)
 
 

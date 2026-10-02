@@ -1,0 +1,17 @@
+# Aevrin control-plane API. Served on the dashboard's own origin at app.aevrin.net/api/*.
+# Nothing project-specific lives in this public file. The three Supabase values are Worker secrets:
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_ANON_KEY
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# deploy/go_live.py sets all three for you.
+# See deploy/cloudflare/README.md and docs/architecture/control-plane-api.md.
+name = "aevrin-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# app.aevrin.net/api/* reaches this Worker; the Pages project serves everything else on the domain.
+routes = [{ pattern = "app.aevrin.net/api/*", zone_name = "aevrin.net" }]
+
+[vars]
+APP_ORIGIN = "https://app.aevrin.net"

@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+/*
+  Aevrin landing - design system.
+  Values are taken from the Folio reference by measuring computed styles:
+  background #121212, foreground #ebebeb, muted #9b9b9b, border #242424,
+  Geist body, editorial serif headlines (H1 60px/600, H2 48px/700, -0.025em),
+  6px buttons, 16px cards, tinted pill badges. Content and logo are Aevrin's.
+*/
+
+@theme {
+  --color-background: #121212;
+  --color-foreground: #ebebeb;
+  --color-muted: #9b9b9b;
+  --color-faint: #6b6b6b;
+  --color-border: #242424;
+  --color-card: #171717;
+  --color-panel: #1a1a1a;
+  --color-elevated: #1f1f1f;
+  --color-input: #262626;
+  --color-primary: #fafafa;
+  --color-primary-foreground: #171717;
+
+  /* Aevrin brand (from the logo mark) */
+  --color-brand: #a3e635;
+
+  /* Tinted pill palette (Tailwind 300 text on 400/10 fill, 400/20 border) */
+  --color-emerald: #6ee7b7;
+  --color-emerald-base: #34d399;
+  --color-blue: #93c5fd;
+  --color-blue-base: #60a5fa;
+  --color-purple: #d8b4fe;
+  --color-purple-base: #c084fc;
+  --color-amber: #fcd34d;
+  --color-amber-base: #fbbf24;
+  --color-orange: #fdba74;
+  --color-orange-base: #fb923c;
+  --color-red: #fca5a5;
+  --color-red-base: #f87171;
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Newsreader", "Tiempos Headline", Georgia, serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: rgba(163, 230, 53, 0.3);
+    color: #fff;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-blue-base);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-serif);
+    font-optical-sizing: auto;
+  }
+  /* H1 / H2 treatment measured on the reference */
+  .h-hero {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .h-section {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .bg-dots {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+  .mask-fade-y {
+    mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  }
+  .mask-fade-x {
+    mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, #000 60%, transparent);
+  }
+
+  /* Rotating blue-to-emerald glow under the hero badge (Folio badge) */
+  @keyframes badge-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .badge-glow {
+    background: conic-gradient(transparent 0%, transparent 70%, #3b82f6 85%, #10b981 95%, transparent 100%);
+    animation: badge-spin 4s linear infinite;
+  }
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes marquee-rev {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+  .animate-marquee-rev {
+    animation: marquee-rev 40s linear infinite;
+  }
+
+  @keyframes flow-dash {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+  .animate-flow {
+    stroke-dasharray: 4 4;
+    animation: flow-dash 1.2s linear infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.9);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 1.8s var(--ease-soft) infinite;
+  }
+
+  @keyframes tab-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .badge-glow,
+    .animate-marquee,
+    .animate-marquee-rev,
+    .animate-flow,
+    .animate-pulse-ring {
+      animation: none;
+    }
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}

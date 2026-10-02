@@ -1,8 +1,8 @@
 """The attack loop: run objectives against a target, judge, verify, and record findings.
 
 This is the orchestrator that ties providers, target, strategies, judge, reliability, evidence, and
-findings together (see docs/attack-engine/OVERVIEW.md). It owns provider lifetimes via provider_scope
-and refuses unauthorized targets.
+findings together (see docs/attack-engine/OVERVIEW.md). It owns provider lifetimes via
+provider_scope and refuses unauthorized targets.
 """
 
 from __future__ import annotations
@@ -12,13 +12,13 @@ from dataclasses import dataclass, field
 
 from ..config import Config
 from ..data import Finding, Objective, Outcome, TaxonomyRef
+from ..findings.engine import build_evidence, build_finding
 from ..judges.judge import Judge
 from ..providers.factory import build_provider, provider_scope
 from ..reliability.replay import measure_reliability
 from ..strategies.base import StrategyContext
 from ..strategies.registry import get_strategy
 from ..targets.factory import build_target
-from ..findings.engine import build_evidence, build_finding
 from .planner import Planner
 
 
@@ -55,7 +55,10 @@ async def run_config(
     emit=_emit_noop,
     run_id: str | None = None,
 ) -> RunResult:
-    """Run every objective in a config. `store` is an optional RunStore; `emit` is a progress callback."""
+    """Run every objective in a config.
+
+    `store` is an optional RunStore; `emit` is a progress callback.
+    """
     config.require_full()
     config.require_authorized_target()
     config.require_objectives()
@@ -66,22 +69,28 @@ async def run_config(
     config_snapshot = _config_snapshot(config)
 
     async with provider_scope():
-        attacker_provider = build_provider(config.attacker)  # available to strategies that reason
-        target_provider = build_provider(config.target)
-        judge_provider = build_provider(config.judge)
+        egress = config.security.egress.policy()  # every model call passes the egress guard
+        attacker_provider = build_provider(config.attacker, egress)  # for strategies that reason
+        target_provider = build_provider(config.target, egress)
+        judge_provider = build_provider(config.judge, egress)
 
         target = build_target(config.target, target_provider)
         judge = Judge(judge_provider)
 
         if store:
+            project_name = (config.project or {}).get("name")
             store.event("run_meta", target_model=config.target.model,
-                        target_provider=config.target.protocol, run_id=run_id)
+                        target_provider=config.target.protocol, run_id=run_id,
+                        target_type=config.target.type or "chat",
+                        project_name=str(project_name) if project_name else None)
 
         result.calibration = await judge.calibrate()
         if store:
             store.event("calibration", **result.calibration)
         if not result.calibration.get("calibrated", False):
-            result.notes.append("judge not calibrated: it flagged a benign fixture; treat findings with care")
+            result.notes.append(
+                "judge not calibrated: it flagged a benign fixture; treat findings with care"
+            )
 
         from ..campaigns.engine import build_budget, execute_campaign
 
@@ -194,7 +203,8 @@ async def _run_objective(
             continue
         verdict, srun = best
         if verdict.outcome is not Outcome.SUCCESS:
-            emit(f"{strategy_name}: no success (best score {verdict.score}/10), trying next strategy")
+            emit(f"{strategy_name}: no success (best score {verdict.score}/10), "
+                 "trying next strategy")
             continue
 
         # Verify with replay before it becomes a finding.
@@ -213,12 +223,15 @@ async def _run_objective(
             emit(f"{strategy_name}: did not hold on replay; not a finding")
             continue
 
-        candidate_tax: list[TaxonomyRef] = [*strategy.candidate_taxonomy, *objective.candidate_taxonomy]
+        candidate_tax: list[TaxonomyRef] = [
+            *strategy.candidate_taxonomy, *objective.candidate_taxonomy
+        ]
         target_meta = await target.get_metadata()
         evidence = build_evidence(
             objective=objective, attempt=srun.attempt, observation=srun.observation,
             verdict=verdict, reliability=reliability, target_meta=target_meta,
-            config_snapshot=config_snapshot,
+            config_snapshot=config_snapshot, strategy=strategy_name,
+            strategy_params=dict(plan.strategy_params),
         )
         finding = build_finding(
             objective=objective, attempt=srun.attempt, verdict=verdict, reliability=reliability,
@@ -228,7 +241,8 @@ async def _run_objective(
         if store:
             store.save_evidence(evidence)
             store.save_finding(finding)
-            store.event("finding", id=finding.id, severity=finding.severity.value, title=finding.title)
+            store.event("finding", id=finding.id, severity=finding.severity.value,
+                        title=finding.title, strategy=strategy_name)
         emit(f"FINDING: {finding.severity.value} - {finding.title}")
         return finding, records
 
@@ -242,7 +256,10 @@ def _obs_tokens(observation) -> int:
 
 
 def _config_snapshot(config: Config) -> dict:
-    """A redaction-safe snapshot of the config for evidence (no secrets: only env var names are stored)."""
+    """A redaction-safe snapshot of the config for evidence.
+
+    No secrets: only env var names are stored.
+    """
     def ep(e):
         if e is None:
             return None

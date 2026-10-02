@@ -18,11 +18,13 @@ reliability (Wilson confidence intervals), evidence, findings (reports show the 
 pass/fail per attempt), the payload/transform engine, the campaign engine (parallel objectives, budgets,
 stop conditions, retries), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
 storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
-garak are integrated.** Live-verified against OpenRouter. 85 offline tests (86 with the `scan` extra).
+garak are integrated.** Live-verified against OpenRouter. 189 offline tests pass (1 skipped).
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
-Run tests: `.venv\Scripts\python -m pytest -q`. Next is Phase 10 (hardening + authenticated REST API, remote
-MCP, CLI auth, Supabase/Cloudflare/Google web app). A live MCP-server target connection, any-llm, direct
+Run tests: `.venv\Scripts\python -m pytest -q`. Phase 10 (local-first product) is in progress: docs, the
+hardened Docker product, egress enforcement, and local MCP guardrails are done; the landing page
+(`src/web`), dashboard (`src/dash`), control-plane API (`src/api`, Cloudflare Worker + Supabase RLS), and
+device login + metadata sync are built and tested offline; deploying them is staged in `deploy/`. A live MCP-server target connection, any-llm, direct
 OpenAI/Anthropic adapters, Ollama, and money/cost budgets are not built/tested yet. See `ROADMAP.md` and
 `docs/testing/test-matrix.md`.
 

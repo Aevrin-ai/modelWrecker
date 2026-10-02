@@ -9,6 +9,8 @@ without leaving the harness.
 by `tests/test_mcp.py`. Decision: [`../decisions/ADR-0013-harness-integration.md`](../decisions/ADR-0013-harness-integration.md).
 
 To add it to a client such as Claude Code, register a stdio MCP server that runs `modelwrecker mcp`.
+Use `--config-dir` to name the only folder the server reads configs from, and `--runs-dir` for the
+folder it keeps runs in.
 
 ## How it works
 
@@ -30,17 +32,10 @@ back structured findings the agent turns into a plain-language summary.
 ## Two ways to connect
 
 1. **MCP server** - run `modelwrecker mcp`. It registers as an MCP server the harness can add. The harness
-   then drives these **safe** tools:
-
-   | Tool | What it does |
-   |------|--------------|
-   | `list_strategies` | show available attack strategies + what each needs |
-   | `define_target` | describe the model/system to test (endpoint, type) |
-   | `run_objective` | run one objective against the target, return the verdict + reliability |
-   | `run_campaign` | run a set of objectives, return aggregate findings |
-   | `get_findings` | fetch findings from a run |
-   | `get_report` | render a report (md/json/sarif) |
-   | `replay_finding` | reproduce a finding from its evidence |
+   then drives a small set of **safe** tools: `list_strategies`, `validate_config`, `run`,
+   `get_findings`, `get_report`, and `replay`. The full list, with arguments, is in
+   [`../mcp/tools.md`](../mcp/tools.md). The target always comes from a config file the developer wrote
+   and marked `authorized: true`; no tool can name or change a target.
 
 2. **JSON driver** - for harnesses that are not MCP clients, shell out:
    `modelwrecker run target.yaml --output json`. The harness reads the structured result.
@@ -55,15 +50,18 @@ issue, or gate a commit.
 
 - The MCP server exposes **only** the orchestration tools above. It never exposes shell, file-write, or
   arbitrary-HTTP host tools - the harness cannot use modelWrecker as a path to the host.
-- All attacks still go through the egress guard; all output is redacted; authorization asserted by the
-  developer is recorded in the run.
-- Over stdio (local) no network auth is needed; any networked transport requires the auth token and
-  refuses non-loopback binds without it. See [`../security/SECURITY.md`](../security/SECURITY.md).
+- Every tool call passes the MCP guardrail chain: tool and argument allowlist, rate limits, path scope,
+  target scope, an entitlement hook, and resource limits on the size and length of a run. A refused call
+  returns a clear error code and runs nothing. See [`../security/mcp.md`](../security/mcp.md).
+- Output is redacted, and refusals are logged with secrets redacted.
+- Over stdio (local) no network auth is needed; any networked transport requires auth and refuses
+  non-loopback binds without it. See [`../security/SECURITY.md`](../security/SECURITY.md).
 
 ## Example (what the developer experiences)
 
 > Developer, in Claude Code: *"Use modelWrecker to see if my local model leaks its system prompt."*
-> The agent calls `define_target` (the local Ollama endpoint) and `run_objective`
-> (`system_prompt_leak`), modelWrecker runs and verifies, and the agent replies: *"modelWrecker ran a
+> The agent calls `validate_config` and then `run` on `local-model.yaml` (a config the developer wrote
+> for their local Ollama model, with `authorized: true` and a `system_prompt_leak` objective).
+> modelWrecker runs and verifies, and the agent replies: *"modelWrecker ran a
 > system-prompt-extraction strategy; it leaked the prompt on 7/8 replays (reliable), mapped to
 > LLM07:2025. Here is the reproduction."*

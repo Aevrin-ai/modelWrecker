@@ -1,11 +1,16 @@
 # IDE / local prompt scratch
 .prompt
+.pypi-key
+.googlelogin-key
 
 # Secrets and config (never commit). Keep ALL local credential files out of git:
 # platform/service tokens live only on disk and in the deploy secret store, never here.
 .env
 .env.*
+!.env.example
 config.local.*
+# Local campaign configs mounted into the Docker container (target URLs, planted prompts).
+/config/
 *.key
 *-key
 *-keys
@@ -34,6 +39,13 @@ venv/
 .mypy_cache/
 dist/
 build/
+
+# Web apps (landing in src/web, dashboard in src/dash) and any Node tooling
+node_modules/
+**/node_modules/
+**/dist/
+**/.vite/
+.wrangler/
 
 # OS / editor
 .DS_Store

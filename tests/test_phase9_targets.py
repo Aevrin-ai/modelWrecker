@@ -114,7 +114,7 @@ def _judge_responder(messages):
 
 
 def _patch(monkeypatch, target_responder):
-    def fake_build(ep):
+    def fake_build(ep, egress=None):
         if ep.model == "target":
             return FakeProvider("target", target_responder)
         if ep.model == "judge":

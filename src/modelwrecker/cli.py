@@ -2,14 +2,19 @@
 
 Commands mirror docs/reference/CLI.md. `run` executes the real attack loop; `check`/`validate`
 validate a config; `provider test` does a live connectivity check; `strategies` lists strategies;
-`report` renders a finished run; `replay` reproduces a finding. For authorized testing only.
+`report` renders a finished run; `replay` reproduces a finding; `login`/`logout`/`sync` connect to
+the dashboard and send metadata-only run summaries (see src/modelwrecker/cloud). For authorized
+testing only.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
+import time
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -32,7 +37,9 @@ def version() -> None:
 
 
 @app.command()
-def init(path: str = typer.Argument("modelwrecker.yaml", help="where to write the starter config")) -> None:
+def init(
+    path: str = typer.Argument("modelwrecker.yaml", help="where to write the starter config"),
+) -> None:
     """Write a starter config you can edit and run."""
     p = Path(path)
     if p.exists():
@@ -67,7 +74,12 @@ def validate(config: str = typer.Argument("modelwrecker.yaml")) -> None:
     """Validate a config file (schema, protocols, authorization, objectives)."""
     cfg = _load(config)
     problems: list[str] = []
-    for check_fn in (cfg.require_full, cfg.require_authorized_target, cfg.require_objectives):
+    for check_fn in (
+        cfg.require_full,
+        cfg.require_authorized_target,
+        cfg.require_objectives,
+        cfg.require_egress_allowed,
+    ):
         try:
             check_fn()
         except ConfigError as e:
@@ -88,6 +100,10 @@ def run(
     stop_on: str = typer.Option(None, help="complete | first_finding | budget (overrides config)"),
     max_objectives: int = typer.Option(None, help="cap objectives scheduled (overrides config)"),
     max_seconds: int = typer.Option(None, help="wall-clock budget in seconds (overrides config)"),
+    sync_after: bool = typer.Option(
+        None, "--sync/--no-sync",
+        help="send the run's summary to the dashboard afterwards (default: only if signed in)",
+    ),
 ) -> None:
     """Run all objectives in a config against the target, verify, and report."""
     cfg = _load(config)
@@ -131,6 +147,8 @@ def run(
     typer.echo("")
     typer.echo(rendered)
     typer.secho(f"\nartifacts in {store.dir}", fg=typer.colors.GREEN)
+    # Sync is best effort: it never changes this command's exit code or touches local results.
+    _auto_sync(store.dir, sync_after)
     if result.findings:
         raise typer.Exit(code=0)
 
@@ -156,11 +174,18 @@ def report(
 
 @app.command()
 def analyze(
-    run_dirs: list[str] = typer.Argument(..., help="one or more run directories under runs/"),
-    out_dir: str = typer.Option(None, help="where to write artifacts (default: each run's own dir)"),
+    run_dirs: Annotated[
+        list[str], typer.Argument(help="one or more run directories under runs/")
+    ],
+    out_dir: str = typer.Option(
+        None, help="where to write artifacts (default: each run's own dir)"
+    ),
     formats: str = typer.Option("html,json,csv", help="comma list: html | json | csv"),
 ) -> None:
-    """Compute ASR analytics (per strategy/category/taxonomy) and a leaderboard as static HTML/JSON/CSV."""
+    """Compute ASR analytics per strategy, category, and taxonomy, plus a leaderboard.
+
+    Output is static HTML, JSON, and CSV files.
+    """
     from .analytics import (
         compute_analytics,
         render_analytics_csv,
@@ -188,29 +213,25 @@ def analyze(
 
         dest = Path(out_dir) if out_dir else d
         dest.mkdir(parents=True, exist_ok=True)
-        if "html" in wanted:
-            (dest / f"analytics-{d.name}.html").write_text(render_analytics_html(a), encoding="utf-8")
-            written.append(dest / f"analytics-{d.name}.html")
-        if "json" in wanted:
-            (dest / f"analytics-{d.name}.json").write_text(render_analytics_json(a), encoding="utf-8")
-            written.append(dest / f"analytics-{d.name}.json")
-        if "csv" in wanted:
-            (dest / f"analytics-{d.name}.csv").write_text(render_analytics_csv(a), encoding="utf-8")
-            written.append(dest / f"analytics-{d.name}.csv")
+        per_run = {"html": render_analytics_html, "json": render_analytics_json,
+                   "csv": render_analytics_csv}
+        for fmt, render in per_run.items():
+            if fmt in wanted:
+                target = dest / f"analytics-{d.name}.{fmt}"
+                target.write_text(render(a), encoding="utf-8")
+                written.append(target)
         typer.echo(f"{label}: ASR {a.successes}/{a.total_attempts}, {a.findings_total} finding(s)")
 
     if len(runs) > 1:
         lb_dir = Path(out_dir) if out_dir else Path(".")
         lb_dir.mkdir(parents=True, exist_ok=True)
-        if "html" in wanted:
-            (lb_dir / "leaderboard.html").write_text(render_leaderboard_html(runs), encoding="utf-8")
-            written.append(lb_dir / "leaderboard.html")
-        if "json" in wanted:
-            (lb_dir / "leaderboard.json").write_text(render_leaderboard_json(runs), encoding="utf-8")
-            written.append(lb_dir / "leaderboard.json")
-        if "csv" in wanted:
-            (lb_dir / "leaderboard.csv").write_text(render_leaderboard_csv(runs), encoding="utf-8")
-            written.append(lb_dir / "leaderboard.csv")
+        boards = {"html": render_leaderboard_html, "json": render_leaderboard_json,
+                  "csv": render_leaderboard_csv}
+        for fmt, render in boards.items():
+            if fmt in wanted:
+                target = lb_dir / f"leaderboard.{fmt}"
+                target.write_text(render(runs), encoding="utf-8")
+                written.append(target)
 
     typer.secho(f"wrote {len(written)} artifact(s)", fg=typer.colors.GREEN)
     for p in written:
@@ -252,8 +273,13 @@ def transforms() -> None:
 
 
 @app.command()
-def mcp(runs_dir: str = typer.Option("runs", help="directory the server reads run artifacts from")) -> None:
-    """Start the harness-integration MCP server over stdio (for Claude Code / Codex / any MCP client)."""
+def mcp(
+    runs_dir: str = typer.Option("runs", help="directory the server keeps run artifacts in"),
+    config_dir: str = typer.Option(
+        ".", help="the only directory the server reads config files from"
+    ),
+) -> None:
+    """Start the harness-integration MCP server over stdio (Claude Code, Codex, any MCP client)."""
     try:
         from .mcp.server import build_server
     except ImportError as e:
@@ -262,7 +288,128 @@ def mcp(runs_dir: str = typer.Option("runs", help="directory the server reads ru
             fg=typer.colors.RED, err=True,
         )
         raise typer.Exit(code=2) from e
-    build_server(runs_dir=runs_dir).run()
+    build_server(runs_dir=runs_dir, config_dir=config_dir).run()
+
+
+@app.command()
+def login(
+    name: str = typer.Option(
+        None, help="a name for this device in the dashboard (default: hostname)"
+    ),
+) -> None:
+    """Connect this install to the Aevrin dashboard as a device (OAuth 2.0 device sign-in)."""
+    import platform
+
+    from .cloud import (
+        ENV_TOKEN,
+        CloudError,
+        DeviceCredential,
+        InsecureUrlError,
+        TokenStatus,
+        poll_for_token,
+        resolve_api_url,
+        save_credential,
+    )
+
+    try:
+        api_url = resolve_api_url()
+    except InsecureUrlError as e:
+        typer.secho(f"error: {e.message}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from e
+
+    device_name = (name or _default_device_name())[:100]
+    os_name = f"{platform.system()} {platform.release()}".strip() or "unknown"
+    try:
+        with _make_cloud_client(api_url, None) as client:
+            code = client.device_code(name=device_name, os_name=os_name, engine_version=__version__)
+            typer.echo("To connect this device, open this link in your browser:")
+            typer.secho(f"  {code.verification_uri_complete}", bold=True)
+            typer.echo(f"and check that it shows the code: {code.user_code}")
+            typer.echo("Waiting for approval (press Ctrl+C to cancel)...")
+            outcome = poll_for_token(client, code, sleep=_sleep)
+    except CloudError as e:
+        typer.secho(f"sign-in failed: {e.message}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except KeyboardInterrupt as e:
+        typer.secho("sign-in cancelled", fg=typer.colors.YELLOW, err=True)
+        raise typer.Exit(code=1) from e
+
+    if outcome.status is TokenStatus.DENIED:
+        typer.secho("sign-in was denied in the dashboard", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    if outcome.status is not TokenStatus.OK or outcome.token is None:
+        typer.secho("the code expired before it was approved; run `modelwrecker login` again",
+                    fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+
+    tok = outcome.token
+    cred = DeviceCredential(token=tok.device_token, device_id=tok.device_id,
+                            project_id=tok.project_id, api_url=api_url)
+    path = save_credential(cred)
+    typer.secho(f"signed in as device {cred.device_id or '(unknown id)'}", fg=typer.colors.GREEN)
+    typer.echo(f"credential saved to {path} (owner-only permissions)")
+    if os.environ.get(ENV_TOKEN):
+        typer.secho(f"note: {ENV_TOKEN} is set and takes precedence over the saved credential",
+                    fg=typer.colors.YELLOW)
+
+
+@app.command()
+def logout() -> None:
+    """Remove this device's saved credential."""
+    from .cloud import ENV_TOKEN, credential_path, delete_credential
+
+    path = credential_path()
+    if delete_credential(path):
+        typer.secho(f"removed {path}", fg=typer.colors.GREEN)
+    else:
+        typer.echo("not signed in (no saved credential)")
+    if os.environ.get(ENV_TOKEN):
+        typer.secho(f"note: {ENV_TOKEN} is still set in this environment; unset it too",
+                    fg=typer.colors.YELLOW)
+    typer.echo("To invalidate the token on the server, revoke this device in the dashboard.")
+
+
+@app.command("sync")
+def sync_command(
+    runs_dir: str = typer.Option("runs", help="directory that holds run folders"),
+) -> None:
+    """Send every run that is not synced yet to the dashboard (summary metadata only)."""
+    from .cloud import CloudError, pending_runs, sync_pending
+
+    cred = _load_credential_or_exit()
+    if cred is None:
+        typer.secho("not signed in. Run `modelwrecker login` or set MODELWRECKER_DEVICE_TOKEN.",
+                    fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    pending = pending_runs(runs_dir)
+    if not pending:
+        typer.echo(f"nothing to sync in {runs_dir}")
+        return
+    try:
+        client = _sync_client(cred)
+    except CloudError as e:
+        typer.secho(f"error: {e.message}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from e
+
+    with client:
+        try:
+            client.heartbeat()
+        except CloudError:
+            pass  # informational only; the sync calls below report the real problem
+        report = sync_pending(client, runs_dir)
+
+    typer.secho(f"synced {len(report.synced)} run(s)", fg=typer.colors.GREEN)
+    if report.deferred:
+        typer.secho(f"{len(report.deferred)} run(s) kept locally to retry later:",
+                    fg=typer.colors.YELLOW)
+        for run_name, why in report.deferred:
+            typer.echo(f"  {run_name}: {why}")
+    if report.refused:
+        typer.secho(f"{len(report.refused)} run(s) refused by the cloud API:",
+                    fg=typer.colors.RED, err=True)
+        for run_name, why in report.refused:
+            typer.secho(f"  {run_name}: {why}", err=True)
+        raise typer.Exit(code=1)
 
 
 @provider_app.command("test")
@@ -282,7 +429,7 @@ def provider_test(
 
     async def _run() -> None:
         async with provider_scope():
-            provider = build_provider(ep)
+            provider = build_provider(ep, cfg.security.egress.policy())
             health = await provider.health_check()
             if not health.ok:
                 typer.secho(f"FAIL: {health.detail}", fg=typer.colors.RED, err=True)
@@ -294,7 +441,8 @@ def provider_test(
             typer.secho("PASS", fg=typer.colors.GREEN)
             typer.echo(f"  model: {c.model}")
             typer.echo(f"  latency: {c.latency_ms} ms")
-            typer.echo(f"  tokens: prompt={c.usage.prompt_tokens} completion={c.usage.completion_tokens}")
+            u = c.usage
+            typer.echo(f"  tokens: prompt={u.prompt_tokens} completion={u.completion_tokens}")
             typer.echo(f"  reply: {c.text[:120]!r}")
 
     try:
@@ -304,7 +452,7 @@ def provider_test(
         raise typer.Exit(code=1) from e
 
 
-# --- helpers ---------------------------------------------------------------------------------------
+# --- helpers -------------------------------------------------------------------------------------
 
 
 def _apply_campaign_overrides(cfg, concurrency, stop_on, max_objectives, max_seconds) -> None:
@@ -333,6 +481,78 @@ def _apply_campaign_overrides(cfg, concurrency, stop_on, max_objectives, max_sec
         raise ConfigError(msg) from e
 
 
+_sleep = time.sleep  # tests replace this so device sign-in polling does not really wait
+
+
+def _make_cloud_client(api_url: str | None, token: str | None):
+    """Build the cloud API client. Tests replace this to inject an offline transport."""
+    from .cloud import CloudClient
+
+    return CloudClient(api_url, token)
+
+
+def _default_device_name() -> str:
+    import socket
+
+    try:
+        return socket.gethostname() or "modelwrecker device"
+    except OSError:
+        return "modelwrecker device"
+
+
+def _load_credential_or_exit():
+    from .cloud import CredentialError, load_credential
+
+    try:
+        return load_credential()
+    except CredentialError as e:
+        typer.secho(f"error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from e
+
+
+def _sync_client(cred):
+    """A client for device routes. A saved credential only talks to the URL it was issued for."""
+    from .cloud import ENV_URL, CloudError, validate_api_url
+
+    env_url = os.environ.get(ENV_URL, "").strip()
+    if cred.source == "file" and cred.api_url:
+        if env_url and validate_api_url(env_url) != validate_api_url(cred.api_url):
+            raise CloudError(
+                "url_mismatch",
+                f"this device was registered with {cred.api_url}, but {ENV_URL} points to "
+                f"{env_url}. Run `modelwrecker login` again to register with the new URL.",
+            )
+        return _make_cloud_client(cred.api_url, cred.token)
+    return _make_cloud_client(None, cred.token)  # env token: MODELWRECKER_CLOUD_URL or the default
+
+
+def _auto_sync(run_dir: Path, wanted: bool | None) -> None:
+    """Send one finished run after `run`. Any failure is a warning; the run stays queued locally."""
+    if wanted is False:
+        return
+    try:
+        from .cloud import load_credential, sync_run
+
+        cred = load_credential()
+        if cred is None:
+            if wanted:
+                typer.secho("note: not signed in, so the run was not synced. Run `modelwrecker "
+                            "login`, then `modelwrecker sync`.", fg=typer.colors.YELLOW, err=True)
+            return
+        with _sync_client(cred) as client:
+            sync_run(client, run_dir)
+        typer.secho("synced the run summary to the dashboard", fg=typer.colors.GREEN)
+    except Exception as e:  # never let sync change the run's result
+        from .security.redaction import redact_text
+
+        detail = str(getattr(e, "message", "") or type(e).__name__)
+        typer.secho(
+            f"warning: sync failed ({redact_text(detail)}). The run is saved locally; "
+            "`modelwrecker sync` will send it later.",
+            fg=typer.colors.YELLOW, err=True,
+        )
+
+
 def _load(config: str):
     try:
         return load_config(config)
@@ -343,9 +563,9 @@ def _load(config: str):
 
 def _new_run_id() -> str:
     import uuid
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
 
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
+    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
 
 
 _STARTER_CONFIG = """# modelWrecker config. Secrets live in environment variables, never here.
