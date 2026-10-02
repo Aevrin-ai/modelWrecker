@@ -56,7 +56,15 @@ happened - never invent historical entries.
 - The API Worker reads all three Supabase values as Worker secrets, so no project-specific value is in
   the public repo. Its `app.aevrin.net/api/*` route is enabled in `wrangler.toml`.
 
+### Released
+- `modelwrecker 0.0.1` published to PyPI (`pip install modelwrecker`) from the `v0.0.1` tag by CI.
+- app.aevrin.net now serves the modelWrecker landing page and dashboard; the API Worker serves
+  `app.aevrin.net/api/*`.
+
 ### Fixed
+- Dashboard deep links served the landing page on Cloudflare Pages: Pages normalizes
+  `/dashboard/index.html` to `/dashboard/`, so the SPA rewrite now targets the folder.
+- CI: Wrangler 4 needs Node 22, and the deploy jobs now call Wrangler directly.
 - Evidence recorded the attack plan's random id in `strategy` instead of the strategy name, contrary to
   the data model. Evidence now stores the strategy name and its parameters (regression test added).
 - The default Docker image (no `attacks` extra) failed every run with `No module named 'pyrit'` because
