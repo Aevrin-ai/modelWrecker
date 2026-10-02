@@ -1,7 +1,7 @@
 """Best-of-N: send the same ask several times and keep the strongest reply.
 
-Useful against stochastic targets: a model that refuses once may comply on another sample. The engine
-loop judges each attempt and keeps the best (see docs/attack-engine/STRATEGIES.md).
+Useful against stochastic targets: a model that refuses once may comply on another sample. The
+engine loop judges each attempt and keeps the best (see docs/attack-engine/STRATEGIES.md).
 """
 
 from __future__ import annotations

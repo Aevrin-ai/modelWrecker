@@ -1,8 +1,9 @@
 """Render findings and the full attempt transcript into reports (markdown and json).
 
-The report shows, for every attempt: what we sent to the model, what the model replied, and whether it
-was a success/partial/refusal. Findings get their own section with the exact payload and response. All
-renderers read the same data, so they never disagree (see docs/architecture/EVIDENCE-AND-FINDINGS.md).
+The report shows, for every attempt: what we sent to the model, what the model replied, and whether
+it was a success/partial/refusal. Findings get their own section with the exact payload and
+response. All renderers read the same data, so they never disagree (see
+docs/architecture/EVIDENCE-AND-FINDINGS.md).
 """
 
 from __future__ import annotations
@@ -17,7 +18,9 @@ _MAX = 800  # characters shown per prompt/response block before truncation
 
 def _clip(text: str, limit: int = _MAX) -> str:
     text = text or ""
-    return text if len(text) <= limit else text[:limit] + f"\n... [truncated, {len(text)} chars total]"
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n... [truncated, {len(text)} chars total]"
 
 
 def _attempt_fields(a: object) -> dict:

@@ -1,20 +1,20 @@
 """The contracts between the core engine and everything that plugs into it.
 
-These Protocols mirror docs/interfaces/. Implementing one of these (plus declaring name/version) is all a
-plugin needs; the core never imports a concrete adapter. Everything is async because the engine is
-I/O-bound. Concrete adapters are added in later Phase 4 steps.
+These Protocols mirror docs/interfaces/. Implementing one of these (plus declaring name/version) is
+all a plugin needs; the core never imports a concrete adapter. Everything is async because the
+engine is I/O-bound. Concrete adapters are added in later Phase 4 steps.
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from enum import Enum
+from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
 from .data import Objective, Observation, ToolCall, Verdict
 
 
-class Capability(str, Enum):
+class Capability(StrEnum):
     """What a target supports. A target only exposes the ones it truly implements."""
 
     SEND_MESSAGE = "send_message"
@@ -59,8 +59,9 @@ class Target(Protocol):
 class Strategy(Protocol):
     """One attack algorithm. See docs/interfaces/strategy.md.
 
-    `run` takes a StrategyContext (defined by the engine at wiring time) and returns a StrategyResult.
-    Typed loosely here to keep the scaffold import-light; the engine binds the concrete context.
+    `run` takes a StrategyContext (defined by the engine at wiring time) and returns a
+    StrategyResult. Typed loosely here to keep the scaffold import-light; the engine binds the
+    concrete context.
     """
 
     name: str

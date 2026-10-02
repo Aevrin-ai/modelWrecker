@@ -1,7 +1,7 @@
 """PyRIT-backed strategy tests (PAIR, TAP, prompt-sending), run offline with fake providers.
 
-These need the optional `modelwrecker[attacks]` dependency (PyRIT 1.1+). They are skipped when PyRIT is
-not importable, so the suite stays green without it. PyRIT's own logging is silenced here.
+These need the optional `modelwrecker[attacks]` dependency (PyRIT 1.1+). They are skipped when PyRIT
+is not importable, so the suite stays green without it. PyRIT's own logging is silenced here.
 """
 
 from __future__ import annotations
@@ -13,7 +13,9 @@ import pytest
 
 from modelwrecker.strategies.pyrit_adapter import pyrit_available
 
-pytestmark = pytest.mark.skipif(not pyrit_available()[0], reason="PyRIT (attacks extra) not installed")
+pytestmark = pytest.mark.skipif(
+    not pyrit_available()[0], reason="PyRIT (attacks extra) not installed"
+)
 
 logging.disable(logging.CRITICAL)
 

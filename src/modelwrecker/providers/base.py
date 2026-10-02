@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 
 
 class ProviderError(Exception):
-    """A clean, typed provider failure. Network/timeout errors become this, never an unhandled crash."""
+    """A clean, typed provider failure. Network/timeout errors become this, never an unhandled
+    crash."""
 
 
 class Usage(BaseModel):
@@ -58,7 +59,8 @@ class BaseProvider(ABC):
     async def generate(self, messages: list[dict], **params: object) -> Completion: ...
 
     async def count_tokens(self, messages: list[dict]) -> int:
-        """Rough token estimate (~4 chars/token). Good enough for budgets; override for exactness."""
+        """Rough token estimate (~4 chars/token). Good enough for budgets; override for
+        exactness."""
         chars = sum(len(str(m.get("content", ""))) for m in messages)
         return max(1, chars // 4)
 
@@ -68,10 +70,12 @@ class BaseProvider(ABC):
     async def health_check(self) -> HealthStatus:
         try:
             c = await self.generate([{"role": "user", "content": "ping"}], max_tokens=1)
-            return HealthStatus(ok=True, detail=f"model={c.model or self.model}", latency_ms=c.latency_ms)
+            return HealthStatus(ok=True, detail=f"model={c.model or self.model}",
+                                latency_ms=c.latency_ms)
         except ProviderError as e:
             return HealthStatus(ok=False, detail=str(e))
 
     async def aclose(self) -> None:
-        """Close any held client. Called once at the run boundary (see docs/providers/OVERVIEW.md)."""
+        """Close any held client. Called once at the run boundary (see
+        docs/providers/OVERVIEW.md)."""
         return None

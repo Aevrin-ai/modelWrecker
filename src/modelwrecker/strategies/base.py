@@ -1,7 +1,8 @@
 """Strategy base types. See docs/attack-engine/STRATEGIES.md and docs/interfaces/strategy.md.
 
-A strategy builds and sends attempts, returning the attempt+observation pairs. The engine loop judges
-them and runs reliability; a strategy may also use ctx.judge for in-loop decisions (multi-turn).
+A strategy builds and sends attempts, returning the attempt+observation pairs. The engine loop
+judges them and runs reliability; a strategy may also use ctx.judge for in-loop decisions
+(multi-turn).
 """
 
 from __future__ import annotations
@@ -49,7 +50,9 @@ class BaseStrategy:
     async def run(self, ctx: StrategyContext) -> StrategyResult:  # pragma: no cover - abstract
         raise NotImplementedError
 
-    def _attempt(self, ctx: StrategyContext, payload: str, delivery: str = "single_turn") -> Attempt:
+    def _attempt(
+        self, ctx: StrategyContext, payload: str, delivery: str = "single_turn"
+    ) -> Attempt:
         return Attempt(
             plan_id=ctx.plan_id,
             objective_id=ctx.objective.id,

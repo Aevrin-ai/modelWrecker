@@ -1,13 +1,14 @@
 """Phase 4 scaffold tests: the parts that work offline today.
 
-These cover the data models, config validation, the egress guard, redaction, and taxonomy validation -
-all testable without a live model. They are the start of the test suite described in
+These cover the data models, config validation, the egress guard, redaction, and taxonomy validation
+- all testable without a live model. They are the start of the test suite described in
 docs/workflows/TESTING.md.
 """
 
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from modelwrecker import __version__
 from modelwrecker.config import Config, ConfigError, Endpoint
@@ -32,7 +33,7 @@ def test_cli_prints_the_version(args: list[str]) -> None:
     assert result.output.strip() == f"modelwrecker {__version__}"
 
 
-# --- data models -----------------------------------------------------------------------------------
+# --- data models ----------------------------------------------------------------------------------
 
 
 def test_data_round_trip() -> None:
@@ -45,7 +46,7 @@ def test_data_round_trip() -> None:
     assert Finding.model_validate_json(f.model_dump_json()).objective_id == obj.id
 
 
-# --- config ----------------------------------------------------------------------------------------
+# --- config ---------------------------------------------------------------------------------------
 
 
 def test_endpoint_rejects_unknown_protocol() -> None:
@@ -56,7 +57,7 @@ def test_endpoint_rejects_unknown_protocol() -> None:
 
 
 def test_endpoint_rejects_unknown_keys() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         Endpoint(model="x", api_key="sk-should-not-be-here")  # type: ignore[call-arg]
 
 
@@ -74,7 +75,7 @@ def test_require_full_raises_when_incomplete() -> None:
         cfg.require_full()
 
 
-# --- egress guard ----------------------------------------------------------------------------------
+# --- egress guard ---------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -106,7 +107,7 @@ def test_allow_private_escape_hatch() -> None:
     assert is_blocked_host("169.254.169.254", allow_private=True) is True
 
 
-# --- redaction -------------------------------------------------------------------------------------
+# --- redaction ------------------------------------------------------------------------------------
 
 
 def test_redact_text_patterns() -> None:
@@ -121,7 +122,7 @@ def test_redact_dict_keys() -> None:
     assert out["nested"]["ok"] == "value"
 
 
-# --- taxonomy --------------------------------------------------------------------------------------
+# --- taxonomy -------------------------------------------------------------------------------------
 
 
 def test_taxonomy_valid_entry_fills_title() -> None:

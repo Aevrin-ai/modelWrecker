@@ -1,7 +1,7 @@
 """Transform registry: look transforms up by name and apply chains.
 
-Built-in first-party transforms register here. PyRIT converters register too when the attacks extra is
-installed (see pyrit_converters). New transforms plug in without the engine changing.
+Built-in first-party transforms register here. PyRIT converters register too when the attacks extra
+is installed (see pyrit_converters). New transforms plug in without the engine changing.
 """
 
 from __future__ import annotations

@@ -5,7 +5,8 @@ Tests are the contract. Nothing is "done" until tests pass. Use the project `.ve
 ```bash
 uv venv
 uv pip install -e ".[dev,mcp,attacks]"
-.venv\Scripts\python -m pytest -q    # 58 tests, offline, no API key
+.venv\Scripts\python -m pytest -q    # 206 tests, offline, no API key
+.venv\Scripts\python -m ruff check src tests    # lint; must be clean
 ```
 
 Without the `attacks` extra (PyRIT), the PyRIT tests skip and the rest still pass.
@@ -37,4 +38,12 @@ suite can run against a local Ollama model for smoke tests. No test calls a paid
 
 ## CI
 
-CI runs the offline suite, lint (ruff), and type-check (mypy/pyright). A red suite blocks merge.
+CI (`.github/workflows/ci.yml`) runs, on every pull request and every push to `main`:
+
+- lint: `ruff check src tests`, with ruff pinned to an exact version in the workflow so a new ruff
+  release cannot fail CI with checks nobody ran locally (bump it on purpose, in its own pull request);
+- the offline engine suite (`pytest -q`, with the `dev`, `mcp`, and `attacks` extras);
+- the control-plane API typecheck and tests;
+- the landing page and dashboard builds.
+
+A red check blocks merge. Type-checking the engine (mypy) is not in CI yet.
