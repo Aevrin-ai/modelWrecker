@@ -62,8 +62,10 @@ happened - never invent historical entries.
   `app.aevrin.net/api/*`.
 
 ### Fixed
-- Dashboard deep links served the landing page on Cloudflare Pages: Pages normalizes
-  `/dashboard/index.html` to `/dashboard/`, so the SPA rewrite now targets the folder.
+- Dashboard deep links served the landing page on Cloudflare Pages. The first fix (a catch-all
+  `_redirects` rewrite) blanked the whole site, because Pages applies `_redirects` before static files and
+  answered every JS, CSS, and image request with HTML. Deep links are now handled by a small Pages
+  `_worker.js` that rewrites only dashboard page paths, and the `_redirects` files are gone.
 - CI: Wrangler 4 needs Node 22, and the deploy jobs now call Wrangler directly.
 - Evidence recorded the attack plan's random id in `strategy` instead of the strategy name, contrary to
   the data model. Evidence now stores the strategy name and its parameters (regression test added).
