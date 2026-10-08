@@ -1,6 +1,6 @@
 """Direct single-shot jailbreak: send the objective's ask straight at the target.
 
-The simplest strategy and the Phase 4 baseline. It sends one payload and returns the result; the
+The simplest strategy. It sends one payload and returns the result; the
 loop judges it. Maps to prompt injection / jailbreak taxonomy entries.
 """
 

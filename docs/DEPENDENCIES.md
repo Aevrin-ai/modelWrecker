@@ -7,40 +7,46 @@ choices is [`research/oss-landscape.md`](research/oss-landscape.md).
 
 Status/versions verified 2026-10-01; re-check before adopting.
 
-## Core (planned, in the critical path)
+## Core (installed with `pip install modelwrecker`)
 
 | Name | Purpose | License | Why | Alternative | Risk | Replace difficulty |
 |------|---------|---------|-----|-------------|------|--------------------|
 | Python 3.12+ | language/runtime | PSF | ecosystem fit (all tools below are Python) | - | low | n/a (ADR-0001) |
-| httpx | async HTTP core | BSD | standard, async, used by SDKs | aiohttp | low | easy |
+| httpx | async HTTP core; the OpenAI-compatible provider and the cloud client | BSD | standard, async, used by SDKs | aiohttp | low | easy |
 | pydantic v2 | data models/validation | MIT | our data model + config | attrs+manual | low | medium |
 | PyYAML | config files | MIT | config loading | tomllib (stdlib) | low | easy |
 | Typer (+Click) | CLI | MIT/BSD | clean CLI, declarative | argparse | low | easy |
-| openai (SDK) | OpenAI + OpenAI-compatible adapter | Apache-2.0 | official, stable | raw httpx | low | easy |
-| anthropic (SDK) | Anthropic adapter | MIT | official, stable | raw httpx | low | easy |
-| Jinja2 | HTML report rendering | BSD | templating | f-strings | low | easy |
 | cryptography | Ed25519 verification of the signed entitlement (issue #11) | Apache-2.0 / BSD-3-Clause | the standard, audited Python crypto library; already pulled in by PyRIT's dependencies | PyNaCl | low | easy |
 
-## Reused behind interfaces (planned; optional or phase-gated)
+The HTML analytics report is built with the standard library, so there is no template engine
+dependency. Jinja2 was listed here earlier and has been removed because no code used it.
 
-| Name | Purpose | License | Why | Alternative | Risk | Replace difficulty |
-|------|---------|---------|-----|-------------|------|--------------------|
-| PyRIT 1.1 | PAIR/TAP attacks + converters behind our Strategy/Transform interfaces | MIT | mature, Microsoft AI Red Team; avoids re-implementing algorithms/converters | implement each strategy | **Integrated** in the project `.venv` (`attacks` extra); PAIR runs offline to SUCCESS. Keep behind the bridge so churn is contained | medium (ADR-0006) |
-| any-llm (`any-llm-sdk`) | **default** multi-provider multiplexer behind our Provider interface | Apache-2.0 | library (no proxy), Mozilla.ai, active (1.25.0 Aug 2026); broad coverage, self-hostable | direct SDKs only | medium: relatively new; kept behind our interface so it is swappable | medium (ADR-0003) |
-| garak | batch probe/detector scanning (Phase 8) | Apache-2.0 | NVIDIA, active (0.17.0 Sep 2026); broad probe set | first-party probes | low-medium | medium |
-| mcp (Python SDK v2) | MCP client/server for MCP targets & attack delivery | MIT | official, supports 2026-07-28 spec | raw protocol | low | hard |
-| presidio-analyzer | PII detection judge signal | MIT | mature, Microsoft | regex sets | low | easy |
-| detect-secrets | secret-leak judge signal | Apache-2.0 | mature, Yelp | gitleaks / regex | low | easy |
-| Hypothesis | property-based tests | MPL-2.0 | edge-case coverage for guard/transforms | hand-written cases | low | easy |
+## Optional extras (reused behind interfaces)
 
-## Optional provider adapters (never required)
+Each extra is opt-in (`pip install "modelwrecker[<extra>]"`); the core runs without any of them.
 
-(any-llm is listed above as a core dependency because it is the default multiplexer.)
+| Name | Extra | Purpose | License | Status | Risk | Replace difficulty |
+|------|-------|---------|---------|--------|------|--------------------|
+| PyRIT 1.1 | `attacks` | PAIR/TAP attacks + converters behind our Strategy/Transform interfaces | MIT | **Integrated**; PAIR runs offline to SUCCESS. Kept behind the bridge so churn is contained | medium | medium (ADR-0006) |
+| garak | `scan` | probe prompts for the `garak_probe` strategy | Apache-2.0 | **Integrated**; NVIDIA, active (0.17.0 Sep 2026). Not installable together with PyRIT (`datasets` pins clash), so `all` leaves it out | low-medium | medium |
+| mcp (Python SDK v2) | `mcp` | the harness MCP server | MIT | **Integrated** (stdio server); official, supports the 2026-07-28 spec | low | hard |
+| presidio-analyzer | `judges` | PII detection judge signal | MIT | listed in the extra, **not wired into code yet**; the built-in judge uses its own regex-based PII and secret signals | low | easy |
+| detect-secrets | `judges` | secret-leak judge signal | Apache-2.0 | listed in the extra, **not wired into code yet** | low | easy |
+| any-llm (`any-llm-sdk`) | `providers` | planned default multi-provider multiplexer behind our Provider interface (ADR-0003) | Apache-2.0 | listed in the extra, **no code imports it yet**; `protocol: any_llm` uses the built-in OpenAI-compatible adapter today | medium: relatively new; kept behind our interface | medium |
+| openai, anthropic (SDKs) | `providers` | planned direct adapters (#23) | Apache-2.0 / MIT | listed in the extra, **no code imports them yet** | low | easy |
+
+Dev tools (the `dev` extra): pytest, pytest-asyncio, ruff, mypy. Hypothesis was listed earlier and has
+been removed because no test used it.
+
+## Optional gateway adapters (never required)
 
 | Name | Purpose | License | Why optional | Risk |
 |------|---------|---------|--------------|------|
 | litellm | multiplexer adapter | MIT core (enterprise/ dir separate) | some teams standardize on it | **high**: enterprise split + Mar-2026 supply-chain incident → optional only, pin via Docker |
 | Portkey gateway | external gateway adapter | MIT | teams already running it | medium: TS service, not a Python lib fit |
+
+`protocol: litellm` and `protocol: portkey` point the built-in OpenAI-compatible adapter at a gateway's
+URL; no gateway package is installed.
 
 ## Web apps and cloud control plane (TypeScript, Phase 10)
 

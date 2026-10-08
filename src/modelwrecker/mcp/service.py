@@ -22,6 +22,7 @@ from pathlib import Path
 from ..config import Config, ConfigError, load_config
 from ..data import Finding
 from ..findings.report import load_run, render_markdown
+from ..storage.files import new_run_id
 from ..strategies.registry import list_strategies
 from .guardrails import (
     TOOL_ARGUMENTS,
@@ -89,12 +90,7 @@ class McpService:
             cfg = load_config(path)
         except ConfigError as e:
             return {"ok": False, "problems": [str(e)]}
-        problems: list[str] = []
-        for fn in (cfg.require_full, cfg.require_authorized_target, cfg.require_objectives):
-            try:
-                fn()
-            except ConfigError as e:
-                problems.append(str(e))
+        problems = cfg.problems()
         return {"ok": not problems, "problems": problems}
 
     def get_findings(self, run_id: str) -> list[dict]:
@@ -143,7 +139,7 @@ class McpService:
 
         self.guard.acquire_run_slot("run", args)  # last check; takes a slot only if all else passed
         try:
-            store = RunStore(run_id=run_id or _new_run_id(), base_dir=str(self.runs_dir))
+            store = RunStore(run_id=run_id or new_run_id(), base_dir=str(self.runs_dir))
             result = await run_config(cfg, store=store, run_id=store.run_id)
         finally:
             self.guard.release_run_slot()
@@ -227,9 +223,3 @@ def authorize(token: str | None) -> None:
         raise GuardrailError("unauthorized: missing or invalid MCP token",
                              check="authentication", code="unauthenticated")
 
-
-def _new_run_id() -> str:
-    import uuid
-    from datetime import UTC, datetime
-
-    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]

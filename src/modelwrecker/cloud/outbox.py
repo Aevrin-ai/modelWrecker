@@ -14,12 +14,11 @@ account turns detail on later, runs synced without it become pending again, so a
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ..storage.files import atomic_write
 from .client import CloudClient, CloudError
 from .policy import METADATA_ONLY, SyncPolicy
 from .summarize import build_sync_body
@@ -115,14 +114,7 @@ def mark_synced(d: Path, response: dict, sent: SyncPolicy = METADATA_ONLY) -> Pa
         },
     }
     path = d / MARKER
-    fd, tmp = tempfile.mkstemp(dir=str(d), prefix=".synced-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(json.dumps(record, indent=2))
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
+    atomic_write(path, json.dumps(record, indent=2), prefix=".synced-")
     return path
 
 

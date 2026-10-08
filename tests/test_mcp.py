@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -28,8 +29,8 @@ from modelwrecker.storage.store import RunStore
 # --- helpers --------------------------------------------------------------------------------------
 
 _ENDPOINTS = (
-    "attacker: {protocol: openai_compatible, model: m, base_url: http://x}\n"
-    "judge: {protocol: openai_compatible, model: m, base_url: http://x}\n"
+    "attacker: {protocol: openai_compatible, model: m, base_url: https://x}\n"
+    "judge: {protocol: openai_compatible, model: m, base_url: https://x}\n"
 )
 
 
@@ -45,7 +46,7 @@ def _write_config(
     text = _ENDPOINTS
     if target:
         text += (
-            "target: {protocol: openai_compatible, model: m, base_url: http://x, "
+            "target: {protocol: openai_compatible, model: m, base_url: https://x, "
             f"authorized: {str(authorized).lower()}}}\n"
         )
     text += "objectives:\n" + "".join(
@@ -119,6 +120,17 @@ def test_validate_config_authorized(tmp_path) -> None:
     bad = svc.validate_config(_write_config(tmp_path, authorized=False, name="bad.yaml"))
     assert bad["ok"] is False
     assert any("authorized" in p for p in bad["problems"])
+
+
+def test_validate_config_runs_the_same_egress_check_as_the_cli(tmp_path) -> None:
+    svc = _svc(tmp_path)
+    text = Path(_write_config(tmp_path)).read_text(encoding="utf-8")
+    blocked = tmp_path / "blocked.yaml"
+    blocked.write_text(text.replace("base_url: https://x, ", "base_url: http://127.0.0.1, "),
+                       encoding="utf-8")
+    out = svc.validate_config(str(blocked))
+    assert out["ok"] is False
+    assert any("egress blocked" in p and "target.base_url" in p for p in out["problems"])
 
 
 def test_get_report_reads_only_within_runs(tmp_path) -> None:

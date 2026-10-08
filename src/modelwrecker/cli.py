@@ -20,6 +20,7 @@ import typer
 
 from . import __version__
 from .config import ConfigError, load_config
+from .storage.files import new_run_id
 
 app = typer.Typer(
     add_completion=False,
@@ -89,18 +90,7 @@ def check(config: str = typer.Argument("modelwrecker.yaml")) -> None:
 @app.command()
 def validate(config: str = typer.Argument("modelwrecker.yaml")) -> None:
     """Validate a config file (schema, protocols, authorization, objectives)."""
-    cfg = _load(config)
-    problems: list[str] = []
-    for check_fn in (
-        cfg.require_full,
-        cfg.require_authorized_target,
-        cfg.require_objectives,
-        cfg.require_egress_allowed,
-    ):
-        try:
-            check_fn()
-        except ConfigError as e:
-            problems.append(str(e))
+    problems = _load(config).problems()
     if problems:
         for p in problems:
             typer.secho(f"  - {p}", fg=typer.colors.RED, err=True)
@@ -146,7 +136,7 @@ def run(
         typer.secho(f"not allowed by your plan: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from e
 
-    store = RunStore(run_id=_new_run_id(), base_dir=out_dir)
+    store = RunStore(run_id=new_run_id(), base_dir=out_dir)
 
     def emit(msg: str) -> None:
         typer.echo(f"  {msg}")
@@ -267,16 +257,18 @@ def analyze(
 
 @app.command()
 def replay(evidence: str = typer.Argument(..., help="an evidence-*.json file from a run")) -> None:
-    """Reproduce a finding: re-send its payload to the same target and re-judge."""
+    """Show the recorded payload of a finding. Re-sending it is not built yet (#52)."""
+    p = Path(evidence)
+    if not p.exists():
+        typer.secho(f"evidence file not found: {p}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    data = json.loads(p.read_text(encoding="utf-8"))
     typer.secho(
-        "replay re-runs reliability against the recorded target; wire-up lands with live testing. "
-        "The evidence file already contains the full reproduction payload and steps.",
+        "Re-sending to the target is not built yet (issue #52). The evidence file holds the full "
+        "payload and steps to reproduce it by hand.",
         fg=typer.colors.YELLOW,
     )
-    p = Path(evidence)
-    if p.exists():
-        data = json.loads(p.read_text(encoding="utf-8"))
-        typer.echo(f"payload: {data.get('payload', '')[:200]}")
+    typer.echo(f"payload: {data.get('payload', '')[:200]}")
 
 
 @app.command()
@@ -735,13 +727,6 @@ def _load(config: str):
     except ConfigError as e:
         typer.secho(f"config error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from e
-
-
-def _new_run_id() -> str:
-    import uuid
-    from datetime import UTC, datetime
-
-    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
 
 
 _STARTER_CONFIG = """# modelWrecker config. Secrets live in environment variables, never here.

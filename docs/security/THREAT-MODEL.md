@@ -27,7 +27,7 @@ agent threat set.
 ```mermaid
 flowchart TD
   T1[Browser-driven RCE via unauth surface] --> C1[Library+CLI first; auth+anti-CSRF on any API; host tools off]
-  T2[SSRF / metadata theft] --> C2[Egress guard, re-check on redirect]
+  T2[SSRF / metadata theft] --> C2[Egress guard, redirects refused]
   T3[Secret exfiltration via logs or read_file] --> C3[Redaction; confined reads; 0600 artifacts]
   T4[Prompt injection from target/dataset into engine or judge] --> C4[Treat all as data; never execute; multi-signal judge]
   T5[Autonomous loop wedges / runs away] --> C5[Deadlines, cancel path, stuck detection, budgets]
@@ -40,7 +40,7 @@ flowchart TD
 | # | Threat | Control | Source |
 |---|--------|---------|--------|
 | T1 | Unauthenticated surface → browser-CSRF RCE | library+CLI first; auth + anti-CSRF; host tools off by default; refuse non-loopback bind without auth | Aevrin security research |
-| T2 | SSRF to internal/metadata endpoints | central egress guard, redirect re-check | Aevrin security research |
+| T2 | SSRF to internal/metadata endpoints | central egress guard, redirects refused | Aevrin security research |
 | T3 | Secret/PII exfiltration via logs or arbitrary file read | redaction before write; confined reads; restrictive perms | Aevrin security research |
 | T4 | Indirect prompt injection from target or dataset | untrusted-by-default; never follow target output as instruction; multi-signal judge resists framing | OWASP LLM01; MCP06/10 |
 | T5 | Runaway/wedged autonomous loop | wall-clock deadlines, cancel/force-stop, stuck detection, budgets | Aevrin security research |

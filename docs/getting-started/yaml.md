@@ -69,7 +69,8 @@ engine:
 
 - `protocol` - how to talk to the model. Use `openai_compatible` for OpenRouter, Ollama, vLLM, and most
   endpoints. (`any_llm` is the planned default multiplexer; today it runs on the same wire.)
-- `base_url` - the API address. OpenRouter: `https://openrouter.ai/api/v1`. Ollama: `http://localhost:11434/v1`.
+- `base_url` - the API address. OpenRouter: `https://openrouter.ai/api/v1`. Ollama:
+  `http://localhost:11434/v1` (needs the egress opt-in below).
 - `model` - the model id. Use a current id (for OpenRouter, from its model list).
 - `api_key_env` - the **name** of the environment variable that holds your key. Never put the key itself
   in the file.
@@ -99,6 +100,37 @@ A list of what you want to achieve. Each has:
 - `max_rounds` - how many strategies to try per objective.
 - `replays` - how many times to re-run a success to check it is reliable.
 - `reliable_threshold` - the success rate needed to call a finding reliable (0.6 = 60%).
+
+### security (only for a local model)
+
+The egress guard (the check on every address the engine sends model traffic to) allows public HTTPS
+only by default. A model on your own machine, such as Ollama at `http://localhost:11434/v1`, is blocked
+until you opt in for exactly that host:
+
+```yaml
+security:
+  egress:
+    allowed_schemes: [https, http]   # Ollama has no TLS
+    allow_hosts: [localhost]
+```
+
+Cloud metadata addresses stay blocked even then. `modelwrecker validate` tells you if an address is
+blocked before anything runs.
+
+### Everything else
+
+This page covers the keys most people need. The full list (`campaign:` limits, `target.type` for agent,
+RAG, and MCP targets, `timeout`, and the rest) lives in one place:
+[`../reference/CONFIGURATION.md`](../reference/CONFIGURATION.md).
+
+## Ready-made examples
+
+The `examples/` folder holds runnable files you can copy:
+
+- `examples/basic.yaml` - the smallest useful config.
+- `examples/openrouter.yaml` - all three roles through OpenRouter.
+- `examples/system-prompt.yaml` - system-prompt extraction with the strategy chosen explicitly.
+- `examples/local-model.yaml` - fully local with Ollama, including the egress opt-in above.
 
 ## How to run it
 

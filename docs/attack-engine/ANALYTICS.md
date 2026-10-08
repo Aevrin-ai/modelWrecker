@@ -40,3 +40,7 @@ The garak batch-scan adapter (ADR-0006) is part of this phase. garak supplies at
 probe corpus); our judge still decides success, so the attacker/target/judge split holds. It is behind the
 `garak_probe` strategy and the optional `modelwrecker[scan]` dependency, registering only when garak is
 importable. See [`STRATEGIES.md`](STRATEGIES.md) and [`../DEPENDENCIES.md`](../DEPENDENCIES.md).
+
+Install `modelwrecker[scan]` in its own environment. garak 0.17 needs `datasets` below 4 and PyRIT 1.1
+needs 4.8 or newer, so the `scan` and `attacks` extras cannot be installed together, and `all` leaves
+`scan` out.

@@ -1,7 +1,5 @@
 # IDE / local prompt scratch
 .prompt
-.pypi-key
-.googlelogin-key
 
 # Secrets and config (never commit). Keep ALL local credential files out of git:
 # platform/service tokens live only on disk and in the deploy secret store, never here.
@@ -45,6 +43,7 @@ node_modules/
 **/node_modules/
 **/dist/
 **/.vite/
+*.tsbuildinfo
 .wrangler/
 
 # OS / editor

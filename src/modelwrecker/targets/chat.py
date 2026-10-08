@@ -1,4 +1,4 @@
-"""Chat/completions API target: the Phase 4 baseline target.
+"""Chat/completions API target: the default target type (`target.type: chat`).
 
 Wraps a provider and presents the Target interface. It is the system under test, not a provider -
 the engine attacks a Target. Responses are returned as data, never executed (see

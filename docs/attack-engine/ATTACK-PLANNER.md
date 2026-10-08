@@ -43,6 +43,11 @@ target family.
 
 ## Selection model
 
+**Built today:** if the user names a strategy, the planner uses it; otherwise it uses a fixed,
+explainable order per objective category (`src/modelwrecker/attacker/planner.py`), and the loop skips a
+strategy the target lacks the capability for. The bandit and the LLM planner mode below are the design,
+not built yet.
+
 - Start simple and explainable: a **per-target-family bandit** seeded with priors from measured attack
   success rates, so the planner learns which strategies work on which model families within a run (the
   approach aligned with Aevrin's red-team research, built first-party). Each choice records a `rationale`

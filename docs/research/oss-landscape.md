@@ -45,7 +45,7 @@ as optional, and keeps direct-SDK + OpenAI-compatible adapters as the always-wor
 | CLI framework | **Typer** / **Click** | MIT / BSD | Reuse. |
 | Config + schemas | **Pydantic v2** + PyYAML | MIT | Reuse. |
 | HTTP core | **httpx** | BSD | Reuse. |
-| Report output | **Jinja2** (HTML), stdlib json, a small SARIF writer | BSD | Reuse Jinja2; SARIF schema is a small first-party writer. |
+| Report output | stdlib (HTML, json, csv), a small SARIF writer later | PSF | Jinja2 was considered; the HTML report turned out small enough for the stdlib, so no template engine is used. SARIF will be a small first-party writer. |
 | Datasets | HarmBench / AdvBench / JBB / StrongREJECT loaders | per-dataset | Thin loaders; respect each dataset's license; gitignore cached copies. |
 
 ## What we build ourselves (the core IP)

@@ -45,7 +45,7 @@ Everything crossing a boundary into the engine from a target or dataset is data,
 ### Egress guard (SSRF)
 - All outbound HTTP the engine makes on behalf of an attack goes through one **egress guard**: block
   loopback, link-local, RFC1918, and cloud metadata (`169.254.169.254`); allow only permitted schemes;
-  **re-check on every redirect** (SEC-4).
+  **refuse redirects** rather than follow them (SEC-4).
 - How it is enforced today: every model request (attacker, target, and judge) is checked against the
   run's `security.egress` policy right before it is sent. Redirects are never followed, so a redirect
   cannot reach an address that was not checked. `modelwrecker validate` does an offline version of the

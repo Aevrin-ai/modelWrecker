@@ -1,5 +1,7 @@
 # Attack strategy test report
 
+> Snapshot from 2026-10-01, Phase 4. Superseded by [`docs/testing/test-matrix.md`](../docs/testing/test-matrix.md).
+
 Date: 2026-10-01. Engineering compatibility report: does each strategy run correctly through the engine?
 It is **not** a ranking of models or providers. Legend: PASS / NOT TESTED.
 

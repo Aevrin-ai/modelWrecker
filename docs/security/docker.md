@@ -57,7 +57,7 @@ flowchart TD
   D1[Container escapes to host] --> C1[No host socket, non-root, no capabilities, no new privileges]
   D2[Secret theft from host] --> C2[Only config and runs mounted, config read-only]
   D3[Runaway loop exhausts host] --> C3[Memory, CPU and process caps plus engine budgets]
-  D4[Attack code reaches internal network] --> C4[Bridge network now, egress guard wiring in 10.3]
+  D4[Attack code reaches internal network] --> C4[Bridge network plus egress guard on every model request]
   D5[Sensitive results leak] --> C5[Results stay in one mount, redaction before write]
   D6[Tampered image] --> C6[Pinned base digest, local build, signing planned]
 ```
@@ -76,18 +76,19 @@ flowchart TD
   limits in `docker-compose.yml` only within what the host can spare.
 - **Network.** The container uses the default compose bridge network, never `network_mode: host`, and
   publishes no ports. `host.docker.internal` is mapped so a config can reach a local model on the host.
-- **Egress guard.** The engine has an egress guard (`src/modelwrecker/security/egress.py`) that blocks
-  loopback, link-local, private, and cloud metadata addresses. **It is unit tested but provider calls do
-  not route through it yet.** Wiring it in and auditing redirects and DNS rebinding is Phase 10.3. Until
-  then, the container network is the only network boundary, so only point configs at targets you are
-  authorized to test. See [`SECURITY.md`](SECURITY.md).
+- **Egress guard.** The engine's egress guard (`src/modelwrecker/security/egress.py`) runs on every
+  attacker, target, and judge request. It blocks loopback, link-local, private, and cloud metadata
+  addresses by default and refuses redirects. A local model is a narrow opt-in through
+  `security.egress.allow_hosts`. DNS rebinding between the check and the connect is not covered yet
+  (#16), so only point configs at targets you are authorized to test. See [`SECURITY.md`](SECURITY.md).
 - **Redaction before write.** Secrets and detected personal data are redacted before anything is written
   to the results mount, same as the rest of the engine.
-- **Credential handling.** Provider keys come only from `.env`. The scoped device or project token
-  (Phase 10.8) will mount read-only and is never the user's Google token. See
+- **Credential handling.** Provider keys come only from `.env`. The optional scoped device token also
+  comes from `.env` (`MODELWRECKER_DEVICE_TOKEN`) and is never the user's Google token. See
   [`authentication.md`](authentication.md).
-- **Attack-generated code stays sandboxed.** Running the container does not relax the no-execute-by-default
-  rule for attack-generated code. See [`SECURITY.md`](SECURITY.md).
+- **Attack-generated code is never run.** The engine does not execute attack-generated code today, and
+  running the container does not relax that rule. A sandbox for it is planned (#17). See
+  [`SECURITY.md`](SECURITY.md).
 
 ## Do not weaken these by hand
 
@@ -101,19 +102,9 @@ Never add any of these to `docker-compose.yml` or a `docker run` line:
 
 ## Example run shape
 
-The compose file is the reference. The same flags as a plain `docker run`:
-
-```bash
-docker run --rm -it --init \
-  --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=256m \
-  --user 10001:10001 \
-  --cap-drop ALL --security-opt no-new-privileges:true \
-  --memory 2g --memory-swap 2g --cpus 2 --pids-limit 256 \
-  --env-file .env -e HOME=/tmp \
-  -v "$PWD/config:/config:ro" \
-  -v "$PWD/runs:/work/runs" \
-  modelwrecker:local run /config/campaign.yaml
-```
+`docker-compose.yml` is the reference: every rule above is already set there. The same flags as a plain
+`docker run` command are kept in one place,
+[`../deployment/docker.md`](../deployment/docker.md#without-compose).
 
 ## Integrity
 

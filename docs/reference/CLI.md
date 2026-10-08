@@ -3,22 +3,23 @@
 The CLI is Typer-based. This is the source of truth for the CLI; update it with every command/flag
 change. Binary: `modelwrecker`.
 
-## Implemented today (Phase 4)
+## Commands
 
 ```bash
 modelwrecker init       my.yaml                    # write a starter config to edit
-modelwrecker validate   my.yaml                    # validate a config (schema, protocols, authorization, objectives)
-modelwrecker check      my.yaml                    # validate + show which API keys resolve from the environment
+modelwrecker validate   my.yaml                    # full pre-run checks: roles, authorization, objectives, egress
+modelwrecker check      my.yaml                    # load the config and print a summary, incl. which API keys resolve
 modelwrecker provider test my.yaml --role target   # one small live request: latency, tokens, errors
 modelwrecker run        my.yaml  --output md|json  # run all objectives, verify, write a report
-modelwrecker report     runs/<run-id>              # re-render a finished run's findings (markdown)
+modelwrecker report     runs/<run-id> --output md|json  # re-render a finished run's findings and transcript
 modelwrecker analyze    runs/<run-id> [more...]    # ASR analytics + leaderboard as static HTML/JSON/CSV
-modelwrecker replay     evidence.json              # reproduce a finding from its evidence
+modelwrecker replay     evidence.json              # print a finding's recorded payload (re-run not built, #52)
 modelwrecker strategies                            # list registered strategies + required capabilities
 modelwrecker transforms                            # list payload transforms (first-party + PyRIT)
 modelwrecker mcp        --runs-dir runs --config-dir .  # start the harness MCP server over stdio (ADR-0013)
 modelwrecker login      [--name my-laptop]         # connect this install to the dashboard as a device
 modelwrecker logout                                # remove the saved device credential
+modelwrecker plan       [--refresh]                # show the plan in force and this month's usage
 modelwrecker sync       --runs-dir runs [--dry-run] [--resync] [--metadata-only]  # list, then send
 modelwrecker version                               # same as: modelwrecker --version (or -V)
 ```
@@ -32,11 +33,18 @@ upload after the run; the default sends the summary only when this install is si
 `mcp` options: `--runs-dir` (default `runs`, where runs are kept) and `--config-dir` (default `.`, the
 only folder the server reads config files from). MCP runs also obey the MCP guardrails and limits in
 [`../security/mcp.md`](../security/mcp.md).
+`report` options: `--output md|json` (default `md`); exit `2` if the folder is not a run directory.
+`replay`: prints the payload recorded in an `evidence-*.json` file and says that re-sending it to the
+target is not built yet (#52). Exit `1` if the evidence file is missing. The evidence file holds the full
+payload and steps to reproduce the finding by hand.
 `analyze` options: one or more run directories; `--out-dir` (default: each run's own dir),
 `--formats html,json,csv`. With two or more runs it also writes a `leaderboard.*`. Output is static
 files only - no server. See [`../attack-engine/ANALYTICS.md`](../attack-engine/ANALYTICS.md).
 
 ## Your plan (issue #11)
+
+The plan check in `run` and the `plan` command are merged on `main` but not in a PyPI release yet; the
+current release (0.0.2) runs without a plan check.
 
 `run` checks your plan before it creates anything or calls a model (see
 [`../security/entitlements.md`](../security/entitlements.md)). Without a valid signed entitlement it uses
@@ -123,8 +131,8 @@ modelwrecker sync                  # push anything that was queued while offline
 
 - `attack` - run a single quick objective.
 - `--output sarif|html`, `--fail-on-finding`, `--ci`, `--headless` (CI modes).
-- `run --remote` - call the authenticated REST API with the device token. Needs `modelwrecker`
-  published to PyPI so `pip install modelwrecker` provides the command.
+- `run --remote` - call the authenticated REST API with the device token. Not built.
+- `replay` that re-sends a finding's payload to the target and re-judges it (#52).
 
 The `mcp` server and a JSON driver are implemented; see
 [`../features/harness-integration.md`](../features/harness-integration.md).
@@ -137,12 +145,14 @@ The `mcp` server and a JSON driver are implemented; see
   non-loopback binds without auth - see [`../security/SECURITY.md`](../security/SECURITY.md).)
 - `run` refuses a target that is not marked `authorized: true`.
 - Host-affecting tools stay off by default; there is no flag that silently enables them.
-- Errors return a non-zero exit code with a useful message, not a stack trace (config errors exit `2`).
+- Errors return a non-zero exit code with a useful message, not a stack trace: config errors and runs
+  not allowed by your plan exit `2`, a failed run exits `1`. A run that produces findings still exits `0`
+  (a `--fail-on-finding` mode is planned).
 
 ## Examples
 
 ```bash
-# Fully local, free run against an Ollama model (no API key)
+# Fully local, free run against an Ollama model (no API key; the file opts in to the local address)
 modelwrecker run examples/local-model.yaml
 
 # Through OpenRouter, JSON output

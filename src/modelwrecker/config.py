@@ -192,6 +192,21 @@ class Config(BaseModel):
         if problems:
             raise ConfigError("egress blocked: " + "; ".join(problems))
 
+    def problems(self) -> list[str]:
+        """Every reason this config cannot run, from all the checks above. Empty means ready."""
+        out: list[str] = []
+        for check in (
+            self.require_full,
+            self.require_authorized_target,
+            self.require_objectives,
+            self.require_egress_allowed,
+        ):
+            try:
+                check()
+            except ConfigError as e:
+                out.append(str(e))
+        return out
+
 
 def load_config(path: str | Path | None = None) -> Config:
     """Load and validate a config file. Env var MODELWRECKER_CONFIG is the default path."""

@@ -7,7 +7,7 @@
 ## Purpose
 
 Get a user from "I have Docker" to "a campaign is running locally" with as few steps as practical. The
-engine runs on the user's machine; the cloud is only the control plane (and that part is not built yet).
+engine runs on the user's machine; the cloud is only the control plane.
 
 ## What ships
 
@@ -64,7 +64,7 @@ flowchart TD
   RUN --> OUT[Report and findings in ./runs]
 ```
 
-Device registration and cloud sync come later (Phase 10.8). Today the container runs fully local.
+The container runs fully local. Cloud sync is optional; see Credentials below.
 
 ## Without compose
 
@@ -140,8 +140,11 @@ already provides it.
 
 - Provider API keys come from `.env` through `env_file`. They are never baked into the image (`.env` is in
   `.dockerignore`) and are redacted from logs and evidence.
-- There is no device or project token yet. When Phase 10.8 adds one, it will mount read-only and will never
-  be the user's Google token. See [`../security/authentication.md`](../security/authentication.md).
+- Cloud sync from the container is optional. Run `modelwrecker login` on the host, then pass the device
+  token as `MODELWRECKER_DEVICE_TOKEN` in `.env` (the container's home is a temporary folder, so a login
+  inside it does not persist). It is a scoped, revocable device token, never the user's Google token. See
+  [`../security/authentication.md`](../security/authentication.md) and
+  [`../reference/ENVIRONMENT.md`](../reference/ENVIRONMENT.md).
 
 ## Linux file ownership
 
@@ -153,8 +156,8 @@ with `sudo chown 10001:10001 runs`.
 ## Offline use
 
 The engine needs no cloud connection. With a local model it needs no internet either. Results stay in
-`./runs`. When cloud sync exists (Phase 10.8) it will send summaries later; see
-[`../architecture/data-flow.md`](../architecture/data-flow.md).
+`./runs`. If a device token is set, runs that could not sync stay queued and `modelwrecker sync` sends
+them later; see [`../architecture/data-flow.md`](../architecture/data-flow.md).
 
 ## Failure cases
 
@@ -167,7 +170,8 @@ The engine needs no cloud connection. With a local model it needs no internet ei
 | Container killed during a run | It hit the 2 GB memory cap. Lower campaign budgets or raise `mem_limit` in `docker-compose.yml` |
 | Objective `errored ... unknown strategy 'pyrit_pair'` | The image was built without the `attacks` extra. Rebuild with it (see Choosing extras) |
 
-Exit codes: `0` success, `2` config error.
+Exit codes: `0` success, `1` the run failed (for example a provider error), `2` config error or not
+allowed by your plan.
 
 ## Verification status
 

@@ -8,35 +8,13 @@ permissions and live under a gitignored runs dir.
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
 from ..data import Evidence, Finding
 from ..security.redaction import redact
-
-
-def _atomic_write(path: Path, text: str) -> None:
-    """Write via a temp file + os.replace so a crash or reader never sees a torn file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    _chmod(path, 0o600)
-
-
-def _chmod(path: Path, mode: int) -> None:
-    try:
-        os.chmod(path, mode)
-    except OSError:
-        pass  # best effort (e.g. on Windows)
+from .files import atomic_write, chmod_quiet
 
 
 class RunStore:
@@ -44,7 +22,7 @@ class RunStore:
         self.run_id = run_id
         self.dir = Path(base_dir) / run_id
         self.dir.mkdir(parents=True, exist_ok=True)
-        _chmod(self.dir, 0o700)
+        chmod_quiet(self.dir, 0o700)
         self.events_path = self.dir / "events.jsonl"
         self.db_path = self.dir / "index.sqlite"
         self._init_db()
@@ -67,18 +45,18 @@ class RunStore:
         line = json.dumps(redact(record), ensure_ascii=False)
         with open(self.events_path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
-        _chmod(self.events_path, 0o600)
+        chmod_quiet(self.events_path, 0o600)
 
     def save_evidence(self, evidence: Evidence) -> Path:
         path = self.dir / f"evidence-{evidence.id}.json"
         data = redact(evidence.model_dump(mode="json"))
-        _atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
+        atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
         return path
 
     def save_finding(self, finding: Finding) -> Path:
         path = self.dir / f"finding-{finding.id}.json"
         data = finding.model_dump(mode="json")
-        _atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
+        atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
         con = sqlite3.connect(self.db_path)
         try:
             con.execute(

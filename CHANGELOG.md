@@ -38,8 +38,26 @@ happened - never invent historical entries.
 - Plan limits are enforced on the server: device approvals over the device limit, projects over the
   project limit, and evidence or transcript sync without Pro are refused, and the model leaderboard is a
   Pro feature. Free limits are now 20 campaign runs and 2,000 attempts a month, 1 device, 2 projects.
+- Codebase audit cleanup (#51). One shared atomic file writer replaces four copies, one run-id helper
+  replaces two, and CLI `validate` and MCP `validate_config` now share `Config.problems()`. Removed dead
+  code, unused constants, an unreachable `openrouter` branch, and stale docstrings. Dropped the unused
+  `jinja2` and `hypothesis` dependencies, pinned ruff to the CI version, and added `uv.lock`. Build output
+  (`*.tsbuildinfo`) is no longer tracked. Docs, the README (also the PyPI page), `.env.example`, and the
+  test matrix were brought up to date with what is built and live.
+- The web apps share one plans module (`src/shared/plans.ts`) and one page-view beacon
+  (`src/shared/beacon.ts`) instead of three and two copies. The production dashboard build no longer
+  ships the demo data; it loads only in mock mode. Removed the unused `GET /admin/plans` route and other
+  dead code, and `formatCurrency` defaults to INR (#51).
+- `replay` exits 1 when the evidence file is missing and says plainly that re-sending is not built yet
+  (#52).
 
 ### Fixed
+- `pip install "modelwrecker[all]"` could not be resolved: garak and PyRIT need incompatible versions of
+  `datasets`. `all` now leaves `scan` out; install `modelwrecker[scan]` in its own environment (#51).
+- MCP `validate_config` skipped the egress check that CLI `validate` runs, so it could approve a config
+  the CLI rejects (#51).
+- A price change in `src/shared/plans.json` alone did not trigger the API or web deploy (#51).
+- The dashboard's "Add target" and "New project" buttons did nothing; they now open their dialogs (#51).
 - Billing highlighted the Pro plan card for every account; it now highlights the plan you are on (#39).
 - The dashboard build broke on `"ignoreDeprecations": "6.0"` with TypeScript 5.9. `baseUrl` is gone
   from the dashboard tsconfig instead, so it builds on TypeScript 5.9 and 6 without the override (#40).

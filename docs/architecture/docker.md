@@ -45,8 +45,9 @@ flowchart TD
 Everything heavy stays here. None of these parts move to the cloud. This is the no-hidden-compute rule
 from [`local-cloud.md`](local-cloud.md).
 
-Built today: everything in the diagram except the **cloud sync client**, which arrives with device
-registration in Phase 10.8. The MCP server is in the image (the `mcp` extra) and starts only when asked.
+Everything in the diagram is built. The MCP server is in the image (the `mcp` extra) and starts only
+when asked. The cloud sync client (`src/modelwrecker/cloud`) sends only when this install has a device
+credential.
 
 ## How a user runs it
 
@@ -71,7 +72,7 @@ between the host and the container). Nothing else from the host is shared.
 |-----------|----------------|-----------|-----|
 | `./config` | `/config` | Read only | The YAML config and target definition |
 | `./runs` | `/work/runs` | Read and write | Findings, evidence, reports, and the local event log |
-| Credential file | - | Read only | Planned for Phase 10.8: the scoped device token; never the Google token |
+| Device token | - | Env var | Optional: pass `MODELWRECKER_DEVICE_TOKEN` through `.env` to sync from the container; never the Google token |
 
 Inside the container the working directory is `/work`, so the CLI's default `runs` output folder is the
 mounted `/work/runs`. Provider keys come from `.env`, not a mount.
@@ -86,8 +87,8 @@ See [`../security/docker.md`](../security/docker.md) for the full list of what i
 - Resource limits (2 CPUs, 2 GB memory, 256 processes) are set so an autonomous loop cannot exhaust the
   host.
 - The container uses the default bridge network and publishes no ports. The engine's egress guard (the
-  control that blocks internal and metadata addresses) exists and is unit tested, but provider calls do
-  not route through it yet; that wiring is Phase 10.3. See [`../security/docker.md`](../security/docker.md).
+  control that blocks internal and metadata addresses) runs on every attacker, target, and judge
+  request and refuses redirects. See [`../security/docker.md`](../security/docker.md).
 - The MCP server inside the container uses stdio by default. Any networked transport must require auth
   and refuse a non-loopback bind without it, same as any other network surface.
 
@@ -97,7 +98,7 @@ See [`../security/docker.md`](../security/docker.md) for the full list of what i
 |-----------|---------|-------|
 | CLI | On | The main way to run a campaign |
 | MCP server | Opt in | Safe orchestration tools only; see [`../mcp/overview.md`](../mcp/overview.md) |
-| Cloud sync | Opt in, not built yet | Will send summary metadata to the control plane (Phase 10.8); see [`data-flow.md`](data-flow.md) |
+| Cloud sync | Opt in | Sends summary metadata to the control plane only when a device credential is set; see [`data-flow.md`](data-flow.md) |
 
 ## Failure cases
 

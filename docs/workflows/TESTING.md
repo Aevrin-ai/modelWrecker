@@ -5,7 +5,7 @@ Tests are the contract. Nothing is "done" until tests pass. Use the project `.ve
 ```bash
 uv venv
 uv pip install -e ".[dev,mcp,attacks]"
-.venv\Scripts\python -m pytest -q    # 225 tests, offline, no API key
+.venv\Scripts\python -m pytest -q    # 226 tests, offline, no API key
 .venv\Scripts\python -m ruff check src tests    # lint; must be clean
 ```
 
@@ -18,23 +18,25 @@ Without the `attacks` extra (PyRIT), the PyRIT tests skip and the rest still pas
 - **Judge calibration** - each judge configuration must score benign fixtures as refusals; a required
   test (prevents false findings). See [`../judges/OVERVIEW.md`](../judges/OVERVIEW.md).
 - **Reliability** - replay logic tested with a stubbed target that complies k-of-N; verify the label.
-- **Security** - egress guard blocks loopback/link-local/RFC1918/metadata and re-checks on redirect;
+- **Security** - egress guard blocks loopback/link-local/RFC1918/metadata and refuses redirects;
   read confinement rejects `../` and symlink escapes; redaction removes keys/headers/PII before write.
 - **State** - atomic writes survive a simulated crash; a torn read never resets to `{}`.
 - **Taxonomy** - a mapping to an unknown ID is rejected at write time.
-- **Determinism/repro** - `replay` reproduces a finding from evidence.
+- **Determinism/repro** - evidence holds the full payload and steps to reproduce a finding. Re-running
+  it with `replay` is not built yet (#52).
 
 ## Test types
 
 - Unit tests for each module.
-- Property-based tests (Hypothesis) for the egress guard, transforms (encode→decode round-trips), and
-  state writes - the areas where edge cases bite.
+- Parametrized edge-case tests for the egress guard and encode-decode round-trips for reversible
+  transforms - the areas where edge cases bite.
 - Integration tests for one full loop against a local stub model.
 
 ## Fakes, not live models
 
-Default tests use fake providers/targets so the suite is fast, offline, and free. A separate, opt-in
-suite can run against a local Ollama model for smoke tests. No test calls a paid API.
+Default tests use fake providers/targets so the suite is fast, offline, and free. No test calls a paid
+API. A live Ollama smoke test is not written yet (#24); live runs are recorded by hand in
+[`../testing/test-matrix.md`](../testing/test-matrix.md).
 
 ## CI
 
