@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -6,7 +7,8 @@ import tailwindcss from "@tailwindcss/vite";
 // https://app.aevrin.net/; the product dashboard lives under /dashboard/).
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // The shared plan config (../shared/plans.json) sits outside this app folder.
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  // The shared plans and beacon (../shared) sit outside this app folder.
   server: { fs: { allow: [".", "../shared"] } },
   build: {
     outDir: "dist",

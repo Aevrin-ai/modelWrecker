@@ -1,0 +1,251 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Display serif for headings. Sentient by the Indian Type Foundry, free for
+   commercial use under the ITF Free Font License, self-hosted from public/. */
+@font-face {
+  font-family: "Sentient";
+  src: url("/fonts/sentient-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme inline {
+  --font-heading: "Sentient", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-lime: var(--lime);
+  --color-brand: var(--brand);
+
+  /* Severity is always shown with its word, never colour alone. */
+  --color-critical: var(--critical);
+  --color-high: var(--high);
+  --color-medium: var(--medium);
+  --color-low: var(--low);
+
+  /* A crisp edge and a long, soft fall-off below: anything floating over a scene. */
+  --shadow-float: 0 1px 2px rgb(15 23 42 / 0.06), 0 30px 60px -30px rgb(15 23 42 / 0.45);
+  /* A hairline ring plus a 1px drop: cards on white. */
+  --shadow-edge: 0 0 0 1px rgb(2 6 23 / 0.08), 0 1px 2px -1px rgb(2 6 23 / 0.08);
+
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Slate ink on white, CSS-painted skies behind the product, and the lime of
+   the Aevrin mark as the one accent. Lime is too light to carry text on white,
+   so --brand (text and icons) is the same hue taken dark. */
+:root {
+  --lime: #bce609;
+  --brand: #4d7c0f;
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --ring: #94a3b8;
+  --primary: #020617;
+  --primary-foreground: #ffffff;
+  --critical: #dc2626;
+  --high: #ea580c;
+  --medium: #b45309;
+  --low: #475569;
+  color-scheme: light;
+}
+
+.dark {
+  --brand: #bce609;
+  --background: #0b1120;
+  --foreground: #f1f5f9;
+  --card: #111a2e;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: rgb(255 255 255 / 0.1);
+  --ring: #64748b;
+  --primary: #f8fafc;
+  --primary-foreground: #020617;
+  --critical: #f87171;
+  --high: #fb923c;
+  --medium: #fbbf24;
+  --low: #94a3b8;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--background);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    overflow-x: clip;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--lime) 55%, transparent);
+    color: #020617;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ── Page container: 1280px wide, 32px sides on a laptop, 20px on a phone ── */
+
+.max-w-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+@media (min-width: 768px) {
+  .max-w-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .max-w-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* ── CSS-painted scenes ─────────────────────────────────────
+   Soft skies, haze and hills, painted with gradients only (no photos), plus a
+   faint grain so the colour reads as paint rather than a flat fill. Each is
+   scenery: it sits behind the product and never takes a click. */
+
+.scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+.scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Daylight sky with drifting cloud banks low down. */
+.scene-sky {
+  background:
+    radial-gradient(60% 38% at 18% 88%, rgb(255 255 255 / 0.95), transparent 70%),
+    radial-gradient(48% 30% at 62% 96%, rgb(255 255 255 / 0.9), transparent 70%),
+    radial-gradient(40% 26% at 92% 78%, rgb(255 255 255 / 0.8), transparent 70%),
+    radial-gradient(30% 18% at 38% 70%, rgb(255 255 255 / 0.55), transparent 70%),
+    radial-gradient(70% 60% at 80% 0%, rgb(255 255 255 / 0.45), transparent 60%),
+    linear-gradient(180deg, #5eb6ec 0%, #8fcdf3 45%, #c6e6f8 78%, #eef7fc 100%);
+}
+
+/* Sky over rolling hills tinted with the Aevrin lime. */
+.scene-meadow {
+  background:
+    radial-gradient(120% 40% at 20% 112%, #9cc93a 0 45%, transparent 46%),
+    radial-gradient(110% 38% at 85% 116%, #b4d94f 0 46%, transparent 47%),
+    radial-gradient(140% 34% at 50% 122%, #7fb02c 0 47%, transparent 48%),
+    radial-gradient(45% 22% at 30% 46%, rgb(255 255 255 / 0.85), transparent 70%),
+    radial-gradient(38% 18% at 76% 38%, rgb(255 255 255 / 0.75), transparent 70%),
+    linear-gradient(180deg, #78c3ee 0%, #a9dbf5 55%, #dff1fb 75%, #eaf6dc 100%);
+}
+
+/* Early evening: peach low down into lilac. */
+.scene-dusk {
+  background:
+    radial-gradient(50% 40% at 70% 100%, rgb(255 214 170 / 0.95), transparent 70%),
+    radial-gradient(60% 34% at 15% 90%, rgb(255 236 214 / 0.85), transparent 70%),
+    radial-gradient(40% 24% at 50% 62%, rgb(255 255 255 / 0.5), transparent 70%),
+    linear-gradient(180deg, #a5b4fc 0%, #c4b5fd 35%, #f5c9d9 70%, #fde2c6 100%);
+}
+
+/* Pale haze with a low sun: quiet, for small panels. */
+.scene-mist {
+  background:
+    radial-gradient(35% 45% at 78% 30%, rgb(255 248 220 / 0.95), transparent 70%),
+    radial-gradient(70% 40% at 25% 95%, rgb(255 255 255 / 0.9), transparent 70%),
+    linear-gradient(180deg, #b9dcf2 0%, #d6ecf8 50%, #f2f9fd 100%);
+}
+
+/* Cool sea-glass greens, for the local-first panel. */
+.scene-glass {
+  background:
+    radial-gradient(55% 40% at 80% 90%, rgb(255 255 255 / 0.85), transparent 70%),
+    radial-gradient(45% 30% at 10% 20%, rgb(255 255 255 / 0.6), transparent 70%),
+    linear-gradient(160deg, #9fe3d6 0%, #b8e6f3 45%, #e3f5e9 100%);
+}
+
+/* At night the skies dim into dusk rather than glowing behind a dark page. */
+.dark .scene {
+  filter: brightness(0.42) saturate(0.85) hue-rotate(-12deg);
+}
+
+/* ── Navigation ─────────────────────────────────────────── */
+
+@keyframes nav-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.nav-panel-in {
+  animation: nav-panel-in 280ms var(--ease-smooth) both;
+}
+
+/* ── Hero entrance: each line rises out of a soft blur ──── */
+
+@keyframes hero-line {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+.hero-line {
+  animation: hero-line 760ms var(--ease-smooth) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-panel-in,
+  .hero-line {
+    animation: none;
+  }
+}

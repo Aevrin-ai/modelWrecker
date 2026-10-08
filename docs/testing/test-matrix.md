@@ -129,7 +129,12 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Security 10.3 | `validate` refuses a blocked endpoint offline (no DNS) | PASS | all four `examples/` configs still validate |
 | Security 10.3 | DNS rebinding between check and connect | NOT TESTED | known limit; address pinning is open (#16) |
 | Landing `src/web` | `npm run build` (tsc + vite) | PASS | 0 TypeScript errors, 2026-10-02 |
-| Landing `src/web` | all sections render, no console errors (1440px) | PASS | checked in Chrome against the Folio and Nguyen references |
+| Landing `src/web` (rebuilt, #55) | every section renders at 1440x900 and 390x844, light and dark; no horizontal scroll; no console errors | PASS | checked in Chrome DevTools against the activepieces.com study |
+| Landing scroll story | readable text at each progress point; 8 wires and 16 end dots, every wire end on a dot; still final frame below 1024px | PASS | measured in Chrome |
+| Landing reduced motion | every mockup opens on its final step; the story becomes plain sections; no cursor | PASS | `matchMedia` override |
+| Landing navbar | menus open on hover, click, Enter and Down arrow; panel height eases between menus; Escape closes; phone menu folds into rows | PASS | checked in Chrome |
+| Landing links | 10 section anchors exist; 8 external links answer 200 | PASS | |
+| Landing Lighthouse (phone) | accessibility, best practices, SEO | PASS | 100 / 100 / 100; LCP 2.4 s and CLS 0 on Slow 4G with 4x CPU slowdown (the home page is prerendered) |
 | Landing `src/web` | no horizontal overflow at 390px (mobile emulation) | PASS | page scroll width equals viewport |
 | Landing `src/web` | deployed to app.aevrin.net | PASS | see the `Live` row for landing, dashboard, and deep links |
 | Dashboard `src/dash` | `npm run build` (tsc + vite), routes code-split | PASS | 0 TypeScript errors, no chunk-size warning |
