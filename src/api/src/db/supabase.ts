@@ -84,7 +84,7 @@ class SupabaseDb implements Db {
 }
 
 /** A database error. The message is logged server-side only, never returned to the caller. */
-export class DbError extends Error {}
+class DbError extends Error {}
 
 export function supabaseDeps(env: {
   SUPABASE_URL: string;

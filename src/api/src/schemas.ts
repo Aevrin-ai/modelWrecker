@@ -8,8 +8,8 @@ const rate = z.number().min(0).max(1);
 const count = z.number().int().min(0).max(10_000_000);
 
 export const SEVERITIES = ["info", "low", "medium", "high", "critical"] as const;
-export const FINDING_STATUSES = ["open", "triaged", "fixed", "accepted-risk"] as const;
-export const TARGET_TYPES = ["chat", "agent", "rag", "mcp"] as const;
+const FINDING_STATUSES = ["open", "triaged", "fixed", "accepted-risk"] as const;
+const TARGET_TYPES = ["chat", "agent", "rag", "mcp"] as const;
 
 // --- device sign-in ---------------------------------------------------------------------------
 
@@ -42,8 +42,8 @@ export const HeartbeatReq = z.object({ engine_version: z.string().trim().max(20)
 // Metadata always. Evidence and transcripts are optional detail, stored only when the account turned
 // them on in Settings (checked on the server, see ingestRun). The engine redacts secrets before sending.
 
-export const EVIDENCE_TEXT_MAX = 20_000;
-export const TRANSCRIPT_TEXT_MAX = 4_000;
+const EVIDENCE_TEXT_MAX = 20_000;
+const TRANSCRIPT_TEXT_MAX = 4_000;
 const body = (max: number) => z.string().max(max).default("");
 const label = (max: number) => z.string().trim().max(max).default("");
 
@@ -164,7 +164,6 @@ export const SyncReq = z
   })
   .strict();
 
-export type SyncBody = z.infer<typeof SyncReq>;
 export type SyncEvidenceBody = z.infer<typeof SyncEvidence>;
 
 // --- dashboard ------------------------------------------------------------------------------------

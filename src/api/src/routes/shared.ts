@@ -1,7 +1,10 @@
 import type { Db } from "../db";
 import { effectivePlan } from "../plans";
 
-export const DEFAULT_PROJECT_NAME = "Default project";
+const DEFAULT_PROJECT_NAME = "Default project";
+
+/** A database value as a string; null and undefined become "". */
+export const str = (v: unknown) => (v == null ? "" : String(v));
 
 /** What an account allows to sync beyond metadata. Both default to off. */
 export interface SyncPolicy {

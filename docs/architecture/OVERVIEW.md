@@ -98,8 +98,9 @@ provider, or a judge signal without touching the engine ([`ADR-0005`](../decisio
 
 ## Repository structure
 
-The engine is a Python package (`modelwrecker/`). Layout as it exists today, with planned homes marked.
-Packages are added when their phase lands, not kept as empty stubs:
+The engine is a Python package (`src/modelwrecker/`). The hosted platform (landing page, dashboard,
+control-plane API) lives next to it under `src/`. Packages are added when their phase lands, not kept
+as empty stubs. Layout as it exists today:
 
 ```text
 modelWrecker/
@@ -107,41 +108,50 @@ modelWrecker/
 ├─ pyproject.toml, uv.lock, Dockerfile, .dockerignore
 ├─ docs/                      # everything in docs/index.md
 ├─ examples/                  # runnable example configs
-├─ reports/                   # test + provider + strategy reports
-├─ src/modelwrecker/
+├─ reports/                   # dated test snapshots from Phase 4
+├─ deploy/                    # Cloudflare, Supabase, Google sign-in, and PyPI setup notes + migrations
+├─ src/modelwrecker/          # the engine (Python)
 │  ├─ data.py                 # the pipeline data models
 │  ├─ interfaces.py           # the plugin contracts (Protocols) + Capability enum
 │  ├─ config.py               # Pydantic config models + loader
 │  ├─ taxonomy.py             # OWASP/ATLAS mapping tables + validators
-│  ├─ providers/              # Provider base + adapters (openai_compatible today; any-llm/anthropic next)
-│  ├─ targets/                # Target adapters (chat today; agent/rag/mcp next)
+│  ├─ providers/              # Provider base + the OpenAI-compatible adapter + a fake for tests
+│  ├─ targets/                # Target adapters: chat, agent, rag, mcp + the target factory
 │  ├─ attacker/               # Attack Planner + adaptive loop
-│  ├─ strategies/             # Strategy interface + built-in strategies + the PyRIT seam
+│  ├─ strategies/             # Strategy interface + built-in strategies + the PyRIT and garak seams
+│  ├─ payloads/               # payload/transform engine
+│  ├─ campaigns/              # campaign engine: parallel objectives, budgets, stop conditions
 │  ├─ judges/                 # judge signals + verdict combiner + calibration
 │  ├─ reliability/            # replay + confidence scoring
 │  ├─ findings/               # evidence capture + finding engine + report renderers
-│  ├─ security/               # egress guard + redaction (sandbox/auth helpers planned)
+│  ├─ analytics/              # attack success rate + leaderboard, static HTML/JSON/CSV
+│  ├─ security/               # egress guard + redaction
 │  ├─ storage/                # atomic JSONL event log + SQLite index
 │  ├─ mcp/                    # harness-integration MCP server + safe service layer
+│  ├─ cloud/                  # device login + metadata and opt-in evidence sync
+│  ├─ entitlements/           # signed plan check, verified offline
 │  └─ cli.py                  # Typer CLI
+├─ src/api/                   # control-plane API: Cloudflare Worker, TypeScript
+├─ src/web/                   # landing page
+├─ src/dash/                  # dashboard and staff admin console
+├─ src/shared/                # plans.json: tiers, limits, prices, shared by API, sites, engine
 └─ tests/                     # offline unit + e2e + mcp + strategy tests
 ```
 
-Planned (added in their phase, not kept empty): `payloads/` (transform engine, Phase 6), `campaigns/`
-(campaign engine, Phase 7), and a separate authenticated `api/` layer (Phase 10). Evidence capture
-currently lives in `findings/` rather than its own package.
-```
+Evidence capture lives in `findings/` rather than its own package. Attack-code sandbox and auth
+helpers in `security/` are planned, not built.
 
 ### Why this structure
 
 - **One folder per role/interface**, so "add a strategy / provider / target / judge" is "add a file
   in one folder", never "edit the core". This is modelWrecker's core rule.
-- **`core/` owns no vendor code.** Vendor/OSS access is confined to `providers/`, `strategies/`,
+- **The core engine owns no vendor code.** Vendor/OSS access is confined to `providers/`, `strategies/`,
   `targets/`, `judges/` adapters. This isolates the LiteLLM-style supply-chain and churn risk.
 - **`security/` is its own module**, imported by targets/providers/payloads - an Aevrin security principle
   that security can't be bolted on per-call.
-- **`api/` is separate and later.** The engine is a library + CLI first ([`ADR-0012`](../decisions/ADR-0012-engine-library-first.md));
-  no network surface exists until it is built with auth from day one.
+- **The API is separate.** The engine is a library + CLI first ([`ADR-0012`](../decisions/ADR-0012-engine-library-first.md))
+  and opens no network listener. The hosted control-plane API in `src/api` is a separate service with
+  auth from day one ([`control-plane-api.md`](control-plane-api.md)).
 - `src/` layout keeps imports honest and packaging clean.
 
 ## Data flow (one shot)

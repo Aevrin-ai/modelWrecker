@@ -16,9 +16,9 @@ from .base import BaseProvider, ProviderError
 from .openai_compatible import OpenAICompatibleProvider
 
 # Protocols that are served by the OpenAI-compatible wire adapter today. any_llm is the documented
-# default multiplexer; until the any-llm SDK adapter lands it falls back to the OpenAI-compatible
-# wire, which already reaches OpenRouter/Ollama/vLLM/OpenAI (see ADR-0003).
-_OPENAI_WIRE = {"openai", "openai_compatible", "any_llm", "openrouter", "litellm", "portkey"}
+# default multiplexer; until the any-llm SDK adapter lands (issue #23) it falls back to the
+# OpenAI-compatible wire, which already reaches OpenRouter/Ollama/vLLM/OpenAI (see ADR-0003).
+_OPENAI_WIRE = {"openai", "openai_compatible", "any_llm", "litellm", "portkey"}
 
 _bucket: ContextVar[list[BaseProvider] | None] = ContextVar("mw_provider_bucket", default=None)
 
@@ -57,10 +57,8 @@ def build_provider(endpoint: Endpoint, egress: EgressPolicy | None = None) -> Ba
 
 
 def _default_base_url(protocol: str) -> str | None:
-    if protocol in ("openai",):
+    if protocol == "openai":
         return "https://api.openai.com/v1"
-    if protocol in ("openrouter",):
-        return "https://openrouter.ai/api/v1"
     return None
 
 

@@ -1,5 +1,5 @@
 // The cost model behind the prices in src/shared/plans.json (issue #42). Not used at request time: a test
-// (test/pricing.test.ts) checks that every paid price keeps a margin inside MARGIN_BAND, so a price or cost
+// (test/billing.test.ts) checks that every paid price keeps a margin inside MARGIN_BAND, so a price or cost
 // change that breaks the rule fails CI. Change the inputs here when real costs change, then re-check prices.
 // Full explanation: docs/billing/pricing.md.
 import config from "../../shared/plans.json";
@@ -8,7 +8,7 @@ import config from "../../shared/plans.json";
 export const MARGIN_BAND = { min: 0.3, max: 0.4 } as const;
 
 /** Monthly cost to serve one paying account, in rupees. */
-export const COST_MODEL = {
+const COST_MODEL = {
   /** Fixed platform cost per month: managed Postgres ($25), Workers paid plan ($5), domain, mail, monitoring. */
   platformFixedPerMonth: 3000,
   /** How many paying accounts the fixed cost is spread over (a conservative first-year planning base). */
@@ -24,7 +24,7 @@ export const COST_MODEL = {
 } as const;
 
 /** Cost to serve one paying account for one month, in rupees. */
-export function monthlyCostPerAccount(model = COST_MODEL): number {
+function monthlyCostPerAccount(model = COST_MODEL): number {
   return model.platformFixedPerMonth / model.plannedPayingAccounts + model.storagePerAccount + model.supportPerAccount;
 }
 
@@ -32,7 +32,7 @@ export function monthlyCostPerAccount(model = COST_MODEL): number {
  * Margin of a price that covers `months` months: (net revenue - payment fee - cost) / net revenue,
  * where net revenue is the price without GST.
  */
-export function margin(pricePaise: number, months: number, model = COST_MODEL): number {
+function margin(pricePaise: number, months: number, model = COST_MODEL): number {
   const grossPerMonth = pricePaise / 100 / months;
   const net = grossPerMonth / (1 + model.gstRate);
   const fee = grossPerMonth * model.paymentFeeRate;

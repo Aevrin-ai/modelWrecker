@@ -9,19 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SeverityBadge, TargetStatusBadge, TargetTypeBadge } from "@/components/StatusBadges";
 import { DataState, EmptyState, SkeletonRows } from "@/components/States";
+import { TargetDialog } from "@/components/dialogs";
 import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { relativeTime } from "@/lib/format";
-import { TARGET_TYPE_LABEL } from "@/lib/constants";
+import { TARGET_TYPE_LABEL, TARGET_TYPES } from "@/lib/constants";
 import type { TargetType } from "@/types";
-
-const TYPES: TargetType[] = ["chat", "agent", "rag", "mcp"];
 
 export function Targets() {
   const { activeProjectId } = useActiveProject();
   const [query, setQuery] = useState("");
   const [type, setType] = useState<TargetType | "all">("all");
+  const [creating, setCreating] = useState(false);
 
   const { data, loading, error, refetch } = useAsync(
     () => apiClient.listTargets({ projectId: activeProjectId ?? undefined }),
@@ -47,7 +47,7 @@ export function Targets() {
         title="Targets"
         description="The AI systems under test. A target must be authorized before any campaign can run against it."
         actions={
-          <Button variant="brand" size="sm">
+          <Button variant="brand" size="sm" onClick={() => setCreating(true)}>
             <Plus className="size-4" />
             Add target
           </Button>
@@ -67,7 +67,7 @@ export function Targets() {
           </div>
           <Select value={type} onChange={(e) => setType(e.target.value as TargetType | "all")}>
             <option value="all">All types</option>
-            {TYPES.map((t) => (
+            {TARGET_TYPES.map((t) => (
               <option key={t} value={t}>
                 {TARGET_TYPE_LABEL[t]}
               </option>
@@ -88,7 +88,7 @@ export function Targets() {
             title="No targets yet"
             description="Add a chat, agent, RAG, or MCP target to start red-teaming it."
             action={
-              <Button variant="brand" size="sm">
+              <Button variant="brand" size="sm" onClick={() => setCreating(true)}>
                 <Plus className="size-4" />
                 Add target
               </Button>
@@ -184,6 +184,8 @@ export function Targets() {
           )
         }
       </DataState>
+
+      <TargetDialog open={creating} onClose={() => setCreating(false)} onSaved={() => refetch()} />
     </div>
   );
 }

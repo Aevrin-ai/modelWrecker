@@ -17,21 +17,21 @@ classifiers = [
 ]
 
 # Core runtime dependencies. Kept small on purpose (see docs/DEPENDENCIES.md).
-# Provider breadth comes from any-llm (the default multiplexer); direct SDKs stay first-class.
+# Every provider is reached over the OpenAI-compatible wire today; the extras below are for the
+# planned any-llm and direct SDK adapters (issue #23).
 dependencies = [
     "pydantic>=2.7",
     "httpx>=0.27",
     "typer>=0.12",
     "pyyaml>=6.0",
-    "jinja2>=3.1",
     "cryptography>=42",  # Ed25519 check of the signed entitlement (issue #11)
 ]
 
 [project.urls]
 Homepage = "https://app.aevrin.net"
-Repository = "https://github.com/spacesdrive/modelWrecker"
-Documentation = "https://github.com/spacesdrive/modelWrecker/tree/main/docs"
-Issues = "https://github.com/spacesdrive/modelWrecker/issues"
+Repository = "https://github.com/Aevrin-ai/modelWrecker"
+Documentation = "https://github.com/Aevrin-ai/modelWrecker/tree/main/docs"
+Issues = "https://github.com/Aevrin-ai/modelWrecker/issues"
 
 [project.optional-dependencies]
 # Provider adapters beyond the OpenAI-compatible baseline.
@@ -43,11 +43,13 @@ scan = ["garak>=0.17"]
 judges = ["presidio-analyzer>=2.2", "detect-secrets>=1.5"]
 # MCP targets and the harness-integration MCP server (see ADR-0013).
 mcp = ["mcp>=2.0"]
-# Everything, for a full install.
+# Everything that installs together. `scan` is left out: garak 0.17 pins datasets<4 and PyRIT 1.1
+# needs datasets>=4.8, so `attacks` and `scan` cannot be resolved into one environment.
 all = [
-    "modelwrecker[providers,attacks,scan,judges,mcp]",
+    "modelwrecker[providers,attacks,judges,mcp]",
 ]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "hypothesis>=6.0", "ruff>=0.6", "mypy>=1.11"]
+# ruff is pinned to the version CI runs, so local lint matches CI.
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff==0.16.9", "mypy>=1.11"]
 
 [project.scripts]
 modelwrecker = "modelwrecker.cli:app"
@@ -79,3 +81,7 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
+
+[tool.uv]
+# See the `all` extra: PyRIT and garak need incompatible versions of `datasets`.
+conflicts = [[{ extra = "attacks" }, { extra = "scan" }], [{ extra = "all" }, { extra = "scan" }]]

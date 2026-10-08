@@ -3,25 +3,34 @@
 **Purpose.** Make a run understandable while it happens and reproducible afterward, without leaking
 secrets.
 
-## What we emit
+## What exists today
 
-- **Structured logs** (JSON) with levels; secrets/PII/auth headers redacted before emission.
-- **A per-run event stream** (append-only JSONL): every attempt, observation, verdict, replay, and
-  finding, with timestamps. This is also the evidence source. See
+- **A per-run event stream** (`runs/<run-id>/events.jsonl`, append-only JSONL): one line per attack plan,
+  attempt, calibration, reliability replay, and finding, plus run metadata, each with a timestamp.
+  Every record is redacted before it is written. This is also the evidence source. See
   [`../architecture/EVIDENCE-AND-FINDINGS.md`](../architecture/EVIDENCE-AND-FINDINGS.md).
-- **Progress lines** from strategies (`ctx.emit`) for interactive runs.
-- **Metrics**: attack success rate (ASR) per strategy/objective/target-family, tokens, cost, latency,
-  replay rate. Queried from the SQLite index.
-- **Optional OpenTelemetry traces** (the MCP SDK and many libs emit OTel by default); off unless
-  configured.
+- **A SQLite index** (`index.sqlite`) of the run's findings, for quick lookup.
+- **Progress lines** from strategies (`ctx.emit`) printed during interactive runs.
+- **Per-call metadata** on each observation: model, prompt and completion tokens, and latency in
+  milliseconds. Request and response bodies are redacted before they are stored.
+- **Analytics** (`modelwrecker analyze`): attack success rate (ASR) per strategy and objective category,
+  with Wilson confidence intervals, findings by severity and taxonomy, and a cross-run leaderboard,
+  computed from the run artifacts. See [`../attack-engine/ANALYTICS.md`](../attack-engine/ANALYTICS.md).
+- **Redacted refusal logs** from the MCP server guardrails (Python `logging`, logger
+  `modelwrecker.mcp`). See [`../security/mcp.md`](../security/mcp.md).
 
-## Inference tracing
+## Planned, not built
 
-Each model call records request/response metadata (model, params, usage, status, latency) linked by an
-inference id, so a run can be audited and costed. Request/response bodies are redacted.
+- Structured JSON logs with levels across the whole engine.
+- An inference id that links each model call across the event stream.
+- Cost per run, which needs per-model pricing (#25).
+- Optional OpenTelemetry traces, off unless configured.
+- A planner that uses ASR by strategy to choose its next strategy (a bandit). Today the planner uses a
+  fixed order per objective category and does not learn from past ASR. See
+  [`../attack-engine/ATTACK-PLANNER.md`](../attack-engine/ATTACK-PLANNER.md).
 
 ## Why it matters
 
-ASR-by-strategy drives the planner's bandit and the operator's trust; reproducible event streams are
-what make a finding "validated, not just reported" (Aevrin). Logs that leak keys are a finding in
-themselves (an Aevrin logging-safety principle) - hence redaction-before-emit everywhere.
+Reproducible event streams are what make a finding "validated, not just reported" (Aevrin), and ASR by
+strategy is what earns the operator's trust. Logs that leak keys are a finding in themselves (an Aevrin
+logging-safety principle) - hence redaction before every write.

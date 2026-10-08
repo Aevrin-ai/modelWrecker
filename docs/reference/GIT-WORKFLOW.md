@@ -15,7 +15,7 @@ flowchart LR
 
 ## 1. Open an issue first
 
-Every problem or piece of work gets a GitHub issue in `spacesdrive/modelWrecker` **before** it is fixed:
+Every problem or piece of work gets a GitHub issue in `Aevrin-ai/modelWrecker` **before** it is fixed:
 a bug you hit, a bug you notice in passing, a gap found during review, a roadmap item you start.
 
 - Use a template: **Bug** for something broken, **Task** for planned or maintenance work.

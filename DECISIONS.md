@@ -26,8 +26,8 @@ Format of each ADR: Decision · Why · Alternatives · Trade-offs · Date · Sta
 | 0016 | Billing provider is Razorpay, cloud-only; payment confirmed by a server-verified webhook; no Razorpay secret in Docker/MCP/CLI/engine | Accepted | [ADR-0016](docs/decisions/ADR-0016-billing-razorpay.md) |
 | 0017 | Device credential model: each install gets a scoped, revocable device/project token, never the user's Google token | Accepted | [ADR-0017](docs/decisions/ADR-0017-device-credential-model.md) |
 | 0018 | Entitlement enforcement: cloud issues a signed scoped entitlement the local engine verifies; enforced outside the UI; no pricing logic in the engine | Accepted | [ADR-0018](docs/decisions/ADR-0018-entitlement-enforcement.md) |
-| 0020 | Admin console at /admin: verified @aevrin.net email plus a TOTP authenticator plus a hashed admin session, checked on every request; every change audited; first-party cookie-free page analytics | Accepted | [ADR-0020](docs/decisions/ADR-0020-admin-console.md) |
 | 0019 | Prepaid plans (month or year) through Razorpay Orders; a payment is applied once, on the server, from verify (signature plus Razorpay fetch), webhook, or reconciliation | Accepted | [ADR-0019](docs/decisions/ADR-0019-prepaid-billing.md) |
+| 0020 | Admin console at /admin: verified @aevrin.net email plus a TOTP authenticator plus a hashed admin session, checked on every request; every change audited; first-party cookie-free page analytics | Accepted | [ADR-0020](docs/decisions/ADR-0020-admin-console.md) |
 
 ## Resolved maintainer decisions
 

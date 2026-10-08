@@ -32,7 +32,7 @@ const STEPS: {
     title: "Get the ModelWrecker engine",
     body: "Clone the repository and create your local environment file. Provider keys stay in .env on your machine; they never reach Aevrin.",
     commands: [
-      { command: "git clone https://github.com/spacesdrive/modelWrecker.git && cd modelWrecker" },
+      { command: "git clone https://github.com/Aevrin-ai/modelWrecker.git && cd modelWrecker" },
       { label: "then set the provider key your config names", command: "cp .env.example .env" },
     ],
   },

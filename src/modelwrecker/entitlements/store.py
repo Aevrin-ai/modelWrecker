@@ -12,12 +12,12 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 from ..cloud import credentials
+from ..storage.files import atomic_write
 from .model import FREE_BASELINE, Entitlement
 from .token import EntitlementError, verify_token
 
@@ -43,22 +43,10 @@ def period_key(now: float | None = None) -> str:
     return f"{dt.year:04d}-{dt.month:02d}"
 
 
-def _write_atomic(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".mw-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-
-
 def save_token(token: str) -> Entitlement:
     """Verify, then store. Raises EntitlementError and stores nothing when the token is invalid."""
     ent = verify_token(token)
-    _write_atomic(token_path(), token.strip())
+    atomic_write(token_path(), token.strip())
     return ent
 
 
@@ -132,7 +120,7 @@ def record_usage(
     data = {k: v for k, v in sorted(data.items())[-11:] if k != key}
     data[key] = row
     try:
-        _write_atomic(usage_path(), json.dumps(data, indent=2, sort_keys=True))
+        atomic_write(usage_path(), json.dumps(data, indent=2, sort_keys=True))
     except OSError:
         pass  # counting is best effort; it never fails a finished run
     return row

@@ -16,7 +16,7 @@ import { RunsLocallyChip } from "@/components/LocalBoundary";
 import { apiClient } from "@/api";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useToast } from "@/hooks/useToast";
-import { STOP_CONDITION_LABEL, STRATEGIES, TARGET_TYPE_DESCRIPTION, TARGET_TYPE_LABEL } from "@/lib/constants";
+import { STOP_CONDITION_LABEL, STRATEGIES, TARGET_TYPE_DESCRIPTION, TARGET_TYPE_LABEL, TARGET_TYPES } from "@/lib/constants";
 import type { Campaign, Project, Target, TargetType } from "@/types";
 
 function errorText(err: unknown): string {
@@ -234,11 +234,9 @@ export function ProjectDialog({
 
 // --- target ----------------------------------------------------------------------------
 
-const TARGET_TYPES: TargetType[] = ["chat", "agent", "rag", "mcp"];
-
 const targetSchema = z.object({
   name: z.string().trim().min(2, "Use at least 2 characters.").max(80),
-  type: z.enum(["chat", "agent", "rag", "mcp"]),
+  type: z.enum(TARGET_TYPES),
   provider: z.string().trim().min(1, "Name the provider, e.g. OpenAI or Local (Ollama)."),
   endpoint: z
     .string()

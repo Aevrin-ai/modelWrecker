@@ -24,7 +24,7 @@ export function base32Encode(bytes: Uint8Array): string {
   return out;
 }
 
-export function base32Decode(text: string): Uint8Array {
+function base32Decode(text: string): Uint8Array {
   const clean = text.toUpperCase().replace(/[\s=-]/g, "");
   let bits = 0;
   let value = 0;
@@ -61,7 +61,7 @@ async function hotp(secret: Uint8Array, counter: number): Promise<string> {
   return String(bin % 10 ** DIGITS).padStart(DIGITS, "0");
 }
 
-export const stepAt = (nowMs: number) => Math.floor(nowMs / 1000 / STEP_S);
+const stepAt = (nowMs: number) => Math.floor(nowMs / 1000 / STEP_S);
 
 /** The code for a given time. Used by tests and by nothing else. */
 export async function totpAt(secretB32: string, nowMs: number): Promise<string> {

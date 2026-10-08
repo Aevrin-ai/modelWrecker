@@ -25,21 +25,6 @@ from .policy import METADATA_ONLY, SyncPolicy
 
 SCHEMA_VERSION = 1
 
-# The exact key sets from the contract. Tests compare against these.
-BODY_KEYS = ("schema", "engine_version", "run")
-RUN_KEYS = (
-    "run_id", "campaign", "target", "started_at", "completed_at", "attempts", "successes",
-    "partials", "refusals", "errors", "asr", "asr_ci_low", "asr_ci_high", "by_strategy", "findings",
-)
-CAMPAIGN_KEYS = ("external_id", "name")
-TARGET_KEYS = ("name", "type", "model", "provider")
-STRATEGY_KEYS = ("strategy", "attempts", "successes", "partials")
-FINDING_KEYS = (
-    "id", "title", "severity", "score", "strategy", "taxonomy", "replays", "successes",
-    "success_rate", "ci_low", "ci_high", "confidence", "discovered_at",
-)
-TAXONOMY_KEYS = ("framework", "id")
-
 _MAX_TEXT = 300  # cap user-authored labels (titles, names) so one long string cannot bloat the body
 
 # Detail limits. They match src/api/src/schemas.ts; the totals keep a body under the 4 MB sync cap

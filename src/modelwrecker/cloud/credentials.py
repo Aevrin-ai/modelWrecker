@@ -17,12 +17,11 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..security.redaction import redact_text
+from ..storage.files import atomic_write, chmod_quiet
 
 ENV_TOKEN = "MODELWRECKER_DEVICE_TOKEN"
 FILE_NAME = "device.json"
@@ -130,22 +129,10 @@ def save_credential(cred: DeviceCredential, path: Path | None = None) -> Path:
     """Write the credential atomically with owner-only permissions. Returns the path."""
     p = path or credential_path()
     p.parent.mkdir(parents=True, exist_ok=True)
-    _chmod(p.parent, 0o700)
+    chmod_quiet(p.parent, 0o700)
     if not cred.created_at:
         cred.created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    text = json.dumps(cred.to_file_dict(), indent=2)
-    # mkstemp creates the file with 0600 already, so the token is never world-readable, not even
-    # for a moment before the chmod.
-    fd, tmp = tempfile.mkstemp(dir=str(p.parent), prefix=".device-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(text)
-        _chmod(Path(tmp), 0o600)
-        os.replace(tmp, p)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    _chmod(p, 0o600)
+    atomic_write(p, json.dumps(cred.to_file_dict(), indent=2), prefix=".device-")
     return p
 
 
@@ -159,13 +146,3 @@ def delete_credential(path: Path | None = None) -> bool:
     return True
 
 
-def safe(text: str) -> str:
-    """Scrub any device token that might appear in a message before it is shown."""
-    return redact_text(text)
-
-
-def _chmod(path: Path, mode: int) -> None:
-    try:
-        os.chmod(path, mode)
-    except OSError:
-        pass  # best effort (Windows ignores most mode bits)

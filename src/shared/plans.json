@@ -1,8 +1,7 @@
 {
-  "$comment": "The one source of plan tiers, limits, and prices. Read by the API (src/api/src/plans.ts), the dashboard, and the landing page. Prices are in paise (1 INR = 100 paise) and include 18% GST. Every paid price must keep a 30-40% margin under the cost model in src/api/src/pricing.ts (a test enforces it). See docs/billing/pricing.md.",
+  "$comment": "The one source of plan tiers, limits, and prices. Read through src/shared/plans.ts by the API (src/api/src/plans.ts), the dashboard, and the landing page. Prices are in paise (1 INR = 100 paise) and include 18% GST. Every paid price must keep a 30-40% margin under the cost model in src/api/src/pricing.ts (a test enforces it). See docs/billing/pricing.md.",
   "currency": "INR",
   "taxNote": "Prices include 18% GST.",
-  "meterPeriod": "calendar month (UTC)",
   "plans": [
     {
       "id": "free",

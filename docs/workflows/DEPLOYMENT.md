@@ -6,9 +6,10 @@
 
 - Python 3.12+. Use a project `.venv` via **uv** (never the global interpreter):
   `uv venv` then `uv pip install -e ".[dev,mcp,attacks]"`. Extras: `mcp` (harness server),
-  `attacks` (PyRIT PAIR/TAP + converters), `providers` (any-llm + direct SDKs).
-- `pip install modelwrecker` once published.
-- A container image for CI/headless use.
+  `attacks` (PyRIT PAIR/TAP + converters), `scan` (garak), `judges`, and `providers` (reserved for
+  any-llm and direct SDK adapters, which are not built yet).
+- From PyPI: `pip install modelwrecker` (add extras as `pip install "modelwrecker[mcp,attacks]"`).
+- A Docker image you build locally (see Docker below).
 
 ## Run modes
 
@@ -21,8 +22,9 @@ flowchart TD
 ```
 
 - **Local**: CLI against local or cloud models. No network listener.
-- **CI**: headless container, `--ci --fail-on-finding`, SARIF upload. No secrets in the image; keys via
-  CI secret store.
+- **CI**: a headless container or a pip install running `modelwrecker run`. Keys come from the CI
+  secret store, never the image. Planned, not built yet: `--ci`, `--fail-on-finding`, and SARIF output
+  for code-scanning upload (see [`../reference/CLI.md`](../reference/CLI.md)).
 - **As an Aevrin backend**: the engine is a library the Aevrin CLI/dashboard/MCP call. Any hosted surface
   is a *separate, authenticated* layer (see [`../security/SECURITY.md`](../security/SECURITY.md) and
   [`../decisions/ADR-0012-engine-library-first.md`](../decisions/ADR-0012-engine-library-first.md)).
@@ -52,13 +54,15 @@ Why each flag is there: [`../security/docker.md`](../security/docker.md). Verifi
 - No custom checksum/corpus-integrity subsystem - normal lockfiles only
   ([`../decisions/ADR-0010-no-mandatory-checksum-gate.md`](../decisions/ADR-0010-no-mandatory-checksum-gate.md)).
 
-## Hosted platform (Phase 10, planned)
+## Hosted platform (Phase 10, live)
 
-The optional hosted surface adds a managed Postgres database with row-level security, a Google OAuth
-identity, and a Cloudflare-hosted web app and landing page, all behind the authenticated REST API. It stays
-optional: the free CLI + local-model path remains a complete deployment. All platform credentials are
-supplied out of band through local untracked files and the deploy secret store - never committed to this
-repo, baked into an image, logged, or printed. See `../../ROADMAP.md` (Phase 10).
+The optional hosted surface at https://app.aevrin.net is a managed Postgres database with row-level
+security, Google sign-in, a Cloudflare-hosted dashboard and landing page, and the authenticated
+control-plane API. It stays optional: the free CLI + local-model path remains a complete deployment. All
+platform credentials are supplied out of band through the deploy secret store - never committed to this
+repo, baked into an image, logged, or printed. How it is deployed:
+[`../deployment/cloudflare.md`](../deployment/cloudflare.md) and [`../../deploy/README.md`](../../deploy/README.md).
+Status: [`../../ROADMAP.md`](../../ROADMAP.md).
 
 ## Data handling
 

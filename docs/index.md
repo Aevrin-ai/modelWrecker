@@ -31,7 +31,10 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | Local-first product: local vs cloud | [`architecture/local-cloud.md`](architecture/local-cloud.md), [`architecture/cloud-control-plane.md`](architecture/cloud-control-plane.md), [`architecture/data-flow.md`](architecture/data-flow.md) |
 | Running the engine in Docker | [`architecture/docker.md`](architecture/docker.md), [`deployment/docker.md`](deployment/docker.md), [`security/docker.md`](security/docker.md) |
 | The control-plane API (routes, device sign-in, sync) | [`architecture/control-plane-api.md`](architecture/control-plane-api.md) |
-| Hosting the cloud control plane | [`deployment/cloudflare.md`](deployment/cloudflare.md) |
+| Hosting the cloud control plane | [`deployment/cloudflare.md`](deployment/cloudflare.md), [`../deploy/README.md`](../deploy/README.md) (setup runbook) |
+| Installing, CI, and run modes | [`workflows/DEPLOYMENT.md`](workflows/DEPLOYMENT.md) |
+| Writing and running tests | [`workflows/TESTING.md`](workflows/TESTING.md), [`testing/test-matrix.md`](testing/test-matrix.md) |
+| Logs, events, and metrics | [`workflows/OBSERVABILITY.md`](workflows/OBSERVABILITY.md) |
 | Sign-in, devices, entitlements | [`security/authentication.md`](security/authentication.md), [`security/entitlements.md`](security/entitlements.md) |
 | The staff admin console | [`security/admin.md`](security/admin.md), [`analytics/page-analytics.md`](analytics/page-analytics.md) |
 | Driving modelWrecker over MCP | [`mcp/overview.md`](mcp/overview.md), [`mcp/tools.md`](mcp/tools.md), [`security/mcp.md`](security/mcp.md) |
@@ -55,8 +58,13 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 - [`DOCUMENTATION.md`](DOCUMENTATION.md) - the change→doc table. Check it before finishing a task.
 - [`DEPENDENCIES.md`](DEPENDENCIES.md) - every external dependency and why we keep it.
 - [`features/`](features/README.md) - cross-cutting user-facing features.
-- [`decisions/`](decisions/) - the ADRs (architecture decision records).
-- [`../ROADMAP.md`](../ROADMAP.md) · [`../CHANGELOG.md`](../CHANGELOG.md) · [`../DECISIONS.md`](../DECISIONS.md)
+- [`../DECISIONS.md`](../DECISIONS.md) - the index of ADRs (architecture decision records), each linked
+  to its file in `decisions/`.
+- [`../examples/`](../examples/basic.yaml) - runnable example configs (`basic`, `openrouter`,
+  `system-prompt`, `local-model`); see [`getting-started/yaml.md`](getting-started/yaml.md#ready-made-examples).
+- [`../reports/`](../reports/final-test-report.md) - dated Phase 4 test snapshots, superseded by
+  [`testing/test-matrix.md`](testing/test-matrix.md).
+- [`../ROADMAP.md`](../ROADMAP.md) · [`../CHANGELOG.md`](../CHANGELOG.md)
 
 ## Research (Phase 0 background)
 

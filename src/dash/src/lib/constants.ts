@@ -29,7 +29,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export interface NavItem {
+interface NavItem {
   label: string;
   to: string;
   icon: LucideIcon;
@@ -99,6 +99,9 @@ export const OUTCOME_LABEL: Record<Outcome, string> = {
   error: "Error",
 };
 
+/** Every target type, in display order (chat / agent / rag / mcp are the real engine types). */
+export const TARGET_TYPES = ["chat", "agent", "rag", "mcp"] as const satisfies readonly TargetType[];
+
 /** Target-type display names (chat / agent / rag / mcp are the real engine types). */
 export const TARGET_TYPE_LABEL: Record<TargetType, string> = {
   chat: "Chat",
@@ -143,6 +146,3 @@ export const STOP_CONDITION_LABEL: Record<"complete" | "first_finding" | "budget
   first_finding: "Stop on first finding",
   budget: "Stop when budget is spent",
 };
-
-/** Report formats the engine's `analyze` command writes. */
-export const REPORT_FORMATS = ["html", "json", "csv"] as const;

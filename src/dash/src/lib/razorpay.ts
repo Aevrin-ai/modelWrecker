@@ -57,7 +57,7 @@ function loadScript(): Promise<void> {
   return loading;
 }
 
-export type CheckoutOutcome =
+type CheckoutOutcome =
   | { kind: "success"; result: CheckoutSuccess }
   | { kind: "dismissed" }
   | { kind: "failed"; message: string };

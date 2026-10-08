@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
-import config from "../../../shared/plans.json";
+import { PLAN_CONFIGS as PLANS, TAX_NOTE, formatPaise, yearlySavingPercent, type FeatureKey, type Interval } from "../../../shared/plans";
 import { Container } from "../components/Container";
 import { SectionHeader } from "../components/SectionHeader";
 import { Reveal } from "../components/Reveal";
@@ -11,26 +11,11 @@ import { DASHBOARD_URL } from "../data/navigation";
 // Prices come from src/shared/plans.json, the same file the API charges from and the dashboard shows,
 // so the landing page can never advertise a price the checkout does not use (docs/billing/pricing.md).
 
-type Interval = "month" | "year";
-
-interface PlanConfig {
-  id: string;
-  name: string;
-  blurb: string;
-  highlighted?: boolean;
-  limits: Record<string, number | null>;
-  features: Record<string, boolean>;
-  prices: Record<Interval, number> | null;
-}
-
-const PLANS = config.plans as PlanConfig[];
-
-const rupees = (paise: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: config.currency, maximumFractionDigits: 0 }).format(paise / 100);
-
 const n = (v: number | null) => (v === null ? "Unlimited" : new Intl.NumberFormat("en-IN").format(v));
 
-const FEATURES: [string, string][] = [
+// Sales wording on purpose. The dashboard's Billing page names the same features plainly
+// (FEATURE_LABEL in src/dash/src/lib/plans.ts).
+const FEATURES: [FeatureKey, string][] = [
   ["advanced_strategies", "PyRIT and garak strategies"],
   ["mcp", "MCP targets"],
   ["evidence_storage", "Evidence and transcript sync"],
@@ -41,7 +26,7 @@ const FEATURES: [string, string][] = [
 export function Pricing() {
   const [interval, setBillingInterval] = useState<Interval>("month");
   const pro = PLANS.find((p) => p.prices);
-  const saving = pro?.prices ? Math.round((1 - pro.prices.year / (pro.prices.month * 12)) * 100) : 0;
+  const saving = yearlySavingPercent(pro?.prices ?? null);
 
   return (
     <section id="pricing" className="scroll-mt-24 py-20 md:py-28">
@@ -87,11 +72,11 @@ export function Pricing() {
                   </div>
                   <p className="mt-2 min-h-[3rem] text-sm leading-relaxed text-muted">{p.blurb}</p>
                   <p className="mt-6 text-4xl font-semibold tracking-tight">
-                    {p.id === "free" ? "₹0" : price ? rupees(price) : "Custom"}
+                    {p.id === "free" ? formatPaise(0) : price ? formatPaise(price) : "Custom"}
                     {price && <span className="text-base font-normal text-muted"> / {interval}</span>}
                   </p>
                   <p className="mt-1 h-5 text-xs text-muted">
-                    {price && interval === "year" ? `${rupees(price / 12)} a month, billed yearly` : p.prices ? config.taxNote : ""}
+                    {price && interval === "year" ? `${formatPaise(price / 12)} a month, billed yearly` : p.prices ? TAX_NOTE : ""}
                   </p>
                   <ul className="mt-6 space-y-2 text-sm">
                     <li className="flex justify-between"><span className="text-muted">Campaign runs a month</span><span>{n(p.limits.campaigns)}</span></li>

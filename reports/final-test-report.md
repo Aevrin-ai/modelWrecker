@@ -1,5 +1,7 @@
 # Final test report
 
+> Snapshot from 2026-10-01, Phase 4. Superseded by [`docs/testing/test-matrix.md`](../docs/testing/test-matrix.md).
+
 Date: 2026-10-01. Phase: 4 (minimum engine). Legend: PASS / FAIL / BLOCKED / NOT TESTED.
 
 ## Executive summary

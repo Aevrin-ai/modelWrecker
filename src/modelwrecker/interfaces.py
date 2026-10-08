@@ -2,7 +2,7 @@
 
 These Protocols mirror docs/interfaces/. Implementing one of these (plus declaring name/version) is
 all a plugin needs; the core never imports a concrete adapter. Everything is async because the
-engine is I/O-bound. Concrete adapters are added in later Phase 4 steps.
+engine is I/O-bound.
 """
 
 from __future__ import annotations

@@ -11,11 +11,12 @@ export class ApiError extends Error {
   }
 }
 
-const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+/** Unpadded base64url. Builds the string byte by byte, so large inputs do not overflow the call stack. */
+export const b64url = (bytes: Uint8Array) => {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
 
 /** A random URL-safe token with `bytes` bytes of entropy. */
 export function randomToken(bytes = 32): string {

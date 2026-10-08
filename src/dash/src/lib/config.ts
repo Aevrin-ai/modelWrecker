@@ -14,8 +14,10 @@ const env = import.meta.env;
 
 export type ApiMode = "mock" | "http";
 
-export const API_MODE: ApiMode = env.VITE_API_MODE === "http" ? "http" : "mock";
-export const IS_HTTP_MODE = API_MODE === "http";
+// Read import.meta.env.VITE_API_MODE directly (not through `env`) so Vite inlines the build-time value
+// and the bundler drops the mock clients and src/data/mock from an http-mode build.
+export const IS_HTTP_MODE = import.meta.env.VITE_API_MODE === "http";
+export const API_MODE: ApiMode = IS_HTTP_MODE ? "http" : "mock";
 
 /** Control-plane base URL, without a trailing slash. Same origin by default. */
 export const API_BASE = (env.VITE_API_BASE || "/api/v1").replace(/\/+$/, "");

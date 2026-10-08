@@ -13,7 +13,6 @@ reads today, with placeholders; Docker loads them from `.env` (see
 | `OPENAI_API_KEY` | OpenAI (and OpenAI-compatible) auth | - |
 | `ANTHROPIC_API_KEY` | Anthropic auth (the direct adapter is not built yet) | - |
 | `MODELWRECKER_CONFIG` | config path for `load_config()` when no path is passed. The CLI always passes one, so CLI commands ignore it | `modelwrecker.yaml` |
-| `MW_MCP_TOKEN` | shared token the harness MCP server requires on a networked transport | - |
 | `MODELWRECKER_CLOUD_URL` | base URL of the cloud API for `login` and `sync`. Must be https; plain http is allowed only for `localhost` or `127.0.0.1` (local Worker development) | `https://app.aevrin.net/api/v1` |
 | `MODELWRECKER_ENTITLEMENT` | a signed entitlement (from `GET /api/v1/device/entitlement`) for CI machines that never run `login`. Takes precedence over the stored `entitlement.jws`. Signed, so it grants nothing if edited | - |
 | `MODELWRECKER_DEVICE_TOKEN` | device token (`mwd_...`) for `sync` and auto-sync after `run`, for CI where `login` cannot open a browser. Takes precedence over the saved credential file. Secret: never logged | - |
@@ -32,6 +31,7 @@ These are reserved names. Setting them today has no effect.
 | `MODELWRECKER_ALLOW_HOST_TOOLS` | emergency global off-switch mirror of the config flag; `true` only with intent | `false` |
 | `MODELWRECKER_EGRESS_ALLOW_PRIVATE` | allow private IPs (dangerous; off) | `false` |
 | `MODELWRECKER_API_TOKEN` | required auth token if the optional API is ever run | - |
+| `MW_MCP_TOKEN` | shared token for a future networked MCP transport (#14). The MCP server today runs only over local stdio, where no token is checked; an `authorize()` hook exists in `mcp/service.py` but no transport calls it yet | - |
 
 The device credential file location follows `XDG_CONFIG_HOME` (Linux and macOS) or `APPDATA`
 (Windows); see [`CLI.md`](CLI.md#dashboard-sign-in-and-sync-phase-104-108-109).

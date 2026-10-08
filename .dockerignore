@@ -22,7 +22,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-dist/
+**/dist/
 build/
 *.egg-info/
 docs/
@@ -32,6 +32,8 @@ examples/
 deploy/
 src/web/
 src/dash/
+src/api/
+src/shared/
 **/node_modules/
 docker-compose.yml
 Dockerfile

@@ -7,14 +7,15 @@
 // Format: base64url(header) "." base64url(payload) "." base64url(signature over the first two parts),
 // header {"alg":"EdDSA","typ":"mw-entitlement","kid":<key id>}.
 import type { Db, Row } from "./db";
+import { b64url } from "./lib";
 import { effectivePlan, type Features, type Limits, type PlanId } from "./plans";
 import { usageFor } from "./usage";
 
-export const ENTITLEMENT_TTL_S = 7 * 24 * 60 * 60;
+const ENTITLEMENT_TTL_S = 7 * 24 * 60 * 60;
 /** The shortest life a token gets, so a plan that ends very soon still yields a usable token. */
 const MIN_TTL_S = 60 * 60;
 
-export interface EntitlementPayload {
+interface EntitlementPayload {
   v: 1;
   iss: string;
   sub: string;
@@ -36,12 +37,6 @@ export interface EntitlementSigner {
   sign(data: Uint8Array): Promise<Uint8Array>;
 }
 
-const b64url = (bytes: Uint8Array) => {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-};
-
 const fromB64 = (s: string) => {
   const norm = s.replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, "");
   const bin = atob(norm + "=".repeat((4 - (norm.length % 4)) % 4));
@@ -60,7 +55,7 @@ export async function createSigner(keyId: string, privateKeyPkcs8B64: string, pu
   };
 }
 
-export async function signToken(signer: EntitlementSigner, payload: EntitlementPayload): Promise<string> {
+async function signToken(signer: EntitlementSigner, payload: EntitlementPayload): Promise<string> {
   const enc = new TextEncoder();
   const head = b64url(enc.encode(JSON.stringify({ alg: "EdDSA", typ: "mw-entitlement", kid: signer.keyId })));
   const body = b64url(enc.encode(JSON.stringify(payload)));

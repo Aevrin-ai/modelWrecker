@@ -11,7 +11,7 @@ import re
 
 from ..data import Objective, Observation, SignalResult
 from ..providers.base import BaseProvider, ProviderError
-from ..security.redaction import _PATTERNS as _SECRET_PATTERNS
+from ..security.redaction import SECRET_PATTERNS
 
 # --- deterministic signals ------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ class SecretDetectorSignal:
 
     async def evaluate(self, obs: Observation, objective: Objective, payload: str) -> SignalResult:
         text = f"{obs.response}\n{obs.reasoning}"
-        hits = [p.pattern for p in _SECRET_PATTERNS if p.search(text)]
+        hits = [p.pattern for p in SECRET_PATTERNS if p.search(text)]
         return SignalResult(
             signal=self.name,
             hit=bool(hits),

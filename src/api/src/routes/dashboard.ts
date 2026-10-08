@@ -17,11 +17,11 @@ import {
   SettingsPatch,
   TargetCreate,
 } from "../schemas";
+import { str } from "./shared";
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const str = (v: unknown) => (v == null ? "" : String(v));
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0) || 0);
 const iso = (v: unknown) => (v == null ? null : String(v));
 const day = (v: unknown) => str(v).slice(0, 10);
