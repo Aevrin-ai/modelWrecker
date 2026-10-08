@@ -252,8 +252,8 @@ export const footer = {
     {
       title: "Resources",
       links: [
-        { label: "Documentation", href: "https://github.com/spacesdrive/modelWrecker/tree/main/docs", external: true },
-        { label: "GitHub", href: "https://github.com/spacesdrive/modelWrecker", external: true },
+        { label: "Documentation", href: "https://github.com/Aevrin-ai/modelWrecker/tree/main/docs", external: true },
+        { label: "GitHub", href: "https://github.com/Aevrin-ai/modelWrecker", external: true },
         { label: "FAQ", href: "#faq" },
         { label: "aevrin.net", href: "https://aevrin.net", external: true },
       ],

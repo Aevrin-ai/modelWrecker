@@ -76,10 +76,7 @@
 
     /* Chart series: primary ink first, then Catmint's grey ramp (darkest to lightest). */
     --chart-1: 240 5.9% 10%;
-    --chart-2: 240 2% 26%;
-    --chart-3: 240 1% 42%;
     --chart-4: 240 1% 58%;
-    --chart-5: 240 1% 74%;
   }
 
   .dark {
@@ -131,10 +128,7 @@
     --sev-info: 240 5% 64.9%;
 
     --chart-1: 0 0% 98%;
-    --chart-2: 240 1% 74%;
-    --chart-3: 240 1% 58%;
     --chart-4: 240 1% 42%;
-    --chart-5: 240 2% 26%;
   }
 }
 

@@ -1,8 +1,8 @@
 # Interfaces (contracts)
 
-These are the contracts between the core engine and everything that plugs into it. **Documentation only
-- no implementation yet.** When code is written, these become the Python Protocols/ABCs in
-`src/modelwrecker/`, and any change here must update the matching code and
+These are the contracts between the core engine and everything that plugs into it. The code lives in
+[`src/modelwrecker/interfaces.py`](../../src/modelwrecker/interfaces.py) as Python Protocols, plus the
+`Capability` enum. Any change here must update that file and
 [`../DOCUMENTATION.md`](../DOCUMENTATION.md).
 
 The signatures are shown in Python-like pseudocode for clarity. Real types are Pydantic models from

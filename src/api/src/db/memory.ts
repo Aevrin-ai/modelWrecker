@@ -102,7 +102,7 @@ const UNIQUES: Record<string, string[][]> = {
 };
 
 /** A JavaScript stand-in for one Postgres function, for offline tests. */
-export type MemoryFn = (db: MemoryDb, args: Record<string, unknown>) => unknown;
+type MemoryFn = (db: MemoryDb, args: Record<string, unknown>) => unknown;
 
 const addMonthsIso = (iso: string, months: number) => {
   const d = new Date(iso);

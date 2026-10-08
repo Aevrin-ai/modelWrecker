@@ -50,7 +50,7 @@ in the control for each from day one rather than retrofitting it. The full mappi
 |-----------------------------------------|---------------------------------|
 | Unauthenticated local service → browser-CSRF remote code execution | Library + CLI first; any API needs auth + anti-CSRF by default; CORS is never treated as access control. |
 | Host tools (shell, file write, arbitrary HTTP) reachable with no auth | Host-affecting tools off by default; never in a network-reachable toolset without explicit opt-in. |
-| SSRF + credential exfiltration via outbound requests | One central egress guard blocks loopback/link-local/RFC1918/metadata and re-checks on redirect. |
+| SSRF + credential exfiltration via outbound requests | One central egress guard blocks loopback/link-local/RFC1918/metadata and refuses redirects. |
 | Arbitrary file read (no path confinement) | All reads confined to a working directory; symlink escapes rejected. |
 | Secrets and auth headers written to logs in the clear | Redact keys/headers/passwords/PII before any write; artifacts `0600`/`0700`. |
 | Pooled HTTP clients leaked across many call sites | Provider lifecycle owned centrally, closed once per boundary. |

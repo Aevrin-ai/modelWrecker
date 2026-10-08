@@ -255,7 +255,7 @@ export function createApp(deps: Deps) {
 }
 
 /** User authentication: verify the Supabase token, then query as that user so RLS applies. */
-export function userAuth(deps: Deps) {
+function userAuth(deps: Deps) {
   return async (c: Context<AppEnv>, next: () => Promise<void>) => {
     const token = bearer(c.req.header("authorization"));
     if (!token || token.startsWith(DEVICE_TOKEN_PREFIX)) {

@@ -100,6 +100,3 @@ def validate_ref(ref: TaxonomyRef) -> TaxonomyRef:
         )
     return ref.model_copy(update={"title": table[ref.id]})
 
-
-def validate_all(refs: list[TaxonomyRef]) -> list[TaxonomyRef]:
-    return [validate_ref(r) for r in refs]

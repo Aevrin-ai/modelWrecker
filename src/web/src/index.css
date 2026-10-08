@@ -80,10 +80,6 @@
 }
 
 @layer utilities {
-  .font-display {
-    font-family: var(--font-serif);
-    font-optical-sizing: auto;
-  }
   /* H1 / H2 treatment measured on the reference */
   .h-hero {
     font-family: var(--font-serif);
@@ -114,9 +110,6 @@
   }
   .mask-fade-x {
     mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
-  }
-  .mask-fade-b {
-    mask-image: linear-gradient(to bottom, #000 60%, transparent);
   }
 
   /* Rotating blue-to-emerald glow under the hero badge (Folio badge) */

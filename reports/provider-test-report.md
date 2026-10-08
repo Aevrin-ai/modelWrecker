@@ -1,5 +1,7 @@
 # Provider test report
 
+> Snapshot from 2026-10-01, Phase 4. Superseded by [`docs/testing/test-matrix.md`](../docs/testing/test-matrix.md).
+
 Date: 2026-10-01. Engineering compatibility report (not a model or provider ranking). No API key is
 included anywhere in this report. Legend: PASS / NOT TESTED.
 

@@ -22,14 +22,13 @@ import {
 } from "../razorpay";
 import { CheckoutReq, VerifyPaymentReq } from "../schemas";
 import { usageFor } from "../usage";
+import { str } from "./shared";
 
 /** Razorpay's smallest order is one rupee. */
 const MIN_ORDER_PAISE = 100;
 const RECONCILE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const RENEWAL_NOTICE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_WEBHOOK_BYTES = 512 * 1024;
-
-const str = (v: unknown) => (v == null ? "" : String(v));
 
 function requireBilling(deps: Deps): BillingConfig {
   if (!deps.billing) throw new ApiError(503, "billing_unavailable", "Payments are not available right now. Try again later.");
@@ -44,13 +43,13 @@ function gatewayError(err: unknown): never {
   throw err;
 }
 
-export type ConfirmResult = "paid" | "pending" | "failed" | "mismatch";
+type ConfirmResult = "paid" | "pending" | "failed" | "mismatch";
 
 /**
  * Apply what Razorpay says about one payment to our order row. Called from verify, the webhook, and
  * reconciliation. Safe to call any number of times for the same payment.
  */
-export async function confirmPayment(deps: Deps, billing: BillingConfig, order: Row, payment: RzpPayment): Promise<ConfirmResult> {
+async function confirmPayment(deps: Deps, billing: BillingConfig, order: Row, payment: RzpPayment): Promise<ConfirmResult> {
   const db = deps.serviceDb;
   if (payment.order_id !== order.razorpay_order_id || payment.amount !== Number(order.amount_paise) || payment.currency !== order.currency) {
     console.error("payment does not match its order", str(order.id));
@@ -126,7 +125,7 @@ export async function refundOrder(deps: Deps, order: Row, notes: Record<string, 
 }
 
 /** The Billing page's view of one account. */
-export async function subscriptionView(deps: Deps, db: Db, owner: string) {
+async function subscriptionView(deps: Deps, db: Db, owner: string) {
   const now = deps.now();
   const [sub] = await deps.serviceDb.table("subscriptions").select({ eq: { owner_id: owner } });
   const eff = effectivePlan(sub, now);

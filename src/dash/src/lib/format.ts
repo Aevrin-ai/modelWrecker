@@ -76,8 +76,8 @@ export function formatDuration(seconds: number | null | undefined): string {
   return rm ? `${h}h ${rm}m` : `${h}h`;
 }
 
-/** Format a currency amount from minor-unit-free config values. No hard-coded symbols in UI. */
-export function formatCurrency(amount: number, currency = "USD"): string {
+/** Format an amount in whole currency units (rupees, not paise). INR, the billing currency, by default. */
+export function formatCurrency(amount: number, currency = "INR"): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,

@@ -48,6 +48,7 @@ from inflating the finding count. See [`../attack-engine/RELIABILITY.md`](../att
 
 ## Reports
 
-Renderers are plugins ([`PLUGIN-SYSTEM.md`](PLUGIN-SYSTEM.md)): Markdown and HTML (Jinja2) for humans,
-JSON for machines, SARIF for CI/code-scanning. All render from the same findings + evidence, so they
-never disagree. CLI: `modelwrecker report`. See [`../reference/CLI.md`](../reference/CLI.md).
+Built today: the run report renders as Markdown (for humans) or JSON (for machines), and `analyze`
+writes a self-contained HTML report plus JSON and CSV, built with the standard library. SARIF for
+CI/code-scanning and an HTML run report are planned. All render from the same findings + evidence, so
+they never disagree. CLI: `modelwrecker report`. See [`../reference/CLI.md`](../reference/CLI.md).

@@ -16,11 +16,13 @@ never runs attacks, never calls a model, and never accepts raw prompts or model 
 
 ## Who can call what
 
-There are three kinds of caller. Each route accepts exactly one.
+There are three kinds of caller. Each route accepts exactly one, with one exception: `POST /billing/webhook`
+takes no bearer token at all. Razorpay calls it, and the API checks Razorpay's HMAC signature of the raw
+body instead (see [Billing](#billing-issue-12)).
 
 | Caller | Credential | Used by |
 |--------|------------|---------|
-| Public | none | health check, start of device sign-in |
+| Public | none | health check, start of device sign-in, plans, entitlement public keys, page-view beacon |
 | User | `Authorization: Bearer <Supabase access token>` | the dashboard |
 | Device | `Authorization: Bearer mwd_<token>` | the local engine |
 
@@ -47,6 +49,13 @@ Rules that hold on every route:
 - Every body is validated with a schema and capped at 256 KB. Unknown fields are rejected.
 - Errors are `{"error": "<code>", "message": "<safe text>"}`. Never a stack trace.
 
+## Health check
+
+### `GET /health` (public)
+
+Response `200`: `{ "ok": true }`. A liveness check only: it reads no database and says nothing about
+configuration.
+
 ## Device sign-in (OAuth 2.0 device authorization grant)
 
 This is the flow from RFC 8628. A command-line tool shows a short code and the user approves it in a
@@ -71,7 +80,7 @@ sequenceDiagram
 Request:
 
 ```json
-{ "name": "Ujjwal's laptop", "os": "Windows 11", "engine_version": "0.0.1" }
+{ "name": "Dev laptop", "os": "Windows 11", "engine_version": "0.0.2" }
 ```
 
 Response `200`:
@@ -113,7 +122,7 @@ SHA-256 hash. A second poll for the same code gets `expired_token`.
 
 ### `POST /device/heartbeat` (device)
 
-Request: `{ "engine_version": "0.0.1" }`. Updates `last_seen_at`. Response:
+Request: `{ "engine_version": "0.0.2" }`. Updates `last_seen_at`. Response:
 
 ```json
 {
@@ -127,11 +136,27 @@ Request: `{ "engine_version": "0.0.1" }`. Updates `last_seen_at`. Response:
 
 `sync` is the account's choice in Settings (What syncs to Aevrin). Evidence and transcripts are a Pro
 feature, so on Free both are `false` whatever the settings say. The engine reads `sync` before every sync
-and adds detail only when it is on. `GET /device/me` returns the same `sync` object.
+and adds detail only when it is on.
 
 `entitlement` is a signed statement of what the plan allows (issue #11). The engine verifies and stores
 it; see [`../security/entitlements.md`](../security/entitlements.md). It is absent when signing is not
 configured, and the engine then runs the free baseline.
+
+### `GET /device/me` (device)
+
+Who the calling device token belongs to:
+
+```json
+{
+  "device_id": "<uuid>",
+  "project_id": "<uuid or null>",
+  "name": "Dev laptop",
+  "sync": { "metadata": true, "evidence": false, "transcripts": false }
+}
+```
+
+`sync` is the same object the heartbeat returns. The engine does not call this route today (it reads
+`sync` from the heartbeat); it is a simple way to check which device a token belongs to.
 
 ### `GET /device/entitlement` (device)
 
@@ -173,7 +198,7 @@ The engine sends one finished run at a time. Sending the same run again is safe:
 ```json
 {
   "schema": 1,
-  "engine_version": "0.0.1",
+  "engine_version": "0.0.2",
   "run": {
     "run_id": "20261002-020850-e4a5e2ae",
     "campaign": { "external_id": "local-smoke-test", "name": "local-smoke-test" },

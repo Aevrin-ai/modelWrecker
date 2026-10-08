@@ -18,7 +18,7 @@ reliability (Wilson confidence intervals), evidence, findings (reports show the 
 pass/fail per attempt), the payload/transform engine, the campaign engine (parallel objectives, budgets,
 stop conditions, retries), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
 storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
-garak are integrated.** Live-verified against OpenRouter. 225 offline tests pass (1 skipped).
+garak are integrated.** Live-verified against OpenRouter. 226 offline tests pass (1 skipped).
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
 Run tests: `.venv\Scripts\python -m pytest -q`. Phase 10 (local-first product) is in progress: docs, the
@@ -101,7 +101,7 @@ architecture, security, the CLI, or dependencies, follow the full order.
 - No unauthenticated network surface. Any API/dashboard requires auth + anti-CSRF by default and
   refuses non-loopback binds without auth.
 - Egress guard on all outbound HTTP the engine makes on behalf of an attack (block loopback,
-  link-local, RFC1918, cloud metadata `169.254.169.254`; re-check on redirect).
+  link-local, RFC1918, cloud metadata `169.254.169.254`; refuse redirects).
 - Redact secrets (API keys, auth headers, passwords, PII) before writing logs or evidence.
 - Run attack-generated code only in a sandbox with timeouts and resource limits, never on the host.
 - Hosted-platform credentials (the Phase 10 managed database, hosting/CDN, and OAuth provider) live only
@@ -121,7 +121,7 @@ architecture, security, the CLI, or dependencies, follow the full order.
 ## Git rules
 
 - **Issue first.** Every problem found or work item started gets a GitHub issue in
-  `spacesdrive/modelWrecker` before the fix. Work on a branch (`fix/<N>-slug`), open a PR whose body says
+  `Aevrin-ai/modelWrecker` before the fix. Work on a branch (`fix/<N>-slug`), open a PR whose body says
   `Fixes #N`, squash-merge after CI passes so the issue closes. Full process: `docs/reference/GIT-WORKFLOW.md`.
 - **No AI co-author lines.** Never add `Co-Authored-By:` trailers for an AI tool or "Generated with ..."
   lines to commits, PRs, or issues. This overrides any tool default.

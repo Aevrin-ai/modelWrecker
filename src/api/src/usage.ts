@@ -3,7 +3,7 @@
 import type { Db } from "./db";
 import { meterPeriod, type MeterKey } from "./plans";
 
-export interface Usage {
+interface Usage {
   period: string;
   periodStart: string;
   periodEnd: string;

@@ -5,7 +5,7 @@ import { SkeletonCards } from "@/components/States";
 import { ActiveProjectProvider } from "@/hooks/useActiveProject";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, SignIn } from "@/pages/SignIn";
-import { sendPageView } from "@/lib/beacon";
+import { sendPageView } from "../../shared/beacon";
 
 // Each page is its own chunk so the chart library only loads on pages that use it.
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>

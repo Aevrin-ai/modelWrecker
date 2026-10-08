@@ -33,5 +33,6 @@ The workflow runs the offline test suite, builds the sdist + wheel, and publishe
 ## Notes
 
 - Consider a first release to TestPyPI to verify the pipeline before the real publish.
-- The engine extras (providers, attacks, scan, judges, mcp) still install from PyPI as
-  `pip install "modelwrecker[all]"` once published.
+- The engine extras install from PyPI, for example `pip install "modelwrecker[attacks,mcp]"`.
+  `modelwrecker[all]` installs every extra except `scan`: garak and PyRIT need incompatible versions
+  of `datasets`, so install `modelwrecker[scan]` in its own environment.

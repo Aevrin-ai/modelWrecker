@@ -157,8 +157,11 @@ export interface Traffic {
   devices: { device: string; views: number }[];
 }
 
-/** Thrown when the admin session is missing or over; the gate shows the code screen. */
-export class AdminSessionRequired extends Error {}
+/**
+ * Thrown when the admin session is missing or over. The gate does not catch it: it listens for the
+ * "aevrin-admin-session-ended" window event sent just before the throw and shows the code screen.
+ */
+class AdminSessionRequired extends Error {}
 
 function sessionEnded(message: string): never {
   storeSession(null);
@@ -167,14 +170,14 @@ function sessionEnded(message: string): never {
   throw new AdminSessionRequired(message);
 }
 
-export function storedSession(): string | null {
+function storedSession(): string | null {
   try {
     return sessionStorage.getItem(SESSION_KEY);
   } catch {
     return null;
   }
 }
-export function storeSession(token: string | null) {
+function storeSession(token: string | null) {
   try {
     if (token) sessionStorage.setItem(SESSION_KEY, token);
     else sessionStorage.removeItem(SESSION_KEY);
@@ -308,4 +311,6 @@ class HttpAdminClient implements AdminClient {
   traffic = (days: number, site: string) => request<Traffic>("GET", `/admin/traffic?days=${days}&site=${enc(site)}`);
 }
 
+// IS_HTTP_MODE is a build-time constant and the admin mock module has no side effects, so an http-mode
+// build drops mockAdminClient and its demo data.
 export const adminClient: AdminClient = IS_HTTP_MODE ? new HttpAdminClient() : mockAdminClient;

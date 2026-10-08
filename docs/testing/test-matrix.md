@@ -1,13 +1,17 @@
 # Test matrix
 
 Honest status of what has actually been tested. Legend: PASS (ran and verified), FAIL, BLOCKED,
-NOT TESTED. Last updated 2026-10-02.
+NOT TESTED. Last updated 2026-10-08.
 
 Run the automated suite in the project venv: `.venv\Scripts\python -m pytest -q` (offline, no API key;
-create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That gives **85 passing + 1
-skipped** (the live garak test skips without the `scan` extra). With the `scan` extra also installed
-(`uv pip install "garak>=0.17"`), the garak test runs too: **86 passing**. Without the `attacks` extra the
-PyRIT tests skip.
+create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That gives **226 passing + 1
+skipped** (the symlink case in `tests/test_mcp.py`, skipped on Windows without symlink rights). The garak
+tests skip without the `scan` extra and the PyRIT tests skip without the `attacks` extra. Lint:
+`.venv\Scripts\python -m ruff check src tests` is clean and CI runs it. The control-plane API has **63
+tests** (vitest): `npm test` in `src/api`.
+
+Rows are grouped by area and were added as each phase landed. Older dated snapshots from Phase 4 live in
+[`../../reports/`](../../reports/final-test-report.md); this page supersedes them.
 
 | Component | Test | Status | Evidence |
 |-----------|------|--------|----------|
@@ -60,25 +64,26 @@ PyRIT tests skip.
 | Evidence | captured + stored, atomic write | PASS | stub_run (`evidence-*.json`) |
 | Storage | JSONL events + SQLite index | PASS | stub_run (`events.jsonl`, `index.sqlite`) |
 | CLI | version / strategies / init / validate / check | PASS | manual run |
+| CLI | `replay` re-runs a finding against its target | NOT TESTED | not built: `replay` prints the recorded payload only (#52) |
 | CLI | error handling (missing file, unauthorized, bad protocol) | PASS | manual run, exit code 2 |
 | CLI | `provider test` (live OpenRouter) | PASS | returned "Pong", ~0.9 s, tokens reported |
 | CLI | `run` against a live model (installed binary) | PASS | ran prompt_extraction vs gpt-4o-mini, report rendered |
 | End-to-end | config -> finding -> evidence -> report | PASS | stub_run over real HTTP (vulnerable target) |
 | End-to-end | config -> judged -> no false finding | PASS | live gpt-4o-mini resisted; judge scored 0, no finding |
 | Live provider | OpenRouter (openai/gpt-4o-mini) | PASS | connectivity + 3 live objectives + installed CLI run |
-| Live provider | Ollama (local) | NOT TESTED - not run in this environment |
+| Live provider | Ollama (local) | NOT TESTED | not run in this environment (#24) |
 | Packaging bug | source `findings/`+`evidence/` excluded by .gitignore (hatchling honors it) | FIXED | root-anchored the ignore patterns; reinstall includes them |
-| Direct provider | OpenAI / Anthropic adapters | NOT TESTED - adapters not implemented yet (anthropic raises a clear error) |
-| any-llm multiplexer | adapter | NOT TESTED - falls back to OpenAI-compatible wire today |
-| garak strategies | adapter | PASS - adapter, mapping, live probe load, and a full live attack loop all tested. See garak rows below. |
+| Direct provider | OpenAI / Anthropic adapters | NOT TESTED | adapters not built yet; `anthropic` raises a clear error (#23) |
+| any-llm multiplexer | adapter | NOT TESTED | not built; `any_llm` uses the OpenAI-compatible wire today |
+| garak strategies | adapter | PASS | adapter, mapping, live probe load, and a full live attack loop all tested; see the `garak` rows |
 | Campaign engine | run all objectives to completion | PASS | `tests/test_campaign.py`; real CLI (3 objectives, concurrency 3, 3 findings) |
 | Campaign engine | parallel execution (concurrency) | PASS | `tests/test_campaign.py`; real CLI `--concurrency 3` ran all in parallel |
 | Campaign engine | stop_on first_finding | PASS | `tests/test_campaign.py`; real CLI stopped after first, skipped the rest |
 | Campaign engine | budgets (max_objectives / max_attempts) | PASS | `tests/test_campaign.py` |
 | Campaign engine | retry + per-objective error isolation | PASS | `tests/test_campaign.py` (transient error retried; campaign survives) |
 | Campaign engine | invalid campaign config rejected | PASS | `tests/test_campaign.py`; real CLI exit 2 clean message |
-| Campaign engine | money budget / wall-clock deadline live | NOT TESTED - money pricing not implemented; deadline tested only via unit budget |
-| Harness integration | MCP server + JSON driver | PASS (built + tested); see MCP rows above |
+| Campaign engine | money budget / wall-clock deadline live | NOT TESTED | money pricing not built (#25); deadline tested only via unit budget |
+| Harness integration | MCP server + JSON driver | PASS | see the `MCP server` and `MCP guardrails` rows |
 | MCP server | builds; tools registered | PASS | `tests/test_mcp.py` |
 | MCP server | real client round-trip (list_tools + call_tool) over in-memory streams | PASS | `tests/test_mcp.py` |
 | MCP guardrails | only safe tools exposed (no shell/file/http) | PASS | round-trip asserts their absence |
@@ -122,18 +127,18 @@ PyRIT tests skip.
 | Security 10.3 | `allow_hosts` opens only the named host | PASS | `localhost` allowed, `127.0.0.1` still blocked |
 | Security 10.3 | attack loop passes the configured policy to all three providers | PASS | |
 | Security 10.3 | `validate` refuses a blocked endpoint offline (no DNS) | PASS | all four `examples/` configs still validate |
-| Security 10.3 | DNS rebinding between check and connect | NOT TESTED - known limit | address pinning is a later hardening step |
+| Security 10.3 | DNS rebinding between check and connect | NOT TESTED | known limit; address pinning is open (#16) |
 | Landing `src/web` | `npm run build` (tsc + vite) | PASS | 0 TypeScript errors, 2026-10-02 |
 | Landing `src/web` | all sections render, no console errors (1440px) | PASS | checked in Chrome against the Folio and Nguyen references |
 | Landing `src/web` | no horizontal overflow at 390px (mobile emulation) | PASS | page scroll width equals viewport |
-| Landing `src/web` | deployed to app.aevrin.net | NOT TESTED | deploy is staged; needs the maintainer's Cloudflare secrets |
+| Landing `src/web` | deployed to app.aevrin.net | PASS | see the `Live` row for landing, dashboard, and deep links |
 | Dashboard `src/dash` | `npm run build` (tsc + vite), routes code-split | PASS | 0 TypeScript errors, no chunk-size warning |
 | Dashboard `src/dash` | all 16 routes render under `/dashboard/`, incl. 3 detail pages and 404 | PASS | client-side route sweep, 0 console errors |
 | Dashboard `src/dash` | light and dark themes match the Catmint reference | PASS | visual comparison in Chrome |
 | Dashboard `src/dash` | no horizontal overflow at 390px on every route | PASS | fixed grid min-width blowout and tab bar overflow during the check |
-| Dashboard `src/dash` | real control-plane API, auth, multi-tenant isolation | NOT TESTED - not built | the dashboard runs on mock data behind `src/api`; the real API is ROADMAP 10.6/10.7 |
-| CI `deploy-web.yml` / `publish-pypi.yml` | workflow runs on GitHub | NOT TESTED | staged; needs GitHub secrets and a PyPI trusted publisher |
-| API `src/api` | typecheck and Worker bundle (Wrangler 4 dry run) | PASS | 196 KB gzipped, nothing deployed |
+| Dashboard `src/dash` | real control-plane API, auth, multi-tenant isolation | PASS | live mode against the real API and Supabase; isolation checked in the `API src/api` rows; real data checks of analytics are open (#13) |
+| CI `deploy-web.yml` / `publish-pypi.yml` | workflow runs on GitHub | PASS | see the `Live` row for CI, site deploy, API deploy, and release workflows |
+| API `src/api` | typecheck and Worker bundle (Wrangler 4 dry run) | PASS | 196 KB gzipped; the live deploy is the `API Worker` row |
 | API `src/api` | device sign-in: pending, slow_down, approve, token shown once, denial, expiry | PASS | `test/api.test.ts` (in-memory database) |
 | API `src/api` | no plaintext device token or device code stored anywhere | PASS | full database scan in the test |
 | API `src/api` | device and user credentials rejected on each other's routes | PASS | |
@@ -175,7 +180,7 @@ PyRIT tests skip.
 | API | device and project limits, Pro-only detail sync and leaderboard | PASS | `src/api/test/billing.test.ts`, `api.test.ts` |
 | API | signed entitlement on heartbeat verifies with the public key; an edited payload fails; Pro after payment expires at the paid-until date and includes a bonus; none without a signing key | PASS | `src/api/test/billing.test.ts` (#11) |
 | Engine | entitlement verification: valid, edited payload, signature, or header, expired, unknown key, wrong issuer, future-dated; the production key is 32 bytes and not the test key | PASS | `tests/test_entitlements.py` (#11) |
-| Engine | free baseline without a token or with a tampered file; MCP targets and explicit PyRIT strategies refused; auto-selected ones skipped; monthly caps from local and signed usage; attempt budget capped and the run counted; `plan` output; `run` refuses before creating a run folder; heartbeat stores only a valid token | PASS | 19 tests in `tests/test_entitlements.py` (#11) |
+| Engine | free baseline without a token or with a tampered file; MCP targets and explicit PyRIT strategies refused; auto-selected ones skipped; monthly caps from local and signed usage; attempt budget capped and the run counted; `plan` output; `run` refuses before creating a run folder; heartbeat stores only a valid token | PASS | 19 tests in `tests/test_entitlements.py` (#11); merged on `main`, not in a PyPI release yet |
 | Live | migration `0004` applied; `payments` and `credit_ledger` owner read only, `billing_events` server only; `fulfil_payment`, `refund_payment`, `adjust_credit` executable by the server key only | PASS | checked with SQL after applying, 2026-10-02 |
 | Live | `fulfil_payment` (credit applied, invoice numbered, second call a no-op, 31 days of Pro), `refund_payment` (credit returned) on the real database | PASS | inside a block that always raised, so nothing was kept; invoice counter reset afterwards |
 | Live | Razorpay live key accepted (read-only orders listing) | PASS | 2026-10-02 |
@@ -190,23 +195,19 @@ PyRIT tests skip.
 
 ## Summary
 
-The **local engine** (config, providers over the OpenAI-compatible wire, chat target, planner, ten
-strategies, multi-signal judge with calibration, reliability replay, evidence, findings with a full
-attempt transcript, the payload/transform engine, storage, the CLI, and the MCP harness server) is
-implemented and verified: 76 offline tests pass (1 skipped), a real end-to-end run works over HTTP, live
-OpenRouter works, the wheel builds and runs a full loop, the MCP server passes a real client round-trip
-with its guardrails, and **Docker builds and runs a full in-container attack loop as a non-root user**.
-**PyRIT 1.1 is integrated**: our provider is bridged into PyRIT targets and **PAIR runs offline to a
-SUCCESS outcome**, TAP executes, and PyRIT converters are available as transforms. The **campaign engine**
-(parallel objectives, budgets, stop conditions, retries, per-objective error isolation) is verified offline
-and through the real CLI. **Phase 8 analytics** (ASR with Wilson confidence intervals, by-strategy/category
-breakdowns, findings-by-severity/taxonomy, a model leaderboard, and self-contained HTML/JSON/CSV reports
-via `analyze`) is verified offline and through the real CLI over two stub runs. The **garak adapter** is
-verified live: with the `scan` extra installed, real garak probes load and a full attack loop runs
-(`garak_probe` DAN prompts -> our target -> our judge -> a critical finding -> analytics), all offline
-against a loopback stub with no API key. **Phase 9 target types** (agent, RAG, MCP) and their strategies
-(`tool_misuse`, `rag_injection`, `mcp_tool_poisoning`) plus the `tool_misuse` judge signal are implemented
-and tested offline, with the agent path also verified through the real CLI (a critical finding mapped to
-LLM03/ASI01). A **live MCP-server connection** for the MCP target (inline tools work today), direct
-OpenAI/Anthropic adapters, any-llm, Ollama, and PyPI publish are NOT TESTED and are marked accordingly -
-none are claimed as passing.
+The **local engine** is built and verified offline and live: config, the OpenAI-compatible provider, the
+chat, agent, RAG, and simulated MCP targets, the planner, the built-in, PyRIT, and garak strategies, the
+multi-signal judge with calibration, reliability replay with Wilson confidence intervals, evidence,
+findings with a full attempt transcript, the payload/transform engine, the campaign engine, analytics,
+storage, the CLI, and the MCP harness server with its guardrails. Docker builds and runs a full attack
+loop as a non-root user. Live OpenRouter runs work, and `modelwrecker` 0.0.2 installs from PyPI.
+
+The **hosted platform** is live at https://app.aevrin.net: landing page, dashboard, control-plane API,
+Supabase with RLS, device login, metadata sync, and opt-in evidence and transcript sync. Billing,
+signed entitlements, and the admin console are built and tested offline, with their migrations applied
+live.
+
+**NOT TESTED** and not claimed as passing: a live MCP-server target (#22), direct OpenAI and Anthropic
+adapters (#23), any-llm, a live Ollama run (#24), money budgets (#25), full `replay` (#52), native
+Linux/macOS Docker hosts, DNS rebinding (#16), a real purchase on the live key, and a real staff
+authenticator enrollment on `/admin`.

@@ -96,7 +96,7 @@ export const projects: Project[] = [
 export const devices: Device[] = [
   {
     id: "dev_ws1",
-    name: "Ujjwal's Workstation",
+    name: "Lab workstation",
     status: "online",
     engineVersion: ENGINE_VERSION,
     os: "Windows 11",
@@ -296,7 +296,7 @@ export const campaigns: Campaign[] = [
     targetId: "tgt_prod_chat",
     targetName: "Production Support Chat",
     deviceId: "dev_ws1",
-    deviceName: "Ujjwal's Workstation",
+    deviceName: "Lab workstation",
     objectiveCount: 12,
     strategies: ["direct_jailbreak", "best_of_n", "crescendo", "encoded_jailbreak"],
     stopCondition: "complete",
@@ -344,7 +344,7 @@ export const campaigns: Campaign[] = [
     targetId: "tgt_support_agent",
     targetName: "Support Tool Agent",
     deviceId: "dev_ws1",
-    deviceName: "Ujjwal's Workstation",
+    deviceName: "Lab workstation",
     objectiveCount: 8,
     strategies: ["tool_misuse", "crescendo"],
     stopCondition: "complete",
@@ -508,7 +508,7 @@ export const campaigns: Campaign[] = [
 export const campaignTimelines: Record<string, CampaignTimelineEvent[]> = {
   cmp_prod_jb: [
     { id: "t1", at: hoursAgo(6), label: "Campaign configured", detail: "12 objectives, 4 strategies", kind: "status" },
-    { id: "t2", at: hoursAgo(5), label: "Queued to device", detail: "Ujjwal's Workstation picked up the job", kind: "status" },
+    { id: "t2", at: hoursAgo(5), label: "Queued to device", detail: "Lab workstation picked up the job", kind: "status" },
     { id: "t3", at: hoursAgo(5), label: "Run started", detail: "concurrency 4", kind: "status" },
     { id: "t4", at: hoursAgo(4), label: "First success", detail: "direct_jailbreak on objective 'disable safety'", kind: "attempt" },
     { id: "t5", at: hoursAgo(3), label: "Finding verified", detail: "CRITICAL - reliable (5/5 replays)", kind: "finding" },
@@ -516,7 +516,7 @@ export const campaignTimelines: Record<string, CampaignTimelineEvent[]> = {
   ],
   cmp_agent_tools: [
     { id: "t1", at: hoursAgo(9), label: "Campaign configured", detail: "8 objectives, 2 strategies", kind: "status" },
-    { id: "t2", at: hoursAgo(8), label: "Run started", detail: "Ujjwal's Workstation, concurrency 2", kind: "status" },
+    { id: "t2", at: hoursAgo(8), label: "Run started", detail: "Lab workstation, concurrency 2", kind: "status" },
     { id: "t3", at: hoursAgo(7), label: "Finding verified", detail: "CRITICAL - unauthorized refund() call, reliable (6/8 replays)", kind: "finding" },
     { id: "t4", at: hoursAgo(6), label: "Run completed", detail: "196 attempts, 3 findings", kind: "status" },
   ],
@@ -1124,8 +1124,8 @@ export const invoices: Invoice[] = [
 
 export const account: Account = {
   id: "usr_1",
-  name: "Ujjwal Rai",
-  email: "ujjwal@example.com",
+  name: "Alex Rivera",
+  email: "alex@example.com",
   role: "owner",
   organization: "Aevrin",
   avatarInitials: "UR",

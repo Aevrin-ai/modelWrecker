@@ -26,8 +26,8 @@ _SECRET_KEYS = {
     "device_code",
 }
 
-# Patterns for secrets that appear inside free text.
-_PATTERNS = [
+# Patterns for secrets that appear inside free text. The judge's secret-leak signal reuses them.
+SECRET_PATTERNS = [
     re.compile(r"\bsk-[A-Za-z0-9_-]{16,}\b"),  # OpenAI-style keys
     re.compile(r"\bsk-ant-[A-Za-z0-9_-]{16,}\b"),  # Anthropic-style keys
     re.compile(r"\bBearer\s+[A-Za-z0-9._-]{10,}\b", re.IGNORECASE),  # bearer tokens
@@ -41,7 +41,7 @@ def redact_text(text: str) -> str:
     if not text:
         return text
     out = text
-    for pat in _PATTERNS:
+    for pat in SECRET_PATTERNS:
         out = pat.sub(REDACTED, out)
     return out
 

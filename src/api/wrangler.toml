@@ -1,7 +1,7 @@
 # Aevrin control-plane API. Served on the dashboard's own origin at app.aevrin.net/api/*.
 # Nothing secret lives in this public file. Secrets are set once per Worker with
 # `npx wrangler secret put <NAME>`:
-#   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY   database (deploy/go_live.py sets these)
+#   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY   database (deploy/cloudflare/README.md)
 #   RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET  billing (docs/billing/razorpay.md)
 #   ENTITLEMENT_SIGNING_KEY                                      Ed25519 private key, PKCS#8 base64 (docs/security/entitlements.md)
 #   ADMIN_TOTP_KEY                                               encrypts admin authenticator secrets (docs/security/admin.md)

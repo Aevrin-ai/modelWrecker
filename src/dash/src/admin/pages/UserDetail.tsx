@@ -580,7 +580,7 @@ function Dialogs({ u, action, close, done, deleted }: { u: Detail; action: Actio
         open={kind === "refund"}
         onClose={close}
         title="Refund payment"
-        description={action?.kind === "refund" ? `Refunds invoice ${action.number} (${formatCurrency(action.amount, "INR")}) in full through Razorpay and takes back the time it bought. Any credit used on it is returned.` : ""}
+        description={action?.kind === "refund" ? `Refunds invoice ${action.number} (${formatCurrency(action.amount)}) in full through Razorpay and takes back the time it bought. Any credit used on it is returned.` : ""}
         destructive
         confirmLabel="Refund in full"
         onSubmit={async (reason) => {

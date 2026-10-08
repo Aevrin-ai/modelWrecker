@@ -4,7 +4,7 @@ This folder holds the staged configuration and the exact manual steps to stand u
 Aevrin cloud control plane. Nothing here runs automatically and nothing here contains a
 secret. You run the live steps when you are ready.
 
-Architecture reminder (see `.prompt/WORKFLOW.md` and `docs/architecture/`):
+Architecture reminder (see [`docs/architecture/local-cloud.md`](../docs/architecture/local-cloud.md) and [`docs/architecture/`](../docs/architecture/OVERVIEW.md)):
 
 - The Aevrin cloud is a thin control plane: identity, projects, devices, entitlements,
   billing, analytics, and the dashboard. It never runs attacks.

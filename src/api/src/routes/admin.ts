@@ -11,7 +11,7 @@ import type { AppEnv } from "../app";
 import { parseBody } from "../body";
 import type { Deps, Row } from "../db";
 import { ApiError, RateLimiter, randomToken, sha256Hex } from "../lib";
-import { effectivePlan, planById } from "../plans";
+import { effectivePlan } from "../plans";
 import {
   AdminBonus,
   AdminCredit,
@@ -25,10 +25,11 @@ import {
 } from "../schemas";
 import { usageFor } from "../usage";
 import { invoiceView, refundOrder } from "./billing";
+import { str } from "./shared";
 import { decryptSecret, encryptSecret, newTotpSecret, otpauthUri, verifyTotp } from "../admin/totp";
 
-export const STAFF_DOMAIN = "aevrin.net";
-export const ADMIN_SESSION_HEADER = "x-admin-session";
+const STAFF_DOMAIN = "aevrin.net";
+const ADMIN_SESSION_HEADER = "x-admin-session";
 const ADMIN_TOKEN_PREFIX = "mwa_";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const SESSION_IDLE_MS = 30 * 60 * 1000;
@@ -36,8 +37,6 @@ const MAX_FAILURES = 5;
 const LOCK_MS = 15 * 60 * 1000;
 const RECOVERY_CODES = 10;
 const PAGE = 50;
-
-const str = (v: unknown) => (v == null ? "" : String(v));
 
 /** A staff email: verified, and exactly on the staff domain (not a subdomain, not a look-alike). */
 export function isStaffEmail(email: string | null | undefined): boolean {
@@ -458,8 +457,6 @@ export function registerAdminRoutes(app: Hono<AppEnv>, deps: Deps, requireUser: 
     const site = c.req.query("site");
     return c.json(await db.rpc("admin_traffic", { p_days: days(c), p_site: site === "landing" || site === "dashboard" ? site : "" }));
   });
-
-  app.get("/admin/plans", requireUser, staff, admin, (c) => c.json(["free", "pro", "enterprise"].map((id) => planById(id))));
 }
 
 function auditView(a: Row) {

@@ -1,6 +1,7 @@
 name: Deploy control-plane API (Cloudflare Worker)
 
-# Redeploys the API Worker (served at app.aevrin.net/api/*) whenever src/api changes on main.
+# Redeploys the API Worker (served at app.aevrin.net/api/*) whenever src/api or src/shared (plans and prices)
+# changes on main.
 # Typecheck and tests must pass first.
 #
 # Required GitHub repository secrets (Settings -> Secrets and variables -> Actions):
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - "src/api/**"
+      - "src/shared/**"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch: {}
 

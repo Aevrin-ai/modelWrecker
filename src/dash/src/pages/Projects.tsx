@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FolderKanban, Plus, Crosshair, Swords, ShieldAlert, MonitorSmartphone } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeverityBar } from "@/components/charts";
 import { DataState, EmptyState } from "@/components/States";
+import { ProjectDialog } from "@/components/dialogs";
 import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { relativeTime } from "@/lib/format";
@@ -16,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 export function Projects() {
   const { data, loading, error, refetch } = useAsync(() => apiClient.listProjects(), []);
+  const [creating, setCreating] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -23,7 +26,7 @@ export function Projects() {
         title="Projects"
         description="Each project groups the targets, campaigns, and findings for one system under test."
         actions={
-          <Button variant="brand" size="sm">
+          <Button variant="brand" size="sm" onClick={() => setCreating(true)}>
             <Plus className="size-4" />
             New project
           </Button>
@@ -53,7 +56,7 @@ export function Projects() {
             title="No projects yet"
             description="Create your first project to start organizing targets and campaigns."
             action={
-              <Button variant="brand" size="sm">
+              <Button variant="brand" size="sm" onClick={() => setCreating(true)}>
                 <Plus className="size-4" />
                 New project
               </Button>
@@ -142,6 +145,8 @@ export function Projects() {
           );
         }}
       </DataState>
+
+      <ProjectDialog open={creating} onClose={() => setCreating(false)} onSaved={() => refetch()} />
     </div>
   );
 }
