@@ -36,13 +36,22 @@ supabase db push
 
 ## What the frontends need (public, safe to expose)
 
-The dashboard build uses the project URL and the anon key (both are public client values;
-RLS is what protects data). Provide them as build-time env vars, kept in your local
-untracked env file and in GitHub Actions / Cloudflare, never in the repo:
+The dashboard build uses only the project URL (a public value: Google sign-in starts there). The API
+makes every token call for it, so no key goes in the dashboard. Provide it as a build-time env var, kept
+in your local untracked env file and in GitHub Actions, never in the repo:
 
 ```text
 VITE_SUPABASE_URL=https://<SUPABASE_PROJECT_REF>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon public key>
+```
+
+## Auth settings the dashboard relies on
+
+Access token expiry, refresh token rotation, the reuse interval, and the token refresh rate limit
+(docs/security/authentication.md). Check them with your own personal access token
+(Account -> Access Tokens in the Supabase dashboard); add `--apply` to set any that differ:
+
+```text
+SUPABASE_ACCESS_TOKEN=<your token> SUPABASE_PROJECT_REF=<project ref> node deploy/supabase/auth-settings.mjs
 ```
 
 The **service role key** is server-only (Workers API). Never put it in a frontend or in

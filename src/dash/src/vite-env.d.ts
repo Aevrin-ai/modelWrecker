@@ -11,8 +11,6 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE?: string;
   /** Supabase project URL (public). Required in http mode. */
   readonly VITE_SUPABASE_URL?: string;
-  /** Supabase anon key (public; row-level security protects the data). Required in http mode. */
-  readonly VITE_SUPABASE_ANON_KEY?: string;
 }
 
 interface ImportMeta {

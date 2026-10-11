@@ -3,12 +3,13 @@
 
   A thin mapping onto the control-plane API contract in docs/architecture/control-plane-api.md:
     - base URL `${VITE_API_BASE ?? "/api/v1"}`, same origin in production
-    - `Authorization: Bearer <Supabase access token>` on every call, read fresh from the Supabase
-      session (which refreshes it when needed). Never a cookie, so no cross-site request forgery.
+    - `Authorization: Bearer <access token>` on every call, from the in-memory session (lib/auth.ts),
+      refreshed ahead of expiry. Never a cookie, so no cross-site request forgery.
     - JSON request and response bodies; responses already use the types in src/types.
     - errors are `{ "error": "<code>", "message": "<safe text>" }`. Only `message` is ever shown;
       a raw body, status text, or stack trace never reaches the UI.
-    - 401 signs the user out of this browser, which returns them to the sign-in screen.
+    - a 401 for an expired or invalid token refreshes the session once and retries once (./session.ts);
+      if the refresh fails, the user is signed out of this browser and sees the sign-in screen.
 
   Like the interface, this client has no way to run an attack, call a model, or fetch an arbitrary URL.
 */
@@ -47,7 +48,8 @@ import type {
   Target,
   WorkspaceSettings,
 } from "@/types";
-import { getSupabase } from "@/lib/supabase";
+import { authTokens } from "@/lib/auth";
+import { sendWithSession } from "./session";
 
 const TIMEOUT_MS = 20_000;
 const MAX_MESSAGE = 300;
@@ -106,24 +108,11 @@ const enc = encodeURIComponent;
 export class HttpApiClient implements ApiClient {
   constructor(private readonly baseUrl: string) {}
 
-  private async token(): Promise<string> {
-    const sb = await getSupabase();
-    const { data } = await sb.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) {
-      await sb.auth.signOut({ scope: "local" });
-      throw new ApiError(401, "unauthorized", "Your session has ended. Please sign in again.");
-    }
-    return token;
-  }
-
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const token = await this.token();
+  private async send(method: string, path: string, token: string, body?: unknown): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    let res: Response;
     try {
-      res = await fetch(`${this.baseUrl}${path}`, {
+      return await fetch(`${this.baseUrl}${path}`, {
         method,
         headers: {
           Accept: "application/json",
@@ -140,6 +129,11 @@ export class HttpApiClient implements ApiClient {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const res = await sendWithSession(authTokens, (token) => this.send(method, path, token, body));
+    if (!res) throw new ApiError(401, "unauthorized", "Your session has ended. Please sign in again.");
 
     let parsed: unknown = undefined;
     const text = res.status === 204 ? "" : await res.text().catch(() => "");
@@ -151,15 +145,6 @@ export class HttpApiClient implements ApiClient {
       }
     }
 
-    if (res.status === 401) {
-      try {
-        const sb = await getSupabase();
-        await sb.auth.signOut({ scope: "local" });
-      } catch {
-        /* nothing to clear */
-      }
-      throw new ApiError(401, "unauthorized", "Your session has ended. Please sign in again.");
-    }
     if (!res.ok) {
       const { code, message } = safeMessage(res.status, parsed);
       throw new ApiError(res.status, code, message);

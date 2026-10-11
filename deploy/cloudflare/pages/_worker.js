@@ -9,6 +9,48 @@
 //
 // /admin is the staff console (docs/security/admin.md). It is the same dashboard build; the API decides
 // who may use it. Its pages are never indexed, framed, or cached.
+//
+// Every HTML page gets a Content-Security-Policy (docs/security/SECURITY.md). Scripts run only from this
+// site, Razorpay Checkout, and Cloudflare Web Analytics, plus the landing page's own inline scripts by
+// hash. deploy-web.yml fills in __INLINE_SCRIPT_HASHES__ with those hashes (csp-hashes.mjs). The
+// per-request nonce is for the bot-check script Cloudflare injects at the edge: Cloudflare copies the
+// nonce from this header onto it.
+
+const INLINE_SCRIPT_HASHES = "__INLINE_SCRIPT_HASHES__";
+
+function contentSecurityPolicy(nonce) {
+  const hashes = INLINE_SCRIPT_HASHES.startsWith("__") ? "" : ` ${INLINE_SCRIPT_HASHES}`;
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'${hashes} https://*.razorpay.com https://static.cloudflareinsights.com`,
+    // Inline style attributes come from the prerendered page and the animation library.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https://*.razorpay.com",
+    "connect-src 'self' https://*.razorpay.com https://cloudflareinsights.com",
+    "frame-src https://*.razorpay.com",
+    "form-action 'self' https://*.razorpay.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+function newNonce() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function withPageHeaders(response, extra = {}) {
+  const res = new Response(response.body, response);
+  if ((res.headers.get("content-type") ?? "").includes("text/html")) {
+    res.headers.set("Content-Security-Policy", contentSecurityPolicy(newNonce()));
+    res.headers.set("X-Content-Type-Options", "nosniff");
+  }
+  for (const [name, value] of Object.entries(extra)) res.headers.set(name, value);
+  return res;
+}
 
 export default {
   async fetch(request, env) {
@@ -17,17 +59,17 @@ export default {
     const lastSegment = path.slice(path.lastIndexOf("/") + 1);
     const isPage = !lastSegment.includes(".");
     if (path.startsWith("/dashboard/") && isPage) {
-      return env.ASSETS.fetch(new Request(new URL("/dashboard/", url), request));
+      return withPageHeaders(await env.ASSETS.fetch(new Request(new URL("/dashboard/", url), request)));
     }
     if ((path === "/admin" || path.startsWith("/admin/")) && isPage) {
       const shell = await env.ASSETS.fetch(new Request(new URL("/dashboard/", url), request));
-      const res = new Response(shell.body, shell);
-      res.headers.set("X-Robots-Tag", "noindex, nofollow");
-      res.headers.set("X-Frame-Options", "DENY");
-      res.headers.set("Cache-Control", "no-store");
-      res.headers.set("Referrer-Policy", "no-referrer");
-      return res;
+      return withPageHeaders(shell, {
+        "X-Robots-Tag": "noindex, nofollow",
+        "X-Frame-Options": "DENY",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      });
     }
-    return env.ASSETS.fetch(request);
+    return withPageHeaders(await env.ASSETS.fetch(request));
   },
 };

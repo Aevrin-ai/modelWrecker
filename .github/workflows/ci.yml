@@ -51,5 +51,5 @@ jobs:
           node-version: "22"  # Wrangler 4 needs Node 22+
       - run: npm ci && npm run build
         working-directory: src/web
-      - run: npm ci && npm run build
+      - run: npm ci && npm test && npm run build
         working-directory: src/dash

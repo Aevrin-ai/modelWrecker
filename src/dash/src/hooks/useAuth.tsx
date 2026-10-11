@@ -2,9 +2,9 @@
   Dashboard sign-in state (docs/security/authentication.md).
 
   http mode: Google sign-in through Supabase Auth with the PKCE flow. Google redirects back to
-  /dashboard/?code=..., this provider exchanges the code for a session once, cleans the URL, and
-  returns the user to the page they started from. The session (a short-lived access token plus a
-  refresh token) is kept by the Supabase client; the HTTP client reads a fresh token per request.
+  /dashboard/?code=..., this provider exchanges the code for a session once (through the API, which
+  keeps the refresh token in an HttpOnly cookie), cleans the URL, and returns the user to the page they
+  started from. On a normal load it restores the session from that cookie. See lib/auth.ts.
   Aevrin never sees the Google password, and the Google token never reaches a local engine.
 
   mock mode: there is no real sign-in. `session` stays null, sign-out opens the sign-in screen as a
@@ -14,15 +14,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { Session, User } from "@supabase/supabase-js";
 import { API_MODE, APP_BASE, IS_HTTP_MODE } from "@/lib/config";
 import type { ApiMode } from "@/lib/config";
-import { getSupabase } from "@/lib/supabase";
+import {
+  completeGoogleSignIn,
+  onSessionChange,
+  restoreSession,
+  signOut as endSession,
+  startGoogleSignIn,
+  type AuthSession,
+  type SessionUser,
+} from "@/lib/auth";
 
 interface AuthContextValue {
   mode: ApiMode;
-  session: Session | null;
-  user: User | null;
+  session: AuthSession | null;
+  user: SessionUser | null;
   /** True until the stored session (or an OAuth callback) has been read. Always false in mock mode. */
   loading: boolean;
   /** A safe, plain-language message when the last sign-in attempt failed. */
@@ -60,7 +67,7 @@ function takeReturnPath(): string | null {
 }
 
 interface InitResult {
-  session: Session | null;
+  session: AuthSession | null;
   error: string | null;
   /** True when this page load was the OAuth callback, so the URL must be cleaned. */
   wasCallback: boolean;
@@ -70,7 +77,6 @@ interface InitResult {
 let initPromise: Promise<InitResult> | null = null;
 
 async function initAuth(): Promise<InitResult> {
-  const sb = await getSupabase();
   const url = new URL(window.location.href);
   const atRoot = url.pathname === BASE_PATH || `${url.pathname}/` === BASE_PATH;
   const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
@@ -82,34 +88,35 @@ async function initAuth(): Promise<InitResult> {
     const oauthFailed =
       url.searchParams.has("error") || url.searchParams.has("error_description") || hash.has("error") || hash.has("error_description");
     if (code && !USER_CODE_RE.test(code)) {
-      wasCallback = true;
-      const { error: exchangeError } = await sb.auth.exchangeCodeForSession(code);
-      if (exchangeError) error = "Sign-in did not complete. Please try again.";
-    } else if (oauthFailed) {
+      const session = await completeGoogleSignIn(code).catch(() => null);
+      return { session, error: session ? null : "Sign-in did not complete. Please try again.", wasCallback: true };
+    }
+    if (oauthFailed) {
       wasCallback = true;
       error = "Google sign-in was cancelled or did not complete. Please try again.";
     }
   }
 
-  const { data } = await sb.auth.getSession();
-  return { session: data.session, error, wasCallback };
+  return { session: await restoreSession(), error, wasCallback };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(IS_HTTP_MODE);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!IS_HTTP_MODE) return;
     let active = true;
-    let unsubscribe: (() => void) | null = null;
+    const unsubscribe = onSessionChange((next) => {
+      if (active) setSession(next);
+    });
 
     initPromise ??= initAuth();
     initPromise
-      .then(async (result) => {
+      .then((result) => {
         if (!active) return;
         setSession(result.session);
         setError(result.error);
@@ -117,10 +124,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Drop ?code= from the address bar and go back to where the user started.
           navigate(result.session ? (takeReturnPath() ?? "/") : "/", { replace: true });
         }
-        const sb = await getSupabase();
-        if (!active) return;
-        const { data } = sb.auth.onAuthStateChange((_event, next) => setSession(next));
-        unsubscribe = () => data.subscription.unsubscribe();
       })
       .catch(() => {
         if (active) setError("Sign-in is unavailable right now. Please try again later.");
@@ -131,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
-      unsubscribe?.();
+      unsubscribe();
     };
     // Runs once; navigate is stable for the router's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,12 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     rememberReturnPath(`${location.pathname}${location.search}`);
     try {
-      const sb = await getSupabase();
-      const { error: oauthError } = await sb.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}${BASE_PATH}` },
-      });
-      if (oauthError) setError("Could not start Google sign-in. Please try again.");
+      await startGoogleSignIn(`${window.location.origin}${BASE_PATH}`);
     } catch {
       setError("Could not start Google sign-in. Please try again.");
     }
@@ -162,15 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     navigate("/", { replace: true });
-    try {
-      const sb = await getSupabase();
-      // Revokes the refresh token on the server. If that call fails, still clear this browser.
-      const { error: outError } = await sb.auth.signOut();
-      if (outError) await sb.auth.signOut({ scope: "local" });
-    } catch {
-      /* the client could not load; there is no session to clear */
-    }
-    setSession(null);
+    // Revokes this session on the server and clears the cookie; this tab is signed out either way.
+    await endSession();
   }, [navigate]);
 
   const value = useMemo<AuthContextValue>(

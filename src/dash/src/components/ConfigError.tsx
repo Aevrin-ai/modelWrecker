@@ -35,7 +35,7 @@ export function ConfigError() {
             ))}
           </ul>
           <p className="text-muted-foreground">
-            Both values are public (the Supabase project URL and anon key). To run the demo on sample data
+            The value is public (the Supabase project URL, where Google sign-in starts). To run the demo on sample data
             instead, leave <span className="font-mono text-xs">VITE_API_MODE</span> unset.
           </p>
         </CardContent>

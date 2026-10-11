@@ -65,6 +65,36 @@ export interface AuthAccount {
   providers: string[];
 }
 
+/** The user a sign-in or refresh returns to the dashboard. Only what the dashboard shows. */
+export interface SessionUser {
+  id: string;
+  email: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+/** A new access token and refresh token from Supabase Auth. */
+export interface TokenGrant {
+  accessToken: string;
+  refreshToken: string;
+  /** Unix seconds. */
+  expiresAt: number;
+  user: SessionUser;
+}
+
+/** `invalid`: the code or refresh token is wrong, expired, revoked, or reused. `unavailable`: try later. */
+export type GrantResult = { ok: true; grant: TokenGrant } | { ok: false; reason: "invalid" | "unavailable" };
+
+/** Supabase Auth token calls, made by the API for the browser so the refresh token never reaches script. */
+export interface AuthTokens {
+  /** Finish the Google sign-in (PKCE): trade the one-time code and its verifier for tokens. */
+  exchangeCode(code: string, verifier: string): Promise<GrantResult>;
+  /** Rotate: the old refresh token stops working and a new one is returned. */
+  refresh(refreshToken: string): Promise<GrantResult>;
+  /** Revoke this session's refresh tokens. False when the access token was not accepted. */
+  signOut(accessToken: string): Promise<boolean>;
+}
+
 /** Everything a request handler needs from the outside world. */
 export interface Deps {
   /** Server-key access. Used only for device routes and device sign-in. */
@@ -79,6 +109,8 @@ export interface Deps {
   billing?: BillingConfig;
   /** Signs entitlements for devices. Devices get no entitlement (free baseline) when it is not configured. */
   signer?: EntitlementSigner;
+  /** Dashboard sign-in tokens. The /auth routes answer 503 when it is not configured. */
+  authTokens?: AuthTokens;
   /** Account administration for the admin console. */
   authAdmin?: AuthAdmin;
   /** Admin console secrets: the key that encrypts authenticator secrets at rest. */
