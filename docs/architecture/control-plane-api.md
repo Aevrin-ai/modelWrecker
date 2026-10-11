@@ -56,6 +56,27 @@ Rules that hold on every route:
 Response `200`: `{ "ok": true }`. A liveness check only: it reads no database and says nothing about
 configuration.
 
+## Dashboard sign-in tokens
+
+The API makes Supabase Auth's token calls for the dashboard, so the refresh token stays in an `HttpOnly`
+cookie (`__Secure-mw_rt`, path `/api/v1/auth`) that script cannot read. The full lifecycle is in
+[`../security/authentication.md`](../security/authentication.md); the decision is ADR-0021.
+
+These three routes are the only ones that read a cookie. Each one needs the header `X-Aevrin-Auth: 1`,
+refuses another `Origin` or a cross-site `Sec-Fetch-Site` with `403`, and is rate limited per address
+(`429`). Without Supabase Auth configured they answer `503 auth_unavailable`.
+
+| Route | Request | Success | Failure |
+| --- | --- | --- | --- |
+| `POST /auth/session` | `{ "code": "...", "code_verifier": "..." }` from the Google sign-in (PKCE) | `200`, sets the refresh cookie and `mw_signed_in=1` | `400 sign_in_failed` for a wrong, used, or expired code; `422` for malformed input |
+| `POST /auth/refresh` | `{}`, the cookie carries the refresh token | `200`, a new access token and a rotated refresh cookie | `401 session_ended` (cookies cleared) for a missing, expired, revoked, or reused token; `503` when Supabase Auth is unreachable (cookie kept) |
+| `POST /auth/logout` | `{}`, with `Authorization: Bearer <access token>` when there is one | `204`, the session is revoked at Supabase Auth and both cookies are cleared | always ends signed out |
+
+A `200` body is `{ "accessToken": "...", "expiresAt": <unix seconds>, "user": { "id", "email", "name",
+"avatarUrl" } }`. The refresh token is never in a body. Once per browser, `/auth/refresh` also accepts
+`{ "refresh_token": "..." }` when there is no cookie, to move a session an older dashboard kept in
+`localStorage` into the cookie.
+
 ## Device sign-in (OAuth 2.0 device authorization grant)
 
 This is the flow from RFC 8628. A command-line tool shows a short code and the user approves it in a

@@ -7,6 +7,20 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Added
+- Opening `app.aevrin.net` while signed in goes straight to the dashboard (#57). The payment note under the
+  landing page's pricing cards is removed.
+- The dashboard and admin console refresh the session once and retry once when the API rejects an expired
+  access token, with one shared refresh for requests that fail together, instead of signing the user out
+  (#58). Dashboard unit tests run with Node's built-in test runner (`npm test` in `src/dash`, also in CI).
+- The dashboard's refresh token now lives only in an `HttpOnly` cookie (#59, ADR-0021). The control-plane
+  API makes Supabase Auth's token calls for the browser (`POST /api/v1/auth/session`, `/refresh`,
+  `/logout`, guarded against cross-site requests and rate limited); the access token stays in memory.
+  Browsers signed in before this move their session into the cookie on their next visit. Sign-out now ends
+  this browser's session only. The dashboard no longer bundles `@supabase/supabase-js` or needs the anon key.
+- A Content-Security-Policy on every page of app.aevrin.net (#60), with the landing page's inline scripts
+  allowed by hash at deploy and a per-request nonce for Cloudflare's injected bot check.
+- `deploy/supabase/auth-settings.mjs` checks, and with `--apply` sets, the Supabase Auth token settings the
+  dashboard relies on (#61).
 - Admin console at `app.aevrin.net/admin` (#43, #44, #45). Staff only: a verified `@aevrin.net` Google
   sign-in plus an authenticator code (TOTP; encrypted secret, no code reuse, lockout, single-use recovery
   codes), then a short admin session stored as a hash, all checked by the server on every request. Admins

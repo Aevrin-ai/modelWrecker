@@ -67,7 +67,7 @@ self-hostable" rule holds for red teaming itself. Versions are pinned by each ap
 | class-variance-authority | web | button variants | Apache-2.0 | tiny, typed variants | hand-rolled maps | low | easy |
 | @fontsource-variable/inter | web | self-hosted Inter body font (no Google Fonts request) | OFL-1.1 | fonts served from our own domain | system fonts | low | easy |
 | ESLint, typescript-eslint, eslint-plugin-react(-hooks, -refresh) | web | lint: unused bindings and undefined JSX components are errors | MIT | catches dead code and render crashes before CI | tsc only | low | easy |
-| @supabase/supabase-js | dash, api | Google sign-in (dash); token verification and RLS-scoped queries (api) | MIT | official client; RLS applies when queries carry the user's token | raw PostgREST + GoTrue over fetch | low | medium |
+| @supabase/supabase-js | api | token verification and RLS-scoped queries (the dashboard's sign-in token calls go through the API, ADR-0021) | MIT | official client; RLS applies when queries carry the user's token | raw PostgREST + GoTrue over fetch | low | medium |
 | Hono | api | request routing on Cloudflare Workers | MIT | tiny, built for Workers, testable with `app.request` | hand-written router | low | easy |
 | Wrangler | api | build, local dev, deploy of the Worker | MIT / Apache-2.0 | official Cloudflare CLI | Cloudflare dashboard upload | low | easy |
 | vitest, @cloudflare/workers-types | api | tests, Worker types | MIT / Apache-2.0 | offline tests against an in-memory database | jest | low | easy |
