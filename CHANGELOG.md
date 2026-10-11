@@ -35,6 +35,15 @@ happened - never invent historical entries.
   dependency: `cryptography`.
 
 ### Changed
+- The landing page at app.aevrin.net was rebuilt in the style of activepieces.com (#55): a floating
+  island navbar with in-place menus, a sky hero with the findings view rising out of it, a sticky scroll
+  story that ends in the nine steps of a run, and sections on what modelWrecker tests, how a run works,
+  the 14 strategies, the judge, replays, the three roles, local-first attacks, findings, pricing, and
+  questions. Every picture is a live, animated mockup over CSS-painted art (no photos or video), every
+  attack shown is a harmless stand-in, and each mockup has a still version for reduced motion. Now on
+  React 19, Tailwind CSS 4, React Router 7 and Vite 8, with ESLint, self-hosted fonts, a home page
+  prerendered at build time so the hero paints before any script runs, a 404 page,
+  `robots.txt` and a sitemap.
 - Plan limits are enforced on the server: device approvals over the device limit, projects over the
   project limit, and evidence or transcript sync without Pro are refused, and the model leaderboard is a
   Pro feature. Free limits are now 20 campaign runs and 2,000 attempts a month, 1 device, 2 projects.

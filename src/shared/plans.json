@@ -14,7 +14,7 @@
     {
       "id": "pro",
       "name": "Pro",
-      "blurb": "PyRIT and garak strategies, MCP targets, evidence and transcript sync, the model leaderboard, and higher limits.",
+      "blurb": "PyRIT-based strategies and garak probes, MCP targets, evidence and transcript sync, the model leaderboard, and higher limits.",
       "highlighted": true,
       "limits": { "campaigns": 300, "attacks": 100000, "devices": 10, "projects": 25 },
       "features": { "advanced_strategies": true, "mcp": true, "analytics": true, "evidence_storage": true, "enterprise": false },

@@ -3,25 +3,40 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Landing page for app.aevrin.net - the local-first AI red teaming product.",
+  "description": "Landing page for app.aevrin.net: modelWrecker, the AI red-teaming engine in the Aevrin security platform.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "dev": "vite --port 4317",
+    "build": "tsc -b && vite build && vite build --ssr src/entry-prerender.tsx --outDir node_modules/.prerender --emptyOutDir && node scripts/prerender.mjs",
+    "lint": "eslint .",
+    "preview": "vite preview --port 4317",
+    "icons": "node scripts/solar-icons.mjs"
   },
   "dependencies": {
-    "lucide-react": "^0.456.0",
-    "motion": "^11.15.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@fontsource-variable/inter": "^5.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.53.0",
+    "motion": "^14.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^7.18.4",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.6.3",
-    "vite": "^6.0.3"
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.3.4"
   }
 }
