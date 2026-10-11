@@ -7,6 +7,42 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Added
+- Benchmark dataset adapters (#70): `InjecAgent` (MIT) and `AgentInjectionBench` (Apache-2.0) load at
+  runtime from a pinned commit through `src/modelwrecker/datasets/`, cached locally, schema-validated,
+  and convertible to objectives. Nothing is bundled; `modelwrecker datasets` lists and validates them,
+  and `MODELWRECKER_DATASETS_OFFLINE=1` forbids downloads. Datasets with no clear licence (MCPTox,
+  Tensor Trust) stay reference-only; see docs/datasets.md.
+- New PyRIT-backed strategy `pyrit_xpia` (#67): runs PyRIT's cross-domain prompt-injection (XPIA)
+  workflow against our target, registered with the `attacks` extra. The first-party
+  `indirect_prompt_injection` remains the better-integrated path.
+- Four more agent attack strategies, all experimental, built from the same incident research (#67):
+  `supply_chain_injection` (a developer-action instruction hidden in a rules file, pull request,
+  package metadata, or tool config; reuses the tool environment with mock run_command/write_file/
+  install_package sinks), `memory_poisoning` (a note saved in one session steers a later session; a
+  new `memory` target that keeps memory across reset), `multi_agent_injection` (one agent's output is
+  trusted as instructions by another; a new `multi_agent` target), and `multimodal_injection` (an
+  instruction in an image; a `chat` target with `vision: true`, reported NOT TESTED against text
+  models). New target types `memory` and `multi_agent`.
+- Tool-environment targets now declare their (simulated) tools to the provider and read native tool
+  calls, so models with native function-calling (for example Groq's gpt-oss) no longer fail the
+  request; the text-protocol path still works (#71).
+- New attack strategy `indirect_prompt_injection` (#67, #68): hides an instruction in content an agent
+  reads through a tool (email, web page, repo issue, tool output) and checks whether the agent obeys it
+  by leaking a planted canary or calling a sensitive tool. It runs in a new **simulated tool environment**
+  on the agent and MCP targets (a bounded multi-step loop where read tools return fixtures and no tool is
+  executed), plants a unique canary per attempt, and confirms a failure with a deterministic `canary_exfil`
+  judge signal, not an LLM opinion. Every scenario runs a matching **benign control**; if the control also
+  succeeds the result is treated as a false positive, not a finding. Marked experimental.
+- Every strategy now declares a **spec** (description, target types, expected safe behavior, success and
+  failure criteria, evidence, limits, and a stable/experimental maturity), shown by `modelwrecker
+  strategies` and the MCP `list_strategies` tool (#67). A strategy the target cannot support is reported
+  as NOT TESTED with the reason, never silently skipped.
+- Per-run **usage metering** across all roles and replays, with `campaign.budget.max_requests` and
+  `campaign.budget.max_cost_usd` caps and optional per-endpoint prices (#69). Runs report requests,
+  tokens, and an estimated cost.
+- Research and docs for turning verified agent incidents into tests: `docs/research/incident-to-strategy.md`,
+  `docs/research/research-sources.md`, and `docs/datasets.md` (dataset licenses and how we may use them)
+  (#70).
 - Opening `app.aevrin.net` while signed in goes straight to the dashboard (#57). The payment note under the
   landing page's pricing cards is removed.
 - The dashboard and admin console refresh the session once and retry once when the API rejects an expired

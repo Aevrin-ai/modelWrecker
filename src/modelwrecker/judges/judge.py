@@ -12,6 +12,7 @@ from ..data import Objective, Observation, Outcome, Verdict
 from ..providers.base import BaseProvider
 from .combiner import WeightedCombiner
 from .signals import (
+    CanaryExfilSignal,
     LLMJudgeSignal,
     PIIDetectorSignal,
     RuleSignal,
@@ -28,6 +29,7 @@ class Judge:
             PIIDetectorSignal(),
             RuleSignal(),
             ToolMisuseSignal(),
+            CanaryExfilSignal(),
         ]
         self.combiner = WeightedCombiner()
 

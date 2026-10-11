@@ -19,7 +19,7 @@ const COLUMNS = [
     links: [
       { label: "What it tests", href: "/#tests" },
       { label: "How a run works", href: "/#how-it-works" },
-      { label: "14 ways to attack", href: "/#attacks" },
+      { label: "20 ways to attack", href: "/#attacks" },
       { label: "Findings", href: "/#findings" },
       { label: "Pricing", href: "/#pricing" },
     ],
