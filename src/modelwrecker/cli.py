@@ -301,6 +301,45 @@ def transforms() -> None:
         typer.echo(f"{t['name']} (v{t['version']}) - {rev}")
 
 
+@app.command("import-promptfoo")
+def import_promptfoo(
+    config: str = typer.Argument(..., help="a Promptfoo config file (its `redteam` section)"),
+    out: str = typer.Option("", "--out", "-o", help="write the config here, else print to stdout"),
+) -> None:
+    """Translate a Promptfoo red-team config into a modelWrecker config.
+
+    modelWrecker stays the engine. Supported plugins and strategies are mapped; unsupported ones
+    (remote-only, or no equivalent) stop with a clear error. Attacker and judge default to the
+    target; edit them before running. See docs/integrations/promptfoo.md.
+    """
+    import yaml
+
+    from .integrations import PromptfooError, translate_promptfoo
+
+    path = Path(config)
+    if not path.exists():
+        typer.secho(f"not found: {path}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        typer.secho(f"could not parse {path}: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from e
+    try:
+        cfg = translate_promptfoo(data)
+    except PromptfooError as e:
+        typer.secho(f"cannot translate: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    text = yaml.safe_dump(cfg.model_dump(exclude_none=True), sort_keys=False)
+    if out:
+        Path(out).write_text(text, encoding="utf-8")
+        typer.echo(f"wrote {out}: {len(cfg.objectives)} objective(s), "
+                   f"strategy {cfg.attack.strategy}")
+        typer.echo("review the attacker/judge endpoints (they default to the target) first.")
+    else:
+        typer.echo(text)
+
+
 @app.command()
 def datasets(
     name: str = typer.Argument("", help="a dataset to fetch and validate; omit to list all"),
