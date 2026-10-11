@@ -53,7 +53,7 @@ export const menus: NavMenu[] = [
         heading: "Findings",
         items: [
           { title: "Proof for every finding", description: "Prompt, reply, and replay", href: "/#findings", icon: ShieldCheck },
-          { title: "14 ways to attack", description: "Four families of attacks", href: "/#attacks", icon: Target },
+          { title: "20 ways to attack", description: "Four families of attacks", href: "/#attacks", icon: Target },
         ],
       },
     ],
