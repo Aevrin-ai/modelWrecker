@@ -12,10 +12,15 @@ from .crescendo import Crescendo
 from .direct import DirectJailbreak
 from .encoded import EncodedJailbreak
 from .extraction import PromptExtraction
+from .indirect_injection import IndirectPromptInjection
 from .many_shot import ManyShot
 from .mcp_poisoning import McpToolPoisoning
+from .memory_poisoning import MemoryPoisoning
+from .multi_agent_injection import MultiAgentInjection
+from .multimodal_injection import MultimodalInjection
 from .prefill import Prefill
 from .rag_injection import RagInjection
+from .supply_chain import SupplyChainInjection
 from .tool_misuse import ToolMisuse
 
 _REGISTRY: dict[str, type[BaseStrategy]] = {
@@ -28,6 +33,11 @@ _REGISTRY: dict[str, type[BaseStrategy]] = {
     EncodedJailbreak.name: EncodedJailbreak,
     ToolMisuse.name: ToolMisuse,
     RagInjection.name: RagInjection,
+    SupplyChainInjection.name: SupplyChainInjection,
+    IndirectPromptInjection.name: IndirectPromptInjection,
+    MemoryPoisoning.name: MemoryPoisoning,
+    MultiAgentInjection.name: MultiAgentInjection,
+    MultimodalInjection.name: MultimodalInjection,
     McpToolPoisoning.name: McpToolPoisoning,
 }
 
@@ -37,8 +47,9 @@ from .pyrit_adapter import pyrit_available  # noqa: E402
 
 if pyrit_available()[0]:
     from .pyrit_attacks import PyRITPair, PyRITPromptSending, PyRITTap  # noqa: E402
+    from .pyrit_xpia import PyRITXpia  # noqa: E402
 
-    for _cls in (PyRITPromptSending, PyRITPair, PyRITTap):
+    for _cls in (PyRITPromptSending, PyRITPair, PyRITTap, PyRITXpia):
         _REGISTRY[_cls.name] = _cls
 
 # garak-backed strategy registers only when the optional `modelwrecker[scan]` dependency is
@@ -66,6 +77,7 @@ def list_strategies() -> list[dict]:
             "version": cls.version,
             "required_capabilities": sorted(c.value for c in cls.required_target_capabilities),
             "taxonomy": [f"{r.framework}:{r.id}" for r in cls.candidate_taxonomy],
+            "spec": cls.spec.as_dict(),
         })
     return out
 

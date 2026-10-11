@@ -52,6 +52,18 @@ things work, read `docs/`.
   gated by the capability only its target declares. New `tool_misuse` judge signal (decisive for agent/MCP).
   Tested offline; the agent path is also verified through the real CLI (critical finding, LLM03/ASI01). A
   live MCP-server connection (inline tools work today) is a documented follow-up.
+- **Phase 10 - agent attack strategies (done, experimental).** Built from verified incidents
+  (`docs/research/incident-to-strategy.md`): `indirect_prompt_injection` (an instruction hidden in tool
+  output), `supply_chain_injection` (a developer-action instruction in project files), `memory_poisoning`
+  (a note that steers a later session; new `memory` target), `multi_agent_injection` (one agent's output
+  trusted by another; new `multi_agent` target), and `multimodal_injection` (an instruction in an image;
+  a vision target, NOT TESTED against text models). Each runs in a simulated tool environment (nothing is
+  executed), plants a canary confirmed by the deterministic `canary_exfil` signal, and runs a benign
+  control. Every strategy now declares a spec, and the loop reports an incompatible strategy as NOT
+  TESTED. Per-run usage metering with request and cost budgets. Verified offline (248 tests) and live on
+  Groq: `indirect_prompt_injection` and `supply_chain_injection` produced findings; a live vision-model
+  run is a follow-up. `pyrit_xpia` (the PyRIT XPIA workflow) and runtime loaders for the InjecAgent
+  (MIT) and AgentInjectionBench (Apache-2.0) datasets are also built; other datasets stay reference-only.
 
 ## In progress: Phase 10 - local-first product (mostly live)
 

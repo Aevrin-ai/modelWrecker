@@ -31,7 +31,13 @@ modelwrecker run my.yaml         # attack, verify, and write a report under runs
 - **Three clean roles.** An **attacker** that decides what to try, a **target** that is tested,
   and a **judge** that decides if an attack worked - kept strictly separate.
 - **Adaptive, not a prompt dump.** A planner selects and mutates strategies based on what the
-  target does, instead of firing a fixed list.
+  target does, instead of firing a fixed list. Strategies are built from real, verified agent
+  incidents, not a pile of old jailbreak prompts, and each declares what it tests and how a failure
+  is confirmed.
+- **Tests modern agents, with controls.** It plants an instruction in content an agent reads through
+  a tool (an email, a web page, a repo issue, a tool result) and checks whether the agent obeys it,
+  leaking a planted canary or calling a tool it should not. Every attack runs alongside a benign
+  control, so a target that misbehaves on its own is flagged as a false positive, not a finding.
 - **Findings you can trust.** A single success is replayed and scored; only verified, reliable
   results become findings, each with full reproduction evidence.
 - **Secure by design.** No network listener in the engine, host tools off by default, an egress guard

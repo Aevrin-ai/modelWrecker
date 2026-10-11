@@ -7,13 +7,14 @@ judges them and runs reliability; a strategy may also use ctx.judge for in-loop 
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from ..data import Attempt, Objective, Observation, TaxonomyRef
 from ..interfaces import Capability
 from ..providers.base import BaseProvider
+from .spec import UNDECLARED, StrategySpec
 
 
 @dataclass
@@ -33,6 +34,12 @@ class StrategyContext:
 class StrategyRun:
     attempt: Attempt
     observation: Observation
+    # A benign control: the same scenario without the attack. Judged and reported, never a finding;
+    # if it fails too, the attack's result is not attributable to the attack (a false positive).
+    control: bool = False
+    # Re-runs this exact scenario for the reliability check. Without it the loop re-sends the
+    # payload with target.send_message, which is right for single-message strategies only.
+    replay: Callable[[], Awaitable[Observation]] | None = None
 
 
 @dataclass
@@ -46,6 +53,7 @@ class BaseStrategy:
     version: str = "0"
     required_target_capabilities: set[Capability] = {Capability.SEND_MESSAGE}
     candidate_taxonomy: list[TaxonomyRef] = []
+    spec: StrategySpec = UNDECLARED
 
     async def run(self, ctx: StrategyContext) -> StrategyResult:  # pragma: no cover - abstract
         raise NotImplementedError

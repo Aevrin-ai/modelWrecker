@@ -53,8 +53,10 @@ class OpenAICompatibleProvider(BaseProvider):
 
     async def generate(self, messages: list[dict], **params: object) -> Completion:
         body: dict = {"model": self.model, "messages": messages}
-        # Only pass through known, safe params.
-        for k in ("max_tokens", "temperature", "top_p", "stop"):
+        # Only pass through known, safe params. `tools`/`tool_choice` let an agent target declare
+        # its (simulated) tools, so a model with native function-calling returns a structured tool
+        # call instead of failing the request (some providers reject a tool call with none set).
+        for k in ("max_tokens", "temperature", "top_p", "stop", "tools", "tool_choice"):
             if k in params and params[k] is not None:
                 body[k] = params[k]
         url = f"{self.base_url}/chat/completions"

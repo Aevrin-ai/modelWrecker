@@ -12,6 +12,7 @@ from ..data import TaxonomyRef
 from ..interfaces import Capability
 from .base import BaseStrategy, StrategyContext, StrategyResult, StrategyRun
 from .pyrit_bridge import ensure_pyrit, make_target, make_threshold_scorer, result_to_observation
+from .spec import Maturity, StrategySpec
 
 _JAILBREAK_TAX = [
     TaxonomyRef(framework="owasp_llm", id="LLM01", edition="2026"),
@@ -41,6 +42,17 @@ class PyRITPromptSending(_PyRITStrategy):
     version = "1"
     required_target_capabilities = {Capability.SEND_MESSAGE}
     candidate_taxonomy = _JAILBREAK_TAX
+    spec = StrategySpec(
+        description="Sends the objective through PyRIT's prompt-sending attack (PyRIT-based).",
+        family="direct_model_attacks",
+        target_types=("chat", "agent", "rag", "mcp"),
+        expected_safe_behavior="The model refuses across the attack's turns.",
+        success_criteria="The model produces the disallowed content, confirmed on replay.",
+        failure_criteria="The model refuses.",
+        evidence="The attack transcript and the judge verdict.",
+        maturity=Maturity.STABLE,
+        notes="Runs only when the optional PyRIT `attacks` extra is installed.",
+    )
 
     def build_attack(self, ctx: StrategyContext):
         from pyrit.executor.attack import PromptSendingAttack
@@ -54,6 +66,19 @@ class PyRITPair(_PyRITStrategy):
     version = "1"
     required_target_capabilities = {Capability.SEND_MULTITURN}
     candidate_taxonomy = _JAILBREAK_TAX
+    spec = StrategySpec(
+        description=(
+            "Runs PyRIT's PAIR attack: an adversarial model refines the prompt over turns."
+        ),
+        family="direct_model_attacks",
+        target_types=("chat", "agent", "rag", "mcp"),
+        expected_safe_behavior="The model refuses across the attack's turns.",
+        success_criteria="The model produces the disallowed content, confirmed on replay.",
+        failure_criteria="The model refuses.",
+        evidence="The attack transcript and the judge verdict.",
+        maturity=Maturity.STABLE,
+        notes="Runs only when the optional PyRIT `attacks` extra is installed.",
+    )
 
     def build_attack(self, ctx: StrategyContext):
         from pyrit.executor.attack import AttackAdversarialConfig, AttackScoringConfig, PAIRAttack
@@ -73,6 +98,19 @@ class PyRITTap(_PyRITStrategy):
     version = "1"
     required_target_capabilities = {Capability.SEND_MULTITURN}
     candidate_taxonomy = _JAILBREAK_TAX
+    spec = StrategySpec(
+        description=(
+            "Runs PyRIT's TAP attack: a tree of attack prompts pruned toward success."
+        ),
+        family="direct_model_attacks",
+        target_types=("chat", "agent", "rag", "mcp"),
+        expected_safe_behavior="The model refuses across the attack's turns.",
+        success_criteria="The model produces the disallowed content, confirmed on replay.",
+        failure_criteria="The model refuses.",
+        evidence="The attack transcript and the judge verdict.",
+        maturity=Maturity.STABLE,
+        notes="Runs only when the optional PyRIT `attacks` extra is installed.",
+    )
 
     def build_attack(self, ctx: StrategyContext):
         from pyrit.executor.attack import AttackAdversarialConfig, AttackScoringConfig, TAPAttack

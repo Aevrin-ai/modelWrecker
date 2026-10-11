@@ -8,7 +8,8 @@ and update everything in the right column.
 |--------|-------------------------|
 | New CLI command or flag | `docs/reference/CLI.md` |
 | New provider / provider adapter | `docs/providers/OVERVIEW.md`; `docs/DEPENDENCIES.md` if a new SDK |
-| New attack strategy | `docs/attack-engine/STRATEGIES.md` |
+| New attack strategy | `docs/attack-engine/STRATEGIES.md`; its spec in code; `docs/testing/test-matrix.md`; `docs/research/incident-to-strategy.md` if it comes from an incident |
+| New benchmark dataset or research source | `docs/datasets.md`; `docs/research/research-sources.md` |
 | Change to how the planner picks attacks | `docs/attack-engine/ATTACK-PLANNER.md` |
 | New payload transform | `docs/attack-engine/PAYLOAD-ENGINE.md` |
 | New target type | `docs/targets/OVERVIEW.md` |

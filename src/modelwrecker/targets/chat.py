@@ -1,68 +1,82 @@
-"""Chat/completions API target: the default target type (`target.type: chat`).
-
-Wraps a provider and presents the Target interface. It is the system under test, not a provider -
-the engine attacks a Target. Responses are returned as data, never executed (see
-docs/security/SECURITY.md).
-"""
-
-from __future__ import annotations
-
-from ..data import Observation, ToolCall
-from ..interfaces import Capability
-from ..providers.base import BaseProvider
-from .base import UnsupportedCapability
-
-
-class ChatTarget:
-    name = "chat"
-    version = "1"
-
-    def __init__(self, provider: BaseProvider, system: str | None = None) -> None:
-        self._provider = provider
-        self._system = system
-
-    def capabilities(self) -> set[Capability]:
-        return {
-            Capability.SEND_MESSAGE,
-            Capability.SEND_MULTITURN,
-            Capability.RESET_SESSION,
-            Capability.GET_METADATA,
-        }
-
-    async def get_metadata(self) -> dict:
-        return {"model": self._provider.model, "provider": self._provider.name}
-
-    async def send_message(self, text: str, **opts: object) -> Observation:
-        messages: list[dict] = []
-        if self._system:
-            messages.append({"role": "system", "content": self._system})
-        messages.append({"role": "user", "content": text})
-        return await self._send(messages, **opts)
-
-    async def send_multiturn(self, thread: list[dict], **opts: object) -> Observation:
-        if not all(isinstance(m, dict) and "role" in m for m in thread):
-            raise UnsupportedCapability("thread must be a list of {role, content} messages")
-        messages = list(thread)
-        if self._system and (not messages or messages[0].get("role") != "system"):
-            messages = [{"role": "system", "content": self._system}, *messages]
-        return await self._send(messages, **opts)
-
-    async def reset_session(self) -> None:
-        # Stateless chat target: nothing to reset between attempts.
-        return None
-
-    async def _send(self, messages: list[dict], **opts: object) -> Observation:
-        completion = await self._provider.generate(messages, **opts)
-        return Observation(
-            attempt_id="",  # filled in by the caller
-            response=completion.text,
-            reasoning=completion.reasoning,
-            tool_calls=[ToolCall(name=tc.get("function", {}).get("name", "unknown"), args=tc)
-                        for tc in completion.tool_calls],
-            target_meta={
-                "model": completion.model,
-                "latency_ms": completion.latency_ms,
-                "prompt_tokens": completion.usage.prompt_tokens,
-                "completion_tokens": completion.usage.completion_tokens,
-            },
-        )
+"""Chat/completions API target: the default target type (`target.type: chat`).
+
+Wraps a provider and presents the Target interface. It is the system under test, not a provider -
+the engine attacks a Target. Responses are returned as data, never executed (see
+docs/security/SECURITY.md).
+"""
+
+from __future__ import annotationsfrom ..data import Observation, ToolCallfrom ..interfaces import Capabilityfrom ..providers.base import BaseProviderfrom .base import UnsupportedCapabilityclass ChatTarget:
+    name = "chat"
+    version = "1"
+
+    def __init__(
+        self, provider: BaseProvider, system: str | None = None, options: dict | None = None
+    ) -> None:
+        self._provider = provider
+        self._system = system
+        # Opt-in: only set `vision: true` when the model actually accepts images, so a text-only
+        # model is never asked for an image (the multimodal strategy is reported NOT TESTED
+        # instead).
+        self._vision = bool((options or {}).get("vision", False))
+
+    def capabilities(self) -> set[Capability]:
+        caps = {
+            Capability.SEND_MESSAGE,
+            Capability.SEND_MULTITURN,
+            Capability.RESET_SESSION,
+            Capability.GET_METADATA,
+        }
+        if self._vision:
+            caps.add(Capability.UPLOAD_IMAGE)
+        return caps
+
+    async def send_image(self, text: str, image_url: str, **opts: object) -> Observation:
+        """Send a prompt plus an image. For testing OCR-derived / cross-modal prompt injection: the
+        image may carry text the model reads. Only used when the target declares UPLOAD_IMAGE."""
+        content = [
+            {"type": "text", "text": text},
+            {"type": "image_url", "image_url": {"url": image_url}},
+        ]
+        messages: list[dict] = []
+        if self._system:
+            messages.append({"role": "system", "content": self._system})
+        messages.append({"role": "user", "content": content})
+        return await self._send(messages, **opts)
+
+    async def get_metadata(self) -> dict:
+        return {"model": self._provider.model, "provider": self._provider.name}
+
+    async def send_message(self, text: str, **opts: object) -> Observation:
+        messages: list[dict] = []
+        if self._system:
+            messages.append({"role": "system", "content": self._system})
+        messages.append({"role": "user", "content": text})
+        return await self._send(messages, **opts)
+
+    async def send_multiturn(self, thread: list[dict], **opts: object) -> Observation:
+        if not all(isinstance(m, dict) and "role" in m for m in thread):
+            raise UnsupportedCapability("thread must be a list of {role, content} messages")
+        messages = list(thread)
+        if self._system and (not messages or messages[0].get("role") != "system"):
+            messages = [{"role": "system", "content": self._system}, *messages]
+        return await self._send(messages, **opts)
+
+    async def reset_session(self) -> None:
+        # Stateless chat target: nothing to reset between attempts.
+        return None
+
+    async def _send(self, messages: list[dict], **opts: object) -> Observation:
+        completion = await self._provider.generate(messages, **opts)
+        return Observation(
+            attempt_id="",  # filled in by the caller
+            response=completion.text,
+            reasoning=completion.reasoning,
+            tool_calls=[ToolCall(name=tc.get("function", {}).get("name", "unknown"), args=tc)
+                        for tc in completion.tool_calls],
+            target_meta={
+                "model": completion.model,
+                "latency_ms": completion.latency_ms,
+                "prompt_tokens": completion.usage.prompt_tokens,
+                "completion_tokens": completion.usage.completion_tokens,
+            },
+        )

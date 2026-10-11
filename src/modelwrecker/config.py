@@ -38,6 +38,9 @@ class Endpoint(BaseModel):
     api_key_env: str | None = None  # NAME of an env var, never the key itself
     provider_pin: str | None = None
     timeout: float | None = None
+    # Optional prices for the cost estimate (USD per 1,000 tokens). Default 0 keeps cost at 0.
+    price_per_1k_input: float = 0.0
+    price_per_1k_output: float = 0.0
     # Target-only fields:
     type: str | None = None  # target kind: chat (default) | agent | rag | mcp
     authorized: bool = False  # a target MUST be explicitly authorized before it is attacked
@@ -118,6 +121,8 @@ class BudgetConfig(BaseModel):
     max_objectives: int | None = None  # cap how many objectives are scheduled
     max_attempts: int | None = None  # total strategy attempts across the whole campaign
     max_tokens: int | None = None  # total target tokens (prompt + completion) across the campaign
+    max_requests: int | None = None  # total model requests across ALL roles and replays
+    max_cost_usd: float | None = None  # total estimated cost (needs per-endpoint prices)
     max_seconds: int | None = None  # wall-clock budget; falls back to engine.deadline_seconds
 
 

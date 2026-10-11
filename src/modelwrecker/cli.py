@@ -276,9 +276,19 @@ def strategies() -> None:
     """List the attack strategies that are available."""
     from .strategies.registry import list_strategies
 
-    for s in list_strategies():
-        caps = ",".join(s["required_capabilities"])
-        typer.echo(f"{s['name']} (v{s['version']}) - needs [{caps}] - {', '.join(s['taxonomy'])}")
+    for item in list_strategies():
+        caps = ",".join(item["required_capabilities"])
+        spec = item.get("spec") or {}
+        maturity = spec.get("maturity", "")
+        tag = f" [{maturity}]" if maturity and maturity != "stable" else ""
+        typer.echo(f"{item['name']} (v{item['version']}){tag} - needs [{caps}] - "
+                   f"{', '.join(item['taxonomy'])}")
+        if spec.get("description"):
+            typer.echo(f"    {spec['description']}")
+        targets = ", ".join(spec.get("target_types") or [])
+        if targets:
+            typer.echo(f"    targets: {targets}"
+                       + ("  (benign control included)" if spec.get("benign_control") else ""))
 
 
 @app.command()
@@ -289,6 +299,40 @@ def transforms() -> None:
     for t in list_transforms():
         rev = "reversible" if t["reversible"] else "one-way"
         typer.echo(f"{t['name']} (v{t['version']}) - {rev}")
+
+
+@app.command()
+def datasets(
+    name: str = typer.Argument("", help="a dataset to fetch and validate; omit to list all"),
+    offline: bool = typer.Option(False, help="do not download; use only a cached copy"),
+) -> None:
+    """List benchmark datasets, or fetch and validate one (docs/datasets.md).
+
+    Nothing is bundled: a dataset is fetched from its pinned source into a local cache. Set
+    MODELWRECKER_DATASETS_OFFLINE=1 (or pass --offline) to forbid downloads.
+    """
+    from .datasets import DatasetError, list_datasets, load_cases
+    from .datasets.base import get_dataset
+
+    if not name:
+        for info in list_datasets():
+            typer.echo(f"{info.name} - {info.title} ({info.license}) - {info.coverage}")
+        typer.echo("\nRun `modelwrecker datasets <name>` to fetch and validate one.")
+        return
+    try:
+        info = get_dataset(name)
+    except KeyError as e:
+        raise typer.BadParameter(str(e)) from e
+    try:
+        cases = load_cases(name, offline=offline)
+    except DatasetError as e:
+        typer.echo(f"error: {e}")
+        raise typer.Exit(code=1) from e
+    benign = sum(1 for c in cases if c.is_benign)
+    typer.echo(f"{info.title}: {len(cases)} cases, {benign} benign controls. "
+               f"Licence {info.license}.")
+    typer.echo(f"Attribution: {info.attribution}")
+    typer.echo(f"Pinned at {info.ref[:12]}. Cached; nothing was written to the repository.")
 
 
 @app.command()

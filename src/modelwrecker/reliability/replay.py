@@ -37,11 +37,14 @@ async def measure_reliability(
     n: int,
     threshold: float,
     backend_pinned: bool = False,
+    replay=None,
 ) -> ReliabilityResult:
+    """`replay`, if given, re-runs the winning scenario (e.g. an indirect-injection tool session)
+    instead of re-sending `payload`; the judge still decides each outcome."""
     n = max(1, n)
 
     async def one() -> Outcome:
-        obs = await target.send_message(payload)
+        obs = await replay() if replay is not None else await target.send_message(payload)
         verdict = await judge.judge(obs, objective, payload)
         return verdict.outcome
 

@@ -17,13 +17,16 @@ capabilities first so this is a guard, not a runtime surprise.
 
 ```text
 send_message        send_multiturn      upload_image
-call_tool           observe_tool_call   reset_session
-get_metadata
+call_tool           observe_tool_call   tool_environment
+ingest_document     reset_session       get_metadata
 ```
 
 A target implements only the ones it truly supports and reports them via `capabilities()`. A pure chat
-API supports `send_message`/`send_multiturn`; an agent adds `call_tool`/`observe_tool_call`; an MCP
-target adds tool discovery. Full signatures: [`../interfaces/target.md`](../interfaces/target.md).
+API supports `send_message`/`send_multiturn`; an agent and an MCP target add `call_tool`,
+`observe_tool_call`, and `tool_environment` (a bounded multi-step tool session where read tools return
+fixtures and no tool is executed - see below); a RAG target adds `ingest_document`. A strategy that needs
+a capability the target lacks is reported as NOT TESTED with the reason, never silently skipped. Full
+signatures: [`../interfaces/target.md`](../interfaces/target.md).
 
 ## Target types
 
@@ -42,14 +45,18 @@ Phase 4 ships the **chat/completions API** target (the baseline). **Phase 9 adds
 targets** (the confirmed order, a resolved decision in [`../../DECISIONS.md`](../../DECISIONS.md)); the
 generic HTTP and browser targets remain later work (see [`../../ROADMAP.md`](../../ROADMAP.md)).
 
-`config.target.type` selects the target (`chat` default, `agent`, `rag`, `mcp`) and `target_options`
+`config.target.type` selects the target (`chat` default, `agent`, `rag`, `mcp`, `memory`, `multi_agent`) and `target_options`
 carries its type-specific config. A factory (`targets/factory.py`) builds the right one, so the loop never
 changes. What each adds:
 
 - **agent** (`targets/agent.py`): a tool-using agent. `target_options.tools` is a list of
   `{name, description, sensitive}`. The agent decides tool calls; modelWrecker only *observes and records*
   them (it never executes a tool), and marks any sensitive call for the judge. Attack: `tool_misuse`
-  (excessive agency / goal hijack; OWASP LLM03, ASI01).
+  (excessive agency / goal hijack; OWASP LLM03, ASI01). The agent and MCP targets also run a **simulated
+  tool environment** (`run_scenario`): a bounded loop where the harness supplies tool results (fixtures),
+  so an instruction hidden in tool output can be tested. This powers `indirect_prompt_injection`, which
+  plants a canary in the fixture and checks whether the agent leaks it or calls a sensitive tool
+  (OWASP LLM01/LLM02). Nothing is ever executed and the loop stops after a fixed number of steps.
 - **rag** (`targets/rag.py`): a retrieval-augmented system. `target_options.documents` is the corpus; it
   retrieves by keyword overlap and injects documents as untrusted context. If `allow_ingest` (default on)
   it declares INGEST_DOCUMENT. Attack: `rag_injection` plants a poisoned document and triggers its
@@ -57,6 +64,13 @@ changes. What each adds:
 - **mcp** (`targets/mcp_target.py`): an MCP-connected agent whose tools (inline for now) may carry poisoned
   descriptions. Attack: `mcp_tool_poisoning` (OWASP MCP03). A live MCP-server connection is a documented
   follow-up; the inline form already exercises the full attack and judge path.
+- **memory** (`targets/memory.py`): an agent that keeps notes across sessions (notes survive
+  `reset_session`). Attack: `memory_poisoning` plants a note in one session and checks a later one
+  (OWASP LLM01/LLM02; group G5).
+- **multi_agent** (`targets/multi_agent.py`): a researcher agent whose notes a main assistant trusts.
+  Attack: `multi_agent_injection` hides an instruction in the researcher's source (group G7).
+- **chat with `vision: true`**: declares UPLOAD_IMAGE so `multimodal_injection` can send an image whose
+  text carries an instruction. Text-only models leave it off, so the strategy is reported NOT TESTED.
 
 ## Untrusted by default
 
