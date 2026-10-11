@@ -140,9 +140,6 @@ export function Pricing() {
         })}
       </div>
 
-      <p className="text-muted-foreground mt-8 text-center text-[13px] text-pretty">
-        Payments by Razorpay. Prices are in Indian rupees. {TAX_NOTE} The engine runs on your machine on every plan.
-      </p>
     </Section>
   );
 }

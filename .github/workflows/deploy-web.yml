@@ -9,8 +9,8 @@ name: Deploy web (landing + dashboard) to Cloudflare Pages
 #   CLOUDFLARE_ACCOUNT_ID   - the Cloudflare account id
 # These are never stored in the repo. See deploy/cloudflare/README.md.
 #
-# Required repository VARIABLES (public values, used at dashboard build time):
-#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+# Required repository VARIABLE (a public value, used at dashboard build time):
+#   VITE_SUPABASE_URL
 
 on:
   push:
@@ -46,11 +46,10 @@ jobs:
       - name: Build dashboard (src/dash)
         working-directory: src/dash
         env:
-          # Public build-time values (RLS protects the data). Set as repository variables.
-          # Live mode only once the anon key variable exists; until then the dashboard ships in demo mode.
-          VITE_API_MODE: ${{ vars.VITE_SUPABASE_ANON_KEY != '' && 'http' || 'mock' }}
+          # Public build-time value (where Google sign-in starts). Set as a repository variable.
+          # Live mode only once it exists; until then the dashboard ships in demo mode.
+          VITE_API_MODE: ${{ vars.VITE_SUPABASE_URL != '' && 'http' || 'mock' }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
         run: |
           npm ci
           npm run build
@@ -67,6 +66,8 @@ jobs:
           # paths to /dashboard/; landing deep links use Pages' default single-page-app fallback.
           cp deploy/cloudflare/pages/_worker.js deploy_out/_worker.js
           rm -f deploy_out/_redirects deploy_out/dashboard/_redirects
+          # The Content-Security-Policy allows the built pages' inline scripts by hash.
+          node deploy/cloudflare/pages/csp-hashes.mjs deploy_out
 
       - name: Deploy to Cloudflare Pages
         env:

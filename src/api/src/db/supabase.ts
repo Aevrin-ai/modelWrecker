@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AuthAccount, AuthAdmin, AuthUser, Db, Query, Row, Table } from "../db";
+import type { AuthAccount, AuthAdmin, AuthTokens, AuthUser, Db, GrantResult, Query, Row, Table } from "../db";
 
 const NO_SESSION = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 
@@ -114,6 +114,65 @@ export function supabaseDeps(env: {
       };
     },
     authAdmin: supabaseAuthAdmin(service),
+    authTokens: supabaseAuthTokens(env.SUPABASE_URL, env.SUPABASE_ANON_KEY),
+  };
+}
+
+/** Supabase Auth's token endpoints, called with the public anon key (docs/security/authentication.md). */
+export function supabaseAuthTokens(url: string, anonKey: string): AuthTokens {
+  const base = `${url.replace(/\/+$/, "")}/auth/v1`;
+  const post = (path: string, body: unknown, accessToken?: string) =>
+    fetch(`${base}${path}`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        "content-type": "application/json",
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(body),
+      redirect: "error",
+    });
+
+  async function grant(type: "pkce" | "refresh_token", body: Record<string, string>): Promise<GrantResult> {
+    let res: Response;
+    try {
+      res = await post(`/token?grant_type=${type}`, body);
+    } catch {
+      return { ok: false, reason: "unavailable" };
+    }
+    if (res.status === 429 || res.status >= 500) return { ok: false, reason: "unavailable" };
+    if (!res.ok) return { ok: false, reason: "invalid" };
+    const data = (await res.json().catch(() => null)) as Record<string, any> | null;
+    if (!data?.access_token || !data.refresh_token || !data.user?.id) return { ok: false, reason: "unavailable" };
+    const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+    const text = (v: unknown) => (typeof v === "string" && v ? v : null);
+    return {
+      ok: true,
+      grant: {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: Number(data.expires_at) || Math.floor(Date.now() / 1000) + Number(data.expires_in ?? 3600),
+        user: {
+          id: String(data.user.id),
+          email: text(data.user.email),
+          name: text(meta.full_name) ?? text(meta.name),
+          avatarUrl: text(meta.avatar_url) ?? text(meta.picture),
+        },
+      },
+    };
+  }
+
+  return {
+    exchangeCode: (code, verifier) => grant("pkce", { auth_code: code, code_verifier: verifier }),
+    refresh: (refreshToken) => grant("refresh_token", { refresh_token: refreshToken }),
+    async signOut(accessToken) {
+      try {
+        const res = await post("/logout?scope=local", {}, accessToken);
+        return res.ok;
+      } catch {
+        return false;
+      }
+    },
   };
 }
 

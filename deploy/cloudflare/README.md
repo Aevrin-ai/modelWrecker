@@ -51,12 +51,11 @@ CLOUDFLARE_API_TOKEN   = a token with the "Cloudflare Pages: Edit" permission
 CLOUDFLARE_ACCOUNT_ID  = your Cloudflare account id
 ```
 
-Also add the dashboard build-time env vars (Supabase public values) as Actions secrets or
-repository variables so the build can read them:
+Also add the dashboard's build-time value (the public Supabase project URL, where Google sign-in starts)
+as a repository variable so the build can read it:
 
 ```text
 VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
 ```
 
 After this, any push to `main` touching `src/web/**` or `src/dash/**` redeploys app.aevrin.net.
@@ -92,8 +91,9 @@ set the API answers `503 unavailable` rather than running half-configured. After
 typecheck and tests first). Give the `CLOUDFLARE_API_TOKEN` secret both "Workers Scripts: Edit" and
 "Cloudflare Pages: Edit".
 
-Also add two repository **variables** (not secrets; they are public) so the dashboard builds against the
-real API: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+Also add the repository **variable** (not a secret; it is public) `VITE_SUPABASE_URL` so the dashboard
+builds against the real API. Without it the dashboard ships in demo mode. The dashboard needs no Supabase
+key: the API makes every token call for it (docs/security/authentication.md).
 
 ## 5. Free-tier limits to respect
 

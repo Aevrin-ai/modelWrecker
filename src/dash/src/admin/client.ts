@@ -11,7 +11,8 @@
 
 import { ApiError } from "@/api/httpClient";
 import { API_BASE, IS_HTTP_MODE } from "@/lib/config";
-import { getSupabase } from "@/lib/supabase";
+import { sendWithSession } from "@/api/session";
+import { authTokens } from "@/lib/auth";
 import { mockAdminClient } from "./mockClient";
 import type { FeatureKey, MeterKey, Plan } from "@/types";
 
@@ -189,18 +190,11 @@ function storeSession(token: string | null) {
 let memorySession: string | null = null;
 const currentSession = () => storedSession() ?? memorySession;
 
-async function request<T>(method: string, path: string, body?: unknown, withSession = true): Promise<T> {
-  const sb = await getSupabase();
-  const { data } = await sb.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new ApiError(401, "unauthorized", "Your session has ended. Please sign in again.");
-  const session = withSession ? currentSession() : null;
-  if (withSession && !session) sessionEnded("Enter your authenticator code.");
+async function send(method: string, path: string, token: string, session: string | null, body?: unknown): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    return await fetch(`${API_BASE}${path}`, {
       method,
       headers: {
         Accept: "application/json",
@@ -218,6 +212,14 @@ async function request<T>(method: string, path: string, body?: unknown, withSess
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function request<T>(method: string, path: string, body?: unknown, withSession = true): Promise<T> {
+  const session = withSession ? currentSession() : null;
+  if (withSession && !session) sessionEnded("Enter your authenticator code.");
+  // An expired sign-in token is refreshed once and retried once (src/api/session.ts).
+  const res = await sendWithSession(authTokens, (token) => send(method, path, token, session, body));
+  if (!res) throw new ApiError(401, "unauthorized", "Your session has ended. Please sign in again.");
   const text = res.status === 204 ? "" : await res.text().catch(() => "");
   let parsed: Record<string, unknown> = {};
   try {

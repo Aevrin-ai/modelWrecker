@@ -48,6 +48,29 @@
         }
       } catch (e) {}
     </script>
+    <!--
+      A signed-in visitor opening the home page goes straight to the dashboard. Sign-in sets the
+      "mw_signed_in" cookie, which holds no secret (the session itself is in an HttpOnly cookie); a
+      browser signed in before that change still has its session in localStorage until the dashboard
+      moves it. If the session has since ended, the dashboard shows its sign-in screen. Links from this
+      site (a same-origin referrer) and links to a section (#pricing) still show the landing page.
+    -->
+    <script>
+      try {
+        var fromSite = document.referrer && new URL(document.referrer).origin === location.origin;
+        if (location.pathname === "/" && !location.hash && !fromSite) {
+          var signedIn = /(?:^|;\s*)mw_signed_in=1(?:;|$)/.test(document.cookie);
+          for (var i = 0; !signedIn && i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            signedIn = !!key && /^sb-[a-z0-9]+-auth-token$/.test(key) && !!(JSON.parse(localStorage.getItem(key)) || {}).refresh_token;
+          }
+          if (signedIn) {
+            document.documentElement.hidden = true;
+            location.replace("/dashboard/");
+          }
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

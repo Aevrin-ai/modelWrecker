@@ -28,6 +28,7 @@ Format of each ADR: Decision · Why · Alternatives · Trade-offs · Date · Sta
 | 0018 | Entitlement enforcement: cloud issues a signed scoped entitlement the local engine verifies; enforced outside the UI; no pricing logic in the engine | Accepted | [ADR-0018](docs/decisions/ADR-0018-entitlement-enforcement.md) |
 | 0019 | Prepaid plans (month or year) through Razorpay Orders; a payment is applied once, on the server, from verify (signature plus Razorpay fetch), webhook, or reconciliation | Accepted | [ADR-0019](docs/decisions/ADR-0019-prepaid-billing.md) |
 | 0020 | Admin console at /admin: verified @aevrin.net email plus a TOTP authenticator plus a hashed admin session, checked on every request; every change audited; first-party cookie-free page analytics | Accepted | [ADR-0020](docs/decisions/ADR-0020-admin-console.md) |
+| 0021 | Dashboard refresh token in an HttpOnly cookie: the API makes Supabase Auth's token calls for the browser; access token in memory only; Content-Security-Policy on every page | Accepted | [ADR-0021](docs/decisions/ADR-0021-refresh-token-cookie.md) |
 
 ## Resolved maintainer decisions
 

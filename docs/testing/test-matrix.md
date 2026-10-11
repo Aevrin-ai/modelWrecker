@@ -196,6 +196,14 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Dashboard | admin console in mock mode: authenticator setup with a locally drawn QR code, recovery codes, Users, user detail and dialogs, Platform analytics, Page analytics | PASS | Chrome, local stand-in for the Pages worker |
 | Live | migration `0005` applied: admin tables and `page_views` have RLS on and no policies; admin functions executable by the server key only; payments keep their rows on user deletion (`ON DELETE SET NULL`); `admin_user_list`, `admin_metrics`, `admin_traffic` return live numbers | PASS | checked with SQL, 2026-10-02 |
 | Live | a staff member enrolling an authenticator and using the console | NOT TESTED | needs an @aevrin.net Google account (maintainer) |
+| API | dashboard sign-in tokens: code exchange, refresh rotation, reuse revokes the session, expired and revoked refresh tokens, outage keeps the cookie, legacy session moved once, logout with a live or expired access token, cross-site and header checks, rate limit, cookie flags (HttpOnly, Secure, SameSite=Strict, path) | PASS | `src/api/test/auth.test.ts` (#59) |
+| API | missing, malformed, expired, or revoked user token answers `401 unauthenticated` | PASS | `src/api/test/api.test.ts` (#58) |
+| Dashboard | refresh once and retry once on `401 unauthenticated`; one shared refresh for concurrent failures; no loop; other 401s and errors untouched | PASS | `src/dash/src/api/session.test.ts`, `npm test` (#58) |
+| Dashboard + API + Pages worker | Google sign-in (PKCE) through the API, refresh cookie unreadable by script, reload restores the session, expired access token refreshed and the request retried, signed-in `/` goes to the dashboard and `/#pricing` does not, sign-out revokes and clears cookies, an old localStorage session moved into the cookie | PASS | Chrome against a local harness: the built site through `_worker.js`, the real API app, a fake Supabase Auth (2026-10-11) |
+| Pages worker | Content-Security-Policy on landing, dashboard, admin; no violations; landing inline scripts run by hash; Google Fonts and Razorpay Checkout (script and payment iframe) load | PASS | same local harness in Chrome (#60) |
+| Live | Google sign-in, refresh, and sign-out through the API cookie on app.aevrin.net | NOT TESTED | needs a real Google sign-in after deploy (maintainer) |
+| Live | Supabase Auth token settings (expiry, rotation, reuse interval, refresh rate limit) | NOT TESTED | run `deploy/supabase/auth-settings.mjs` with the maintainer's token (#61) |
+| Live | Cloudflare's injected bot-check script runs under the CSP nonce | NOT TESTED | only happens on the live zone |
 | Live | a real purchase, renewal, and refund on the live key | NOT TESTED | needs the maintainer to buy once and refund it from the admin console or Razorpay dashboard |
 
 ## Summary

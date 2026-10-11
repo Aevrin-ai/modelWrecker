@@ -23,7 +23,6 @@ export const API_MODE: ApiMode = IS_HTTP_MODE ? "http" : "mock";
 export const API_BASE = (env.VITE_API_BASE || "/api/v1").replace(/\/+$/, "");
 
 export const SUPABASE_URL = (env.VITE_SUPABASE_URL ?? "").trim();
-export const SUPABASE_ANON_KEY = (env.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
 function validSupabaseUrl(value: string): boolean {
   try {
@@ -45,7 +44,6 @@ export const CONFIG_PROBLEMS: string[] = (() => {
   const problems: string[] = [];
   if (!SUPABASE_URL) problems.push("VITE_SUPABASE_URL is not set.");
   else if (!validSupabaseUrl(SUPABASE_URL)) problems.push("VITE_SUPABASE_URL is not a valid https URL.");
-  if (!SUPABASE_ANON_KEY) problems.push("VITE_SUPABASE_ANON_KEY is not set.");
   return problems;
 })();
 

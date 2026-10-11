@@ -16,6 +16,7 @@ import {
 import { DeviceApproveReq, DeviceCodeReq, DeviceTokenReq, HeartbeatReq, SyncReq, type SyncEvidenceBody } from "./schemas";
 import { reconcileOwner, registerBillingRoutes } from "./routes/billing";
 import { registerAdminRoutes } from "./routes/admin";
+import { registerAuthRoutes } from "./routes/auth";
 import { registerCollectRoute } from "./routes/collect";
 import { registerDashboardRoutes } from "./routes/dashboard";
 import { issueEntitlement } from "./entitlements";
@@ -250,6 +251,7 @@ export function createApp(deps: Deps) {
   registerBillingRoutes(app, deps, requireUser);
   registerAdminRoutes(app, deps, requireUser);
   registerCollectRoute(app, deps);
+  registerAuthRoutes(app, deps);
 
   return app;
 }

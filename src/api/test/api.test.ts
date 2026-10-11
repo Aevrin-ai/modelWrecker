@@ -168,6 +168,18 @@ describe("credentials stay on their own routes", () => {
     expect((await call("GET", "/projects")).status).toBe(401);
     expect((await call("POST", "/sync", { token: "mwd_forged", body: syncBody() })).status).toBe(401);
   });
+
+  // The dashboard refreshes its session once and retries only on this exact code (src/dash/src/api/session.ts).
+  it("answers a missing, malformed, expired, or revoked user token with 401 unauthenticated", async () => {
+    for (const token of [undefined, "not-a-token", "token-expired", "a b", "mwd_forged"]) {
+      const res = await call("GET", "/projects", { token });
+      expect(res.status).toBe(401);
+      expect((await json(res)).error).toBe("unauthenticated");
+    }
+    const malformed = await app.request("/api/v1/projects", { headers: { authorization: "Basic dXNlcjpwYXNz" } });
+    expect(malformed.status).toBe(401);
+    expect((await json(malformed)).error).toBe("unauthenticated");
+  });
 });
 
 describe("result sync", () => {
