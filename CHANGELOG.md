@@ -19,6 +19,9 @@ happened - never invent historical entries.
   this browser's session only. The dashboard no longer bundles `@supabase/supabase-js` or needs the anon key.
 - A Content-Security-Policy on every page of app.aevrin.net (#60), with the landing page's inline scripts
   allowed by hash at deploy and a per-request nonce for Cloudflare's injected bot check.
+- The API's calls to Supabase Auth and Razorpay no longer pass `redirect: "error"` to `fetch`, which the
+  Workers runtime rejected, so live sign-in failed after the cookie change (#63). They use `manual` and refuse
+  any redirect.
 - `deploy/supabase/auth-settings.mjs` checks, and with `--apply` sets, the Supabase Auth token settings the
   dashboard relies on (#61).
 - Admin console at `app.aevrin.net/admin` (#43, #44, #45). Staff only: a verified `@aevrin.net` Google

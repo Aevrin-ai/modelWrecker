@@ -130,7 +130,8 @@ export function supabaseAuthTokens(url: string, anonKey: string): AuthTokens {
         ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
       },
       body: JSON.stringify(body),
-      redirect: "error",
+      // Never follow a redirect. "manual" because the Workers runtime rejects "error"; a 3xx is refused below.
+      redirect: "manual",
     });
 
   async function grant(type: "pkce" | "refresh_token", body: Record<string, string>): Promise<GrantResult> {
@@ -140,7 +141,7 @@ export function supabaseAuthTokens(url: string, anonKey: string): AuthTokens {
     } catch {
       return { ok: false, reason: "unavailable" };
     }
-    if (res.status === 429 || res.status >= 500) return { ok: false, reason: "unavailable" };
+    if (res.status === 429 || res.status >= 500 || (res.status >= 300 && res.status < 400)) return { ok: false, reason: "unavailable" };
     if (!res.ok) return { ok: false, reason: "invalid" };
     const data = (await res.json().catch(() => null)) as Record<string, any> | null;
     if (!data?.access_token || !data.refresh_token || !data.user?.id) return { ok: false, reason: "unavailable" };
