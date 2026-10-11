@@ -22,8 +22,8 @@ spec and a capability the loop checks, reporting incompatible ones as NOT TESTED
 reliability (Wilson confidence intervals), evidence, findings (reports show the prompt sent + model reply +
 pass/fail per attempt), the payload/transform engine, the campaign engine (parallel objectives, budgets,
 stop conditions, request/token/cost budgets, and per-run usage metering), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
-benchmark dataset adapters (InjecAgent, AgentInjectionBench; load-at-runtime, never bundled), storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
-garak are integrated.** Live-verified against OpenRouter. 257 offline tests pass (1 skipped).
+benchmark dataset adapters (InjecAgent, AgentInjectionBench, HarmBench text, JailbreakBench; load-at-runtime, never bundled), a live MCP-server tool-discovery connection, storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
+garak are integrated.** Live-verified against OpenRouter. 263 offline tests pass (1 skipped).
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
 Run tests: `.venv\Scripts\python -m pytest -q`. Phase 10 (local-first product) is in progress: docs, the

@@ -57,7 +57,8 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Target | models with native function-calling (Groq gpt-oss) run the tool environment without a 400 | PASS | live on Groq gpt-oss-20b after #71; indirect_prompt_injection produced a finding via a native send_message call |
 | API | sync accepts the new target types `memory` and `multi_agent` | PASS | `src/api/src/schemas.ts` TARGET_TYPES; `src/api/test` (84 tests) |
 | Strategy | pyrit_xpia (PyRIT XPIA workflow) | PASS | `tests/test_pyrit.py` (runs through the bridge); live on Groq gpt-oss-20b it scored 10/10 once but did not hold on replay, so correctly no finding; registers with the `attacks` extra |
-| Datasets | InjecAgent and AgentInjectionBench parse, normalize, keep benign controls, convert to objectives; offline guard | PASS | `tests/test_datasets.py` on pinned fixtures; both also loaded live from their pinned commits (200 and 182 cases) |
+| Datasets | InjecAgent, AgentInjectionBench, HarmBench text, and JailbreakBench parse, normalize, keep benign controls, read JSON/JSONL/CSV, convert to objectives; offline guard | PASS | `tests/test_datasets.py` on pinned fixtures; all four also loaded live from their pinned commits (500/182/400/200 cases) |
+| Target | live MCP-server tool discovery (streamable HTTP); poisoned tool feeds the catalog; discovery only, never calls a tool; cached | PASS | `tests/test_mcp_live_connection.py` (stubbed client); verified against a real local MCP server exposing a poisoned tool; a live mcp_tool_poisoning run on Groq discovered the tools and ran end to end |
 | Strategy | PyRIT bridge (provider -> PyRIT target) | PASS | `tests/test_pyrit.py` (pyrit_send runs) |
 | Strategy | pyrit_pair (PAIR via PyRIT) | PASS | `tests/test_pyrit.py` - runs offline, reaches SUCCESS outcome |
 | Strategy | pyrit_tap (TAP via PyRIT) | PASS (executes) | `tests/test_pyrit.py` - runs; prunes offline without live adversarial |
