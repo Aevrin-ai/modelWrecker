@@ -201,9 +201,9 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Dashboard | refresh once and retry once on `401 unauthenticated`; one shared refresh for concurrent failures; no loop; other 401s and errors untouched | PASS | `src/dash/src/api/session.test.ts`, `npm test` (#58) |
 | Dashboard + API + Pages worker | Google sign-in (PKCE) through the API, refresh cookie unreadable by script, reload restores the session, expired access token refreshed and the request retried, signed-in `/` goes to the dashboard and `/#pricing` does not, sign-out revokes and clears cookies, an old localStorage session moved into the cookie | PASS | Chrome against a local harness: the built site through `_worker.js`, the real API app, a fake Supabase Auth (2026-10-11) |
 | Pages worker | Content-Security-Policy on landing, dashboard, admin; no violations; landing inline scripts run by hash; Google Fonts and Razorpay Checkout (script and payment iframe) load | PASS | same local harness in Chrome (#60) |
-| Live | Google sign-in, refresh, and sign-out through the API cookie on app.aevrin.net | NOT TESTED | needs a real Google sign-in after deploy (maintainer) |
-| Live | Supabase Auth token settings (expiry, rotation, reuse interval, refresh rate limit) | NOT TESTED | run `deploy/supabase/auth-settings.mjs` with the maintainer's token (#61) |
-| Live | Cloudflare's injected bot-check script runs under the CSP nonce | NOT TESTED | only happens on the live zone |
+| Live | Google sign-in through the API cookie on app.aevrin.net | PASS | the maintainer signed in with Google 2026-10-11 after #64; the PKCE authorize request, return address `/dashboard/`, and the auth routes' 400, 401, and 403 answers were also checked directly |
+| Live | Supabase Auth token settings (expiry, rotation, reuse interval, refresh rate limit) | PASS | `deploy/supabase/auth-settings.mjs` run by the maintainer 2026-10-11: `jwt_exp` 3600, rotation on, reuse interval 10 s were already set; `rate_limit_token_refresh` raised from 150 to 1800 (#61) |
+| Live | Cloudflare's injected bot-check script runs under the CSP nonce | PASS | clean Chrome profile on app.aevrin.net 2026-10-11: the injected bot check and Web Analytics scripts carry the nonce and run; no CSP violations (#60) |
 | Live | a real purchase, renewal, and refund on the live key | NOT TESTED | needs the maintainer to buy once and refund it from the admin console or Razorpay dashboard |
 
 ## Summary
