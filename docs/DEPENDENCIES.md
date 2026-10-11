@@ -56,19 +56,26 @@ self-hostable" rule holds for red teaming itself. Versions are pinned by each ap
 
 | Name | Used in | Purpose | License | Why | Alternative | Risk | Replace difficulty |
 |------|---------|---------|---------|-----|-------------|------|--------------------|
-| React 18, Vite, TypeScript | web, dash | UI and build | MIT / Apache-2.0 | standard, fast static builds for Cloudflare Pages | Svelte, plain HTML | low | hard (UI rewrite) |
+| React (19 web, 18 dash), Vite, TypeScript | web, dash | UI and build | MIT / Apache-2.0 | standard, fast static builds for Cloudflare Pages | Svelte, plain HTML | low | hard (UI rewrite) |
 | Tailwind CSS (v4 web, v3 dash) | web, dash | styling with design tokens | MIT | tokens map 1:1 to the measured reference styles | CSS modules | low | medium |
 | motion | web | entrance and scroll animation | MIT | small, respects reduced motion | CSS only | low | easy |
 | lucide-react | web, dash | icons | ISC | tree-shaken icons | heroicons | low | easy |
-| react-router-dom | dash | routing under `/dashboard/` | MIT | standard | TanStack Router | low | medium |
+| react-router-dom (dash), react-router 7 (web) | web, dash | routing (landing pages and its 404; the dashboard under `/dashboard/`) | MIT | standard | TanStack Router | low | medium |
 | Recharts | dash | charts (code-split per page) | MIT | simple, themeable | visx, hand SVG | low | medium |
 | zod | dash, api | schema validation | MIT | strict request schemas reject unknown fields | valibot | low | easy |
-| clsx, tailwind-merge | dash | class name helpers | MIT | tiny | hand-rolled | low | easy |
+| clsx, tailwind-merge | web, dash | class name helpers | MIT | tiny | hand-rolled | low | easy |
+| class-variance-authority | web | button variants | Apache-2.0 | tiny, typed variants | hand-rolled maps | low | easy |
+| @fontsource-variable/inter | web | self-hosted Inter body font (no Google Fonts request) | OFL-1.1 | fonts served from our own domain | system fonts | low | easy |
+| ESLint, typescript-eslint, eslint-plugin-react(-hooks, -refresh) | web | lint: unused bindings and undefined JSX components are errors | MIT | catches dead code and render crashes before CI | tsc only | low | easy |
 | @supabase/supabase-js | dash, api | Google sign-in (dash); token verification and RLS-scoped queries (api) | MIT | official client; RLS applies when queries carry the user's token | raw PostgREST + GoTrue over fetch | low | medium |
 | Hono | api | request routing on Cloudflare Workers | MIT | tiny, built for Workers, testable with `app.request` | hand-written router | low | easy |
 | Wrangler | api | build, local dev, deploy of the Worker | MIT / Apache-2.0 | official Cloudflare CLI | Cloudflare dashboard upload | low | easy |
 | vitest, @cloudflare/workers-types | api | tests, Worker types | MIT / Apache-2.0 | offline tests against an in-memory database | jest | low | easy |
 | qrcode | dash (admin only) | draws the authenticator enrollment QR code in the browser, so the secret never goes to a third-party QR service | MIT | small, widely used, no network calls | show the setup key as text only | low | easy |
+
+The landing page also self-hosts the Sentient heading font (Indian Type Foundry, ITF Free Font License,
+free for commercial use) and uses Solar icons by 480 Design (CC BY 4.0, credited here and in the generated icon file), generated
+into one file by `src/web/scripts/solar-icons.mjs`. Its art is CSS only; there are no photos or videos.
 
 Razorpay Checkout (`checkout.razorpay.com/v1/checkout.js`) is loaded by the dashboard's Billing page only
 when the user clicks Buy. It is Razorpay's hosted payment form, not a package; card and UPI details are
