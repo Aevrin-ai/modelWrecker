@@ -7,6 +7,12 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Added
+- A Promptfoo compatibility layer (#77): `modelwrecker import-promptfoo` translates the `redteam`
+  section of a Promptfoo config into a modelWrecker config (plugins -> objectives, strategies -> a
+  strategy or payload transform, target -> target). It is a pure-Python one-way translator with no
+  Promptfoo runtime dependency and no call to Promptfoo's hosted service; unsupported, remote-only, or
+  deprecated ids stop with a clear error, never silently dropped. See `docs/integrations/promptfoo.md`,
+  `docs/research/promptfoo-integration.md`, and ADR-0022.
 - The MCP target can connect to a live MCP server (`target_options.mcp_url`, streamable HTTP) and
   discover its tools, using their descriptions as the untrusted catalog for tool-poisoning tests. It
   never calls a tool on the server (discovery only); a tool whose name or description implies a state
