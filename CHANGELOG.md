@@ -7,6 +7,12 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Added
+- The MCP target can connect to a live MCP server (`target_options.mcp_url`, streamable HTTP) and
+  discover its tools, using their descriptions as the untrusted catalog for tool-poisoning tests. It
+  never calls a tool on the server (discovery only); a tool whose name or description implies a state
+  change is marked sensitive. Verified against a local MCP server exposing a poisoned tool.
+- Two more benchmark dataset adapters: `HarmBench` text (MIT) and `JailbreakBench` (MIT), the latter
+  with its matched benign controls. The dataset loader now reads CSV and multi-file datasets.
 - Benchmark dataset adapters (#70): `InjecAgent` (MIT) and `AgentInjectionBench` (Apache-2.0) load at
   runtime from a pinned commit through `src/modelwrecker/datasets/`, cached locally, schema-validated,
   and convertible to objectives. Nothing is bundled; `modelwrecker datasets` lists and validates them,

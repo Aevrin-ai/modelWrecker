@@ -10,7 +10,8 @@ revision) over copying data into the repository. We keep large datasets out of t
 we add benign controls so we can measure false positives. A benign control is a matched sample with no
 attack in it; if the target "fails" on it, the result is a false positive, not a finding.
 
-Two of these are now built: **InjecAgent** (MIT) and **AgentInjectionBench** (Apache-2.0) load at
+Four of these are now built: **InjecAgent** (MIT), **AgentInjectionBench** (Apache-2.0),
+**HarmBench** text (MIT), and **JailbreakBench** (MIT) load at
 runtime from a pinned commit through `src/modelwrecker/datasets/`, cached locally, never bundled. Run
 `modelwrecker datasets` to list them and `modelwrecker datasets <name>` to fetch and validate one. Set
 `MODELWRECKER_DATASETS_OFFLINE=1` to forbid downloads (a cached copy is then required). The others
@@ -35,8 +36,8 @@ approach.
 | AgentDojo | github.com/ethz-spylab/agentdojo, PyPI agentdojo | MIT / MIT, data ships in the package | PyPI and tag 0.1.35, 2025-10-27; main 089ed46, 2026-06-02 | Agent user tasks plus injection tasks across simulated environments | v1 to v1.1.2: 97 user tasks, 27 injection tasks, 629 pairs. v1.2 to v1.2.2: 97 user, 35 injection, 949 pairs | pip package, code plus environments (planned, optional extra) | MIT allows it, but it is code, not data | Load at runtime from a pinned source, optional extra |
 | Contemporary Agent Attacks | github.com/AndrewSispoidis/contemporary-agent-attacks | none / claimed CC BY 4.0, GitHub reports NOASSERTION | commit ca781be, 2026-09-26, no tags | Single-turn attack text plus negatives, a classifier corpus | 533 attacks, 102 held out, plus 1,187 negatives | Raw files at a pinned commit (planned) | Claimed with attribution, but provenance is a problem | Reference only |
 | Tensor Trust | github.com/HumanCompatibleAI/tensor-trust-data, HF mirror qxcv/tensor-trust | game code BSD-2-Clause / none | commit 747a75e, 2024-03-17 | Prompt hijacking and system-prompt extraction from a game | hijacking 776, extraction 570, extraction detection 230 | Raw files or Hugging Face (planned) | Not allowed, no data license | Reference only |
-| HarmBench | github.com/centerforaisafety/HarmBench | MIT / MIT repo, multimodal images are third-party | commit 8e1604d, 2024-08-05, no tags, not on PyPI | Harmful-behavior prompts, text and multimodal | text 400: val 80, test 320; multimodal 110 | Raw CSV at a pinned commit, text only (planned) | Text CSVs allowed with the notice; do not ship images; do not load the pickled hashes | Load at runtime from a pinned source, text only |
-| JailbreakBench | github.com/JailbreakBench/jailbreakbench, PyPI jailbreakbench, HF JailbreakBench/JBB-Behaviors | MIT / MIT | PyPI and tag v1.0.0, 2024-06-13; HF revision 886acc3, 2024-09-26 | Harmful and benign behaviors plus a judge-comparison set | 100 harmful plus 100 benign; 300 judge comparison | Hugging Face datasets at a pinned revision (planned); avoid the pip package, it pins python below 3.12 | Allowed with the MIT notice | Load at runtime from a pinned source |
+| HarmBench | github.com/centerforaisafety/HarmBench | MIT / MIT repo, multimodal images are third-party | commit 8e1604d, 2024-08-05, no tags, not on PyPI | Harmful-behavior prompts, text and multimodal | text 400: val 80, test 320; multimodal 110 | Built: loads the text CSV at runtime from pinned commit 8e1604d via `datasets/harmbench` | Text CSVs allowed with the notice; images and pickles are never fetched | Built (text only, load at runtime, not bundled) |
+| JailbreakBench | github.com/JailbreakBench/jailbreakbench, PyPI jailbreakbench, HF JailbreakBench/JBB-Behaviors | MIT / MIT | PyPI and tag v1.0.0, 2024-06-13; HF revision 886acc3, 2024-09-26 | Harmful and benign behaviors plus a judge-comparison set | 100 harmful plus 100 benign; 300 judge comparison | Built: loads the harmful and benign CSVs at runtime from pinned revision 886acc3 via `datasets/jailbreakbench`; the pip package is avoided (it pins python below 3.12) | Allowed with the MIT notice | Built (load at runtime, not bundled) |
 
 ## What we will use first
 

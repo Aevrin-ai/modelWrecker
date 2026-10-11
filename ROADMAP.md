@@ -61,8 +61,9 @@ things work, read `docs/`.
   executed), plants a canary confirmed by the deterministic `canary_exfil` signal, and runs a benign
   control. Every strategy now declares a spec, and the loop reports an incompatible strategy as NOT
   TESTED. Per-run usage metering with request and cost budgets. Verified offline (248 tests) and live on
-  Groq: `indirect_prompt_injection` and `supply_chain_injection` produced findings; a live vision-model
-  run is a follow-up. `pyrit_xpia` (the PyRIT XPIA workflow) and runtime loaders for the InjecAgent
+  Groq: `indirect_prompt_injection` and `supply_chain_injection` produced findings; a live MCP-server tool-discovery connection is built (`target_options.mcp_url`), and the InjecAgent,
+  AgentInjectionBench, HarmBench text, and JailbreakBench dataset loaders are built; a live
+  vision-model run is a follow-up. `pyrit_xpia` (the PyRIT XPIA workflow) and runtime loaders for the InjecAgent
   (MIT) and AgentInjectionBench (Apache-2.0) datasets are also built; other datasets stay reference-only.
 
 ## In progress: Phase 10 - local-first product (mostly live)

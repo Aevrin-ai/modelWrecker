@@ -29,7 +29,7 @@ Each extra is opt-in (`pip install "modelwrecker[<extra>]"`); the core runs with
 |------|-------|---------|---------|--------|------|--------------------|
 | PyRIT 1.1 | `attacks` | PAIR/TAP attacks + converters behind our Strategy/Transform interfaces | MIT | **Integrated**; PAIR runs offline to SUCCESS. Kept behind the bridge so churn is contained | medium | medium (ADR-0006) |
 | garak | `scan` | probe prompts for the `garak_probe` strategy | Apache-2.0 | **Integrated**; NVIDIA, active (0.17.0 Sep 2026). Not installable together with PyRIT (`datasets` pins clash), so `all` leaves it out | low-medium | medium |
-| mcp (Python SDK v2) | `mcp` | the harness MCP server | MIT | **Integrated** (stdio server); official, supports the 2026-07-28 spec | low | hard |
+| mcp (Python SDK v2) | `mcp` | the harness MCP server, and the client that discovers a live MCP target's tools | MIT | **Integrated** (stdio server; streamable-HTTP client for tool discovery); official | low | hard |
 | presidio-analyzer | `judges` | PII detection judge signal | MIT | listed in the extra, **not wired into code yet**; the built-in judge uses its own regex-based PII and secret signals | low | easy |
 | detect-secrets | `judges` | secret-leak judge signal | Apache-2.0 | listed in the extra, **not wired into code yet** | low | easy |
 | any-llm (`any-llm-sdk`) | `providers` | planned default multi-provider multiplexer behind our Provider interface (ADR-0003) | Apache-2.0 | listed in the extra, **no code imports it yet**; `protocol: any_llm` uses the built-in OpenAI-compatible adapter today | medium: relatively new; kept behind our interface | medium |
@@ -42,7 +42,8 @@ been removed because no test used it.
 
 No external attack dataset is bundled into the package or the Docker image. Two are loaded at runtime
 from a pinned commit by `src/modelwrecker/datasets/` (using the core `httpx`, so no new dependency):
-**InjecAgent** (MIT) and **AgentInjectionBench** (Apache-2.0). They are cached locally, never
+**InjecAgent** (MIT), **AgentInjectionBench** (Apache-2.0), **HarmBench** text (MIT), and
+**JailbreakBench** (MIT). They are cached locally, never
 redistributed, and downloads can be turned off (`MODELWRECKER_DATASETS_OFFLINE=1`). Other candidate
 benchmarks, their licenses, and how we may use them are tracked in [`datasets.md`](datasets.md); ones
 with no license (MCPTox, Tensor Trust) are reference only. The strategy research behind the new agent attacks is in

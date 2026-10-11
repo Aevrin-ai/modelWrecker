@@ -62,8 +62,11 @@ changes. What each adds:
   it declares INGEST_DOCUMENT. Attack: `rag_injection` plants a poisoned document and triggers its
   retrieval (indirect prompt injection; OWASP LLM01/LLM05).
 - **mcp** (`targets/mcp_target.py`): an MCP-connected agent whose tools (inline for now) may carry poisoned
-  descriptions. Attack: `mcp_tool_poisoning` (OWASP MCP03). A live MCP-server connection is a documented
-  follow-up; the inline form already exercises the full attack and judge path.
+  descriptions. Attack: `mcp_tool_poisoning` (OWASP MCP03). Tools can be inline, or discovered from a
+  live MCP server with `target_options.mcp_url` (streamable HTTP): modelWrecker lists the server's
+  tools and uses their descriptions as the untrusted catalog, and never calls a tool on the server
+  (discovery only). A tool whose name or description implies a state change is marked sensitive (or
+  name them in `target_options.sensitive_tools`).
 - **memory** (`targets/memory.py`): an agent that keeps notes across sessions (notes survive
   `reset_session`). Attack: `memory_poisoning` plants a note in one session and checks a later one
   (OWASP LLM01/LLM02; group G5).
