@@ -68,7 +68,7 @@ export class HttpRazorpay implements RazorpayApi {
         method,
         headers: { Authorization: this.auth, ...(body ? { "Content-Type": "application/json" } : {}) },
         body: body ? JSON.stringify(body) : undefined,
-        redirect: "error",
+        redirect: "manual", // never follow; the Workers runtime rejects "error", and a 3xx fails below
         signal: controller.signal,
       });
     } catch {
