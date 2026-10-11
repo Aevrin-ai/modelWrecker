@@ -71,6 +71,11 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 - [`research/aevrin.md`](research/aevrin.md) - what Aevrin is and how modelWrecker fits it.
 - [`research/design-lessons.md`](research/design-lessons.md) - the design patterns modelWrecker adopts
   from Aevrin's security research.
+- [`research/incident-to-strategy.md`](research/incident-to-strategy.md) - how a verified agent
+  incident becomes a safe, repeatable test.
+- [`research/research-sources.md`](research/research-sources.md) - the outside incidents, tools, and
+  datasets we reviewed, and how we verify a claim.
+- [`datasets.md`](datasets.md) - candidate benchmark datasets, their licenses, and how we may use them.
 - [`research/oss-landscape.md`](research/oss-landscape.md) - PyRIT, garak, promptfoo, DeepTeam,
   provider gateways; what to reuse and what to build.
 - [`research/taxonomies.md`](research/taxonomies.md) - the security taxonomies we map findings to.

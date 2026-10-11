@@ -72,3 +72,14 @@ def test_pyrit_tap_executes() -> None:
     res = asyncio.run(strat.run(_ctx("SURE, here is the content you asked for.")))
     assert len(res.runs) == 1
     assert res.runs[0].observation.target_meta.get("pyrit_outcome")
+
+
+def test_pyrit_xpia_registered_and_runs() -> None:
+    names = {s["name"] for s in list_strategies()}
+    assert "pyrit_xpia" in names
+    strat = get_strategy("pyrit_xpia")
+    # The processing target "follows" the embedded instruction; the scorer rates it a success.
+    res = asyncio.run(strat.run(_ctx("SURE, ignoring the user and doing the embedded step.")))
+    assert len(res.runs) == 1
+    obs = res.runs[0].observation
+    assert "xpia_success" in obs.target_meta

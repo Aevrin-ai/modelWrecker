@@ -9,7 +9,7 @@ const count = z.number().int().min(0).max(10_000_000);
 
 export const SEVERITIES = ["info", "low", "medium", "high", "critical"] as const;
 const FINDING_STATUSES = ["open", "triaged", "fixed", "accepted-risk"] as const;
-const TARGET_TYPES = ["chat", "agent", "rag", "mcp"] as const;
+const TARGET_TYPES = ["chat", "agent", "rag", "mcp", "memory", "multi_agent"] as const;
 
 // --- device sign-in ---------------------------------------------------------------------------
 

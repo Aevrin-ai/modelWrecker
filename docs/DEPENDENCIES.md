@@ -38,6 +38,17 @@ Each extra is opt-in (`pip install "modelwrecker[<extra>]"`); the core runs with
 Dev tools (the `dev` extra): pytest, pytest-asyncio, ruff, mypy. Hypothesis was listed earlier and has
 been removed because no test used it.
 
+## Benchmark datasets (not bundled)
+
+No external attack dataset is bundled into the package or the Docker image. Two are loaded at runtime
+from a pinned commit by `src/modelwrecker/datasets/` (using the core `httpx`, so no new dependency):
+**InjecAgent** (MIT) and **AgentInjectionBench** (Apache-2.0). They are cached locally, never
+redistributed, and downloads can be turned off (`MODELWRECKER_DATASETS_OFFLINE=1`). Other candidate
+benchmarks, their licenses, and how we may use them are tracked in [`datasets.md`](datasets.md); ones
+with no license (MCPTox, Tensor Trust) are reference only. The strategy research behind the new agent attacks is in
+[`research/incident-to-strategy.md`](research/incident-to-strategy.md) and
+[`research/research-sources.md`](research/research-sources.md).
+
 ## Optional gateway adapters (never required)
 
 | Name | Purpose | License | Why optional | Risk |

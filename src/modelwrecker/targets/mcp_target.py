@@ -14,7 +14,7 @@ from __future__ import annotations
 from ..data import Observation
 from ..interfaces import Capability
 from ..providers.base import BaseProvider
-from .agent import run_tool_agent, tools_from_options
+from .agent import _merge_tools, run_tool_agent, run_tool_session, tools_from_options
 
 
 class McpTarget:
@@ -28,12 +28,14 @@ class McpTarget:
         self._system = system
         self._tools = tools_from_options(options or {})
         self._server = str((options or {}).get("server", "inline"))
+        self._max_steps = int((options or {}).get("max_steps", 4))
 
     def capabilities(self) -> set[Capability]:
         return {
             Capability.SEND_MESSAGE,
             Capability.CALL_TOOL,
             Capability.OBSERVE_TOOL_CALL,
+            Capability.TOOL_ENVIRONMENT,
             Capability.RESET_SESSION,
             Capability.GET_METADATA,
         }
@@ -48,6 +50,19 @@ class McpTarget:
 
     async def send_message(self, text: str, **opts: object) -> Observation:
         return await run_tool_agent(self._provider, self._system, self._tools, text, **opts)
+
+    def tools(self) -> list[dict]:
+        return list(self._tools)
+
+    async def run_scenario(
+        self, task: str, environment: dict[str, str], tools: list[dict] | None = None,
+        **opts: object,
+    ) -> Observation:
+        """One simulated tool session. `tools` adds scenario tools to the configured ones."""
+        merged = _merge_tools(self._tools, tools or [])
+        return await run_tool_session(
+            self._provider, self._system, merged, task, environment, self._max_steps, **opts
+        )
 
     async def reset_session(self) -> None:
         return None

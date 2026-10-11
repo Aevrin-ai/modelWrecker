@@ -8,7 +8,7 @@ import { PaintedPanel } from "@/components/ui/scene";
 import { Book, ChatRoundDots, Database, Layers, type IconComponent } from "@/components/ui/solar-icons";
 
 /*
-  The 14 attack strategies, grouped into their four families on a painted
+  The 20 attack strategies, grouped into their four families on a painted
   stage, the way Activepieces lays out its pieces. The names are real text,
   not a picture, so everyone can read the whole list. While the stage is on
   screen a soft ring walks from family to family; for anyone who asked for
@@ -31,14 +31,14 @@ const FAMILIES: { title: string; icon: IconComponent; strategies: string[]; text
   {
     title: "From research",
     icon: Book,
-    strategies: ["PAIR (PyRIT-based)", "TAP (PyRIT-based)", "PyRIT-based send", "garak probes"],
+    strategies: ["PAIR (PyRIT-based)", "TAP (PyRIT-based)", "XPIA (PyRIT-based)", "PyRIT-based send", "garak probes"],
     text: "Methods from published security research: PAIR and TAP (PyRIT-based), a PyRIT-based send, and garak probes.",
   },
   {
-    title: "Tools and data",
+    title: "Agents, tools and data",
     icon: Database,
-    strategies: ["tool misuse", "RAG injection", "MCP tool poisoning"],
-    text: "Attacks on the tools, documents and plug-ins an AI uses.",
+    strategies: ["tool misuse", "indirect prompt injection", "supply-chain injection", "memory poisoning", "multi-agent injection", "multimodal injection", "RAG injection", "MCP tool poisoning"],
+    text: "Attacks on the tools, documents, memory and other agents an AI works with, including instructions hidden in what it reads.",
   },
 ];
 
@@ -54,7 +54,7 @@ export function Attacks() {
     <Section id="attacks" labelledBy="attacks-heading">
       <SectionIntro
         id="attacks-heading"
-        title="14 ways to attack, in four families."
+        title="20 ways to attack, in four families."
         lead="Some attacks take one message. Some take a whole conversation. Some go after the tools and documents around the AI."
       />
 

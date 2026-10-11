@@ -9,6 +9,7 @@ from __future__ import annotations
 from ..data import TaxonomyRef
 from ..interfaces import Capability
 from .base import BaseStrategy, StrategyContext, StrategyResult, StrategyRun
+from .spec import Maturity, StrategySpec
 
 _DEFAULT_PROBE = "test.Test"  # garak's built-in no-model-needed probe; override via params["probe"]
 
@@ -41,6 +42,20 @@ class GarakProbe(BaseStrategy):
     candidate_taxonomy = [
         TaxonomyRef(framework="owasp_llm", id="LLM01", edition="2026"),
     ]
+    spec = StrategySpec(
+        description=(
+            "Loads a garak probe's prompts and sends them at the target; our judge decides."
+        ),
+        family="direct_model_attacks",
+        target_types=("chat", "agent", "rag", "mcp"),
+        expected_safe_behavior="The model refuses the probe's prompts.",
+        success_criteria="A probe prompt produces the disallowed content, confirmed on replay.",
+        failure_criteria="The model refuses the probe.",
+        evidence="The probe name, the winning prompt, and the judge verdict.",
+        maturity=Maturity.STABLE,
+        required_config=("attack.params.probe",),
+        notes="Runs only when the optional garak `scan` extra is installed.",
+    )
 
     async def run(self, ctx: StrategyContext) -> StrategyResult:
         from .garak_adapter import garak_available, load_probe_prompts

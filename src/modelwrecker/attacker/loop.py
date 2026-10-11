@@ -15,6 +15,7 @@ from ..data import Finding, Objective, Outcome, TaxonomyRef
 from ..findings.engine import build_evidence, build_finding
 from ..judges.judge import Judge
 from ..providers.factory import build_provider, provider_scope
+from ..providers.meter import Meter, MeteredProvider
 from ..reliability.replay import measure_reliability
 from ..strategies.base import StrategyContext
 from ..strategies.registry import get_strategy
@@ -32,6 +33,7 @@ class AttemptRecord:
     outcome: str  # success | partial | refused | error
     score: int
     objective_category: str = ""  # carried for per-category analytics (Phase 8)
+    control: bool = False  # a benign control attempt (measures false positives), never a finding
 
 
 @dataclass
@@ -42,6 +44,12 @@ class RunResult:
     objectives_run: int = 0
     notes: list[str] = field(default_factory=list)
     attempts: list[AttemptRecord] = field(default_factory=list)
+    # One row per strategy actually run: attempts, confirmed failures, benign-control failures.
+    strategy_metrics: list[dict] = field(default_factory=list)
+    # Strategies skipped because the target cannot support them: {strategy, reason}.
+    not_tested: list[dict] = field(default_factory=list)
+    # Request / token / cost totals for the run (providers.meter.Meter.summary()).
+    usage: dict = field(default_factory=dict)
 
 
 def _emit_noop(_m: str) -> None:
@@ -76,11 +84,18 @@ async def run_config(
     planner = Planner()
     config_snapshot = _config_snapshot(config)
 
+    meter = Meter()  # counts every model request (all roles + replays), tokens, and estimated cost
+
+    def metered(endpoint, role):
+        inner = build_provider(endpoint, egress)
+        return MeteredProvider(inner, meter, role,
+                               endpoint.price_per_1k_input, endpoint.price_per_1k_output)
+
     async with provider_scope():
         egress = config.security.egress.policy()  # every model call passes the egress guard
-        attacker_provider = build_provider(config.attacker, egress)  # for strategies that reason
-        target_provider = build_provider(config.target, egress)
-        judge_provider = build_provider(config.judge, egress)
+        attacker_provider = metered(config.attacker, "attacker")  # for strategies that reason
+        target_provider = metered(config.target, "target")
+        judge_provider = metered(config.judge, "judge")
 
         target = build_target(config.target, target_provider)
         judge = Judge(judge_provider)
@@ -103,6 +118,7 @@ async def run_config(
         from ..campaigns.engine import build_budget, execute_campaign
 
         budget = build_budget(config)
+        budget.meter = meter  # so the request and cost caps can read running totals
         # The plan's monthly attempt allowance caps the campaign budget
         # (docs/security/entitlements.md).
         if allowance.remaining_attempts is not None:
@@ -116,6 +132,7 @@ async def run_config(
                 objective=objective,
                 config=config,
                 planner=planner,
+                result=result,
                 target=target,
                 attacker_provider=attacker_provider,
                 judge=judge,
@@ -139,6 +156,14 @@ async def run_config(
             )
         finally:
             record_run(budget.attempts)
+            result.usage = meter.summary()
+            if store:
+                store.event("usage", **result.usage)
+            if result.usage["cost_usd"]:
+                result.notes.append(
+                    f"usage: {result.usage['requests']} requests, "
+                    f"estimated cost ${result.usage['cost_usd']:.4f}"
+                )
 
     return result
 
@@ -148,6 +173,7 @@ async def _run_objective(
     objective: Objective,
     config: Config,
     planner: Planner,
+    result: RunResult,
     target,
     attacker_provider,
     judge: Judge,
@@ -172,9 +198,16 @@ async def _run_objective(
             emit(f"skip {strategy_name}: not included in your plan (needs Pro)")
             continue
         strategy = get_strategy(strategy_name)
-        # Capability check: skip a strategy the target cannot support.
-        if not strategy.required_target_capabilities.issubset(target.capabilities()):
-            emit(f"skip {strategy_name}: target missing required capabilities")
+        # Capability check: a strategy the target cannot support is reported as NOT TESTED with
+        # the reason (never silently skipped), so a clean run does not look like a passed one.
+        missing = strategy.required_target_capabilities - target.capabilities()
+        if missing:
+            reason = "target lacks " + ", ".join(sorted(c.value for c in missing))
+            emit(f"not tested: {strategy_name} ({reason})")
+            result.not_tested.append({"strategy": strategy_name, "reason": reason})
+            if store:
+                store.event("not_tested", strategy=strategy_name, reason=reason,
+                            objective=objective.title)
             continue
 
         from ..data import AttackPlan
@@ -204,27 +237,56 @@ async def _run_objective(
                 tokens=sum(_obs_tokens(sr.observation) for sr in strat_result.runs),
             )
 
-        # Judge each attempt; keep the strongest.
-        best = None  # (verdict, run)
+        # Judge each attempt; keep the strongest ATTACK run, and note any benign control that
+        # also "succeeded" (a false positive: the target misbehaves even without the injection).
+        best = None  # (verdict, run) over attack runs only
+        attempts_n = 0
+        confirmed = 0
+        control_success_by_scenario: dict[str, bool] = {}
+        control_failures = 0
         for srun in strat_result.runs:
             verdict = await judge.judge(srun.observation, objective, srun.attempt.payload)
+            succeeded = verdict.outcome is Outcome.SUCCESS
+            attempts_n += 1
             records.append(AttemptRecord(
                 objective=objective.title, strategy=strategy_name,
                 prompt_sent=srun.attempt.payload, model_response=srun.observation.response,
                 outcome=verdict.outcome.value, score=verdict.score,
-                objective_category=objective.category,
+                objective_category=objective.category, control=srun.control,
             ))
             if store:
                 store.event("attempt", objective=objective.title, strategy=strategy_name,
                             payload=srun.attempt.payload, response=srun.observation.response,
                             outcome=verdict.outcome.value, score=verdict.score,
-                            category=objective.category)
+                            category=objective.category, control=srun.control)
+            scenario = str((srun.observation.target_meta or {}).get("scenario") or "")
+            if srun.control:
+                if succeeded:
+                    control_failures += 1
+                    control_success_by_scenario[scenario] = True
+                continue
+            if succeeded:
+                confirmed += 1
             if best is None or verdict.score > best[0].score:
                 best = (verdict, srun)
+
+        metrics = {"strategy": strategy_name, "attempts": attempts_n, "confirmed": confirmed,
+                   "benign_control_failures": control_failures}
+        result.strategy_metrics.append(metrics)
+        if store:
+            store.event("strategy_metrics", objective=objective.title, **metrics)
 
         if best is None:
             continue
         verdict, srun = best
+        # If the matching benign control also succeeded, this result is not attributable to the
+        # attack (a false positive), so it does not become a finding.
+        best_scenario = str((srun.observation.target_meta or {}).get("scenario") or "")
+        if control_success_by_scenario.get(best_scenario):
+            emit(f"{strategy_name}: benign control also succeeded"
+                 f"{f' for {best_scenario}' if best_scenario else ''}; "
+                 "treating as a false positive, not a finding")
+            continue
         if verdict.outcome is not Outcome.SUCCESS:
             emit(f"{strategy_name}: no success (best score {verdict.score}/10), "
                  "trying next strategy")
@@ -237,6 +299,7 @@ async def _run_objective(
             payload=srun.attempt.payload, attempt_id=srun.attempt.id,
             n=config.engine.replays, threshold=config.engine.reliable_threshold,
             backend_pinned=bool(config.target.provider_pin),
+            replay=srun.replay,
         )
         if store:
             store.event("reliability", strategy=strategy_name,

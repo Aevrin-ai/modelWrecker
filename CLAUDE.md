@@ -12,13 +12,18 @@ AI red-teaming layer of the Aevrin security platform.
 Status: **Phases 4-9 done.** The local engine runs end to end, verified offline and live: config,
 OpenAI-compatible provider, target types (chat, agent, rag, mcp via `target.type` + a target factory),
 planner, strategies (direct_jailbreak, prompt_extraction, best_of_n, prefill, many_shot, crescendo,
-encoded_jailbreak, PyRIT-backed pyrit_send/pyrit_pair/pyrit_tap, garak_probe with the scan extra, and the
-Phase 9 tool_misuse/rag_injection/mcp_tool_poisoning), multi-signal judge (incl. a tool_misuse signal) with
+encoded_jailbreak, PyRIT-backed pyrit_send/pyrit_pair/pyrit_tap, garak_probe and pyrit_xpia (XPIA) with the extras, and the
+Phase 9 tool_misuse/rag_injection/mcp_tool_poisoning, and the Phase 10 indirect_prompt_injection,
+supply_chain_injection, memory_poisoning, multi_agent_injection, and multimodal_injection, which hide an
+instruction in tool output, project files, memory, another agent, or an image and confirm a leak with a
+canary signal; each strategy declares a
+spec and a capability the loop checks, reporting incompatible ones as NOT TESTED), multi-signal judge
+(incl. tool_misuse and canary_exfil signals, with benign controls for false positives) with
 reliability (Wilson confidence intervals), evidence, findings (reports show the prompt sent + model reply +
 pass/fail per attempt), the payload/transform engine, the campaign engine (parallel objectives, budgets,
-stop conditions, retries), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
-storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
-garak are integrated.** Live-verified against OpenRouter. 226 offline tests pass (1 skipped).
+stop conditions, request/token/cost budgets, and per-run usage metering), the analytics engine (ASR + leaderboard + static HTML/JSON/CSV via `analyze`),
+benchmark dataset adapters (InjecAgent, AgentInjectionBench; load-at-runtime, never bundled), storage, CLI, the MCP harness server, a built wheel, and a verified non-root Docker image. **PyRIT 1.1 and
+garak are integrated.** Live-verified against OpenRouter. 257 offline tests pass (1 skipped).
 
 **Use the project `.venv` (uv), never global pip.** Create: `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`.
 Run tests: `.venv\Scripts\python -m pytest -q`. Phase 10 (local-first product) is in progress: docs, the
