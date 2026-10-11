@@ -38,6 +38,14 @@ Each extra is opt-in (`pip install "modelwrecker[<extra>]"`); the core runs with
 Dev tools (the `dev` extra): pytest, pytest-asyncio, ruff, mypy. Hypothesis was listed earlier and has
 been removed because no test used it.
 
+## Promptfoo (not a dependency)
+
+modelWrecker does not depend on, bundle, or run Promptfoo. The `import-promptfoo` command is a
+pure-Python one-way translator (Promptfoo `redteam` YAML -> modelWrecker config) using the core PyYAML;
+it adds no runtime dependency and never calls Promptfoo's Node app or its hosted service. Why, and the
+source review: [`research/promptfoo-integration.md`](research/promptfoo-integration.md) and
+[`decisions/ADR-0022-promptfoo-translator.md`](decisions/ADR-0022-promptfoo-translator.md).
+
 ## Benchmark datasets (not bundled)
 
 No external attack dataset is bundled into the package or the Docker image. Two are loaded at runtime

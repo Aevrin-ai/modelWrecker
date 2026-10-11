@@ -76,6 +76,8 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 - [`research/research-sources.md`](research/research-sources.md) - the outside incidents, tools, and
   datasets we reviewed, and how we verify a claim.
 - [`datasets.md`](datasets.md) - candidate benchmark datasets, their licenses, and how we may use them.
+- [`integrations/promptfoo.md`](integrations/promptfoo.md) - run a Promptfoo red-team config on modelWrecker (one-way translator).
+- [`research/promptfoo-integration.md`](research/promptfoo-integration.md) - the Promptfoo source review behind that.
 - [`research/oss-landscape.md`](research/oss-landscape.md) - PyRIT, garak, promptfoo, DeepTeam,
   provider gateways; what to reuse and what to build.
 - [`research/taxonomies.md`](research/taxonomies.md) - the security taxonomies we map findings to.
