@@ -14,7 +14,7 @@ from ..config import ConfigError
 from .model import Entitlement
 from .store import effective_usage, load, record_usage
 
-UPGRADE = ("Upgrade at https://app.aevrin.net/dashboard/billing, then run "
+UPGRADE = ("Upgrade at https://vyra.aevrin.ai/dashboard/billing, then run "
            "`modelwrecker plan --refresh`.")
 
 

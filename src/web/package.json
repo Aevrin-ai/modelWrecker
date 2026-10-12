@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Landing page for app.aevrin.net: modelWrecker, the AI red-teaming engine in the Aevrin security platform.",
+  "description": "Landing page for vyra.aevrin.ai: modelWrecker, the AI red-teaming engine in the Aevrin security platform.",
   "scripts": {
     "dev": "vite --port 4317",
     "build": "tsc -b && vite build && vite build --ssr src/entry-prerender.tsx --outDir node_modules/.prerender --emptyOutDir && node scripts/prerender.mjs",

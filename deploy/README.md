@@ -18,8 +18,9 @@ secret manager (GitHub Actions secrets, Cloudflare, Supabase). Never commit them
 
 ## One domain, two apps
 
-- Landing page (marketing): `https://app.aevrin.net/` - source in `src/web/`.
-- Dashboard (product): `https://app.aevrin.net/dashboard/` - source in `src/dash/`.
+- Landing page (marketing): `https://vyra.aevrin.ai/` - source in `src/web/`.
+- Dashboard (product): `https://vyra.aevrin.ai/dashboard/` - source in `src/dash/`.
+- `app.aevrin.net` page loads 301-redirect to vyra.aevrin.ai; `app.aevrin.net/api/*` stays on the Worker.
 
 Both are built and deployed together to a single Cloudflare Pages project by
 `.github/workflows/deploy-web.yml` on every push that touches `src/web/**` or `src/dash/**`.
@@ -28,7 +29,7 @@ Both are built and deployed together to a single Cloudflare Pages project by
 
 1. Supabase - `deploy/supabase/README.md`
 2. Google sign-in - `deploy/google/README.md`
-3. Cloudflare Pages + DNS for app.aevrin.net - `deploy/cloudflare/README.md`
+3. Cloudflare Pages + DNS for vyra.aevrin.ai (and the app.aevrin.net redirect) - `deploy/cloudflare/README.md`
 4. GitHub Actions secrets (for auto-deploy) - `deploy/cloudflare/README.md`
 5. PyPI publishing - `deploy/pypi/README.md`
 

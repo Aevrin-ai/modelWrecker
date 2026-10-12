@@ -5,7 +5,7 @@
   Browsers with Do Not Track or Global Privacy Control send nothing.
 */
 
-const PROD_HOST = "app.aevrin.net";
+const PROD_HOST = "vyra.aevrin.ai";
 let first = true;
 
 export function sendPageView(site: "landing" | "dashboard", path: string) {

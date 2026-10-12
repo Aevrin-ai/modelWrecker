@@ -9,6 +9,9 @@ export interface Env {
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   APP_ORIGIN: string;
+  // The entitlement issuer. Kept at https://app.aevrin.net even after the browser origin moves, because
+  // every shipped engine trusts only that issuer. Defaults to app.aevrin.net when unset.
+  ENTITLEMENT_ISSUER?: string;
   // Billing (secrets). Without the key pair, billing routes answer 503.
   RAZORPAY_KEY_ID?: string;
   RAZORPAY_KEY_SECRET?: string;
@@ -50,6 +53,7 @@ async function depsFor(env: Env) {
   return {
     ...supabaseDeps(env),
     appOrigin: env.APP_ORIGIN,
+    entitlementIssuer: env.ENTITLEMENT_ISSUER || "https://app.aevrin.net",
     now: () => new Date(),
     billing: billingFor(env),
     signer: await signerFor(env),
@@ -66,7 +70,7 @@ function appFor(env: Env): Promise<App> {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("missing Supabase configuration");
   }
-  const key = `${env.SUPABASE_URL}|${env.APP_ORIGIN}`;
+  const key = `${env.SUPABASE_URL}|${env.APP_ORIGIN}|${env.ENTITLEMENT_ISSUER ?? ""}`;
   if (cached?.key === key) return cached.app;
   const app = build(env);
   cached = { key, app };

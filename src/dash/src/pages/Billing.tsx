@@ -410,7 +410,7 @@ function printReceipt(i: Invoice) {
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#111;margin:40px}h1{font-size:20px;margin:0 0 4px}
 table{border-collapse:collapse;width:100%;margin-top:24px}th,td{text-align:left;padding:8px;border-bottom:1px solid #ddd}
 th{width:40%;color:#555;font-weight:500}.muted{color:#666;font-size:12px;margin-top:24px}</style></head><body>
-<h1>Aevrin - payment receipt</h1><div class="muted">app.aevrin.net</div>
+<h1>Aevrin - payment receipt</h1><div class="muted">vyra.aevrin.ai</div>
 <table>
 ${row("Receipt number", esc(i.number))}
 ${row("Date", esc(formatDate(i.issuedAt)))}

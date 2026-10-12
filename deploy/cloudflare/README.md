@@ -23,23 +23,30 @@ catch-all rewrite answers the JS and CSS requests with HTML and the page loads b
 `_worker.js` sends dashboard page paths (no file extension) to `/dashboard/` and passes everything else to
 the static files. Landing deep links use the Pages default single-page-app fallback.
 
-## 2. Add the custom domain + DNS for app.aevrin.net
+## 2. Custom domains: vyra.aevrin.ai (primary) and app.aevrin.net (redirect)
 
-The maintainer asked: if an `app.aevrin.net` DNS record already exists, remove it and
-recreate it. DNS is the one change that can break a live site, so confirm before running.
+The browser app is served at **vyra.aevrin.ai**. **app.aevrin.net** stays alive: its page loads
+301-redirect to vyra.aevrin.ai, but `app.aevrin.net/api/*` keeps serving the API Worker so already
+installed `modelwrecker` CLI clients (which default to app.aevrin.net) do not break.
 
-1. In Cloudflare dashboard: Pages -> modelwrecker-app -> Custom domains -> Set up a custom
-   domain -> `app.aevrin.net`. Cloudflare creates the correct CNAME automatically.
-2. If a conflicting existing record for `app` is present under the aevrin.net zone (DNS tab),
-   delete it first, then let the custom-domain step create the new one.
-
-Record that results (for reference):
+1. Pages -> modelwrecker-app -> Custom domains -> add `vyra.aevrin.ai`. Cloudflare creates the CNAME in
+   the aevrin.ai zone automatically.
+2. Keep `app.aevrin.net` attached as a custom domain too (the redirect below, not the Pages content,
+   is what app.aevrin.net visitors see for page loads).
+3. Redirect rule (Rules -> Redirect Rules on the aevrin.net zone), so browsers move to the new domain
+   while the CLI keeps reaching the API:
 
 ```text
-Type:   CNAME
-Name:   app   (app.aevrin.net)
-Target: modelwrecker-app.pages.dev
-Proxy:  Proxied (orange cloud)
+When:  (http.host eq "app.aevrin.net" and not starts_with(http.request.uri.path, "/api/"))
+Then:  Static/Dynamic redirect to  concat("https://vyra.aevrin.ai", http.request.uri.path)
+       preserve query string, status 301
+```
+
+Records for reference:
+
+```text
+CNAME  vyra  (vyra.aevrin.ai)  ->  modelwrecker-app.pages.dev   Proxied
+CNAME  app   (app.aevrin.net)  ->  modelwrecker-app.pages.dev   Proxied   (page loads 301 to vyra; /api/* stays on the Worker)
 ```
 
 ## 3. GitHub Actions secrets (enables auto-deploy)
@@ -58,16 +65,17 @@ as a repository variable so the build can read it:
 VITE_SUPABASE_URL
 ```
 
-After this, any push to `main` touching `src/web/**` or `src/dash/**` redeploys app.aevrin.net.
+After this, any push to `main` touching `src/web/**` or `src/dash/**` redeploys the site on vyra.aevrin.ai.
 
 ## 4. Deploy the control-plane API Worker
 
-The API (`src/api`) is a Cloudflare Worker served on the same domain at `app.aevrin.net/api/*`.
+The API (`src/api`) is a Cloudflare Worker served at `vyra.aevrin.ai/api/*` (the browser app's origin) and
+still at `app.aevrin.net/api/*` (for installed CLI clients). Both routes are in `src/api/wrangler.toml`.
 
 ```bash
 cd src/api
 npm ci
-npx wrangler deploy                                  # creates the Worker and its app.aevrin.net/api/* route
+npx wrangler deploy                                  # creates the Worker and its vyra.aevrin.ai/api/* + app.aevrin.net/api/* routes
 npx wrangler secret put SUPABASE_URL                 # paste each value when prompted; never commit them
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
@@ -84,12 +92,14 @@ The entitlement key id and public key are plain vars in `src/api/wrangler.toml`;
 public key. Keep an offline copy of every generated secret in your own secret store: a lost signing key
 means a key rotation, and a lost `ADMIN_TOTP_KEY` means every admin enrolls their authenticator again.
 
-The route is already set in `src/api/wrangler.toml` (the aevrin.net zone is on Cloudflare), so
-`app.aevrin.net/api/*` reaches the Worker and everything else stays on Pages. Until the three secrets are
-set the API answers `503 unavailable` rather than running half-configured. After that, the workflow
-`.github/workflows/deploy-api.yml` redeploys the Worker on any push touching `src/api/**` (it runs the
-typecheck and tests first). Give the `CLOUDFLARE_API_TOKEN` secret both "Workers Scripts: Edit" and
-"Cloudflare Pages: Edit".
+Both routes are set in `src/api/wrangler.toml` (the aevrin.ai and aevrin.net zones are on Cloudflare), so
+`vyra.aevrin.ai/api/*` and `app.aevrin.net/api/*` reach the Worker and everything else stays on Pages.
+`APP_ORIGIN` is `https://vyra.aevrin.ai` (the browser origin), while `ENTITLEMENT_ISSUER` stays
+`https://app.aevrin.net` so every shipped engine keeps trusting the entitlements the Worker signs. Until
+the three secrets are set the API answers `503 unavailable` rather than running half-configured. After
+that, the workflow `.github/workflows/deploy-api.yml` redeploys the Worker on any push touching
+`src/api/**` (it runs the typecheck and tests first). Give the `CLOUDFLARE_API_TOKEN` secret both
+"Workers Scripts: Edit" and "Cloudflare Pages: Edit".
 
 Also add the repository **variable** (not a secret; it is public) `VITE_SUPABASE_URL` so the dashboard
 builds against the real API. Without it the dashboard ships in demo mode. The dashboard needs no Supabase

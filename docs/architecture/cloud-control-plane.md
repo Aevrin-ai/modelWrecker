@@ -6,7 +6,8 @@
 
 ## Purpose
 
-The control plane is the small cloud service behind `app.aevrin.net`. It answers five questions and
+The control plane is the small cloud service behind `vyra.aevrin.ai` (and still `app.aevrin.net/api/*` for
+installed CLI clients). It answers five questions and
 nothing more:
 
 - Who are you?

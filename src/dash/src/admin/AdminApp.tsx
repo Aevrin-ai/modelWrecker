@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AdminGate } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
 
-// Staff console at app.aevrin.net/admin (docs/security/admin.md). Same build as the dashboard; this chunk
+// Staff console at vyra.aevrin.ai/admin (docs/security/admin.md). Same build as the dashboard; this chunk
 // loads only under /admin/. Access is decided by the API on every request, not by this component.
 
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>

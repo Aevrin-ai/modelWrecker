@@ -50,7 +50,7 @@ export function Pill({ variant, size, className, to, href, children, ...props }:
     );
   }
   if (href) {
-    const external = /^https?:/.test(href) && !href.startsWith("https://app.aevrin.net");
+    const external = /^https?:/.test(href) && !href.startsWith("https://vyra.aevrin.ai");
     return (
       <a
         href={href}
