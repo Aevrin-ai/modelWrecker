@@ -7,6 +7,10 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Changed
+- Redesigned the dashboard sign-in screen (#81): an airier, Activepieces-inspired layout with a logo and
+  wordmark lockup, a bold tagline headline, a prominent Continue with Google button, and a soft elevated
+  card on a subtle theme-aware backdrop. Removed the "Google confirms who you are" reassurance line. The
+  shared auth frame and loading screen keep the same look.
 - The browser app (landing + dashboard) moved to `https://vyra.aevrin.ai` (#79). `app.aevrin.net` stays
   live: its page loads 301-redirect to vyra.aevrin.ai, but `app.aevrin.net/api/*` keeps serving the
   control-plane Worker so already-installed `modelwrecker` CLI clients (which default to app.aevrin.net
