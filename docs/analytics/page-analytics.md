@@ -11,7 +11,7 @@ from, with our own beacon and without collecting personal data.
 ## What is sent
 
 One small beacon per page view, from `src/web` (each load) and `src/dash` (each route), to our own API at
-`POST /api/v1/collect`, only on `app.aevrin.net`. The admin console sends nothing.
+`POST /api/v1/collect`, only on `vyra.aevrin.ai`. The admin console sends nothing.
 
 ```json
 { "s": "dashboard", "p": "/dashboard/campaigns/<id>", "r": "https://www.google.com/search?q=..." }
@@ -46,7 +46,7 @@ The endpoint always answers `204`, so a beacon never shows an error or reveals w
 
 ## Cloudflare Web Analytics
 
-Separately from this, app.aevrin.net also loads Cloudflare Web Analytics
+Separately from this, vyra.aevrin.ai also loads Cloudflare Web Analytics
 (`static.cloudflareinsights.com/beacon.min.js`). Cloudflare injects it because Web Analytics is turned on for
 the site in the Cloudflare dashboard. It sets no cookie, but it is a script from Cloudflare, which
 already serves the site. Its numbers appear in the Cloudflare dashboard, not in the admin console. To

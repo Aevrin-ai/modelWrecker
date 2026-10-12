@@ -6,6 +6,15 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Changed
+- The browser app (landing + dashboard) moved to `https://vyra.aevrin.ai` (#79). `app.aevrin.net` stays
+  live: its page loads 301-redirect to vyra.aevrin.ai, but `app.aevrin.net/api/*` keeps serving the
+  control-plane Worker so already-installed `modelwrecker` CLI clients (which default to app.aevrin.net
+  and only trust its entitlement issuer) are unaffected. The API Worker now serves both
+  `vyra.aevrin.ai/api/*` and `app.aevrin.net/api/*`; `APP_ORIGIN` is the new browser origin while the
+  entitlement issuer is pinned to `https://app.aevrin.net` via a new `ENTITLEMENT_ISSUER` var. The CLI's
+  default cloud API URL and the engine's trusted entitlement issuer are unchanged.
+
 ### Added
 - A Promptfoo compatibility layer (#77): `modelwrecker import-promptfoo` translates the `redteam`
   section of a Promptfoo config into a modelWrecker config (plugins -> objectives, strategies -> a

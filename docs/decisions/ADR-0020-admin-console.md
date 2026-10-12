@@ -4,7 +4,7 @@
 - **Date:** 2026-10-02
 
 ## Decision
-Staff manage the platform at `app.aevrin.net/admin`, the dashboard build under another path. Access needs
+Staff manage the platform at `vyra.aevrin.ai/admin`, the dashboard build under another path. Access needs
 a Google sign-in with a **verified email exactly on `aevrin.net`**, then a **TOTP authenticator code**,
 which starts a short **admin session** stored only as a hash. The API checks all three on every admin
 request. Every change needs a reason and is written to an append-only audit table. Page analytics are

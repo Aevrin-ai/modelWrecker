@@ -86,7 +86,7 @@ The first-run journey, from the website to a local run.
 
 ```mermaid
 flowchart TD
-  U[User] --> WEB[app.aevrin.net]
+  U[User] --> WEB[vyra.aevrin.ai]
   WEB --> LOGIN[Sign in with Google]
   LOGIN --> DASH[Dashboard]
   DASH --> PROJ[Create a project]

@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Aevrin staff manage accounts and watch the platform at **https://app.aevrin.net/admin**. It is the same
+Aevrin staff manage accounts and watch the platform at **https://vyra.aevrin.ai/admin**. It is the same
 dashboard build served under a different path, with its own navigation: Users, Payments, Audit log,
 Platform analytics, and Page analytics. The page is never indexed, framed, or cached.
 
@@ -91,7 +91,7 @@ user, the time, the address, and the details. Audit entries are kept when a user
 
 1. Apply migration `0005_admin.sql`.
 2. Set the Worker secrets `ADMIN_TOTP_KEY` (32 random bytes, base64) and `ANALYTICS_SALT`.
-3. Add `https://app.aevrin.net/admin/` and `https://app.aevrin.net/admin/**` to the Supabase Auth redirect
+3. Add `https://vyra.aevrin.ai/admin/` and `https://vyra.aevrin.ai/admin/**` to the Supabase Auth redirect
    allow list, so Google sign-in returns to the console.
 4. Sign in at `/admin` with an `@aevrin.net` Google account and enroll an authenticator.
 

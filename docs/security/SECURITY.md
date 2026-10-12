@@ -33,7 +33,7 @@ Everything crossing a boundary into the engine from a target or dataset is data,
   never treated as access control (SEC-2).
 - **Refuse non-loopback binds** unless auth is configured; loud warning on any non-loopback bind (SEC-7).
 - Secret/config writes are **privileged**; never performed from an unauthenticated request (SEC-3).
-- The hosted pages at app.aevrin.net send a **Content-Security-Policy** on every HTML response
+- The hosted pages at vyra.aevrin.ai send a **Content-Security-Policy** on every HTML response
   (`deploy/cloudflare/pages/_worker.js`): scripts only from the site itself, Razorpay Checkout, and
   Cloudflare Web Analytics; the landing page's inline scripts by SHA-256 hash, filled in at deploy
   (`csp-hashes.mjs`); a fresh nonce per request for the bot-check script Cloudflare injects. No `eval`,

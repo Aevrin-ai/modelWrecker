@@ -56,7 +56,7 @@ Why each flag is there: [`../security/docker.md`](../security/docker.md). Verifi
 
 ## Hosted platform (Phase 10, live)
 
-The optional hosted surface at https://app.aevrin.net is a managed Postgres database with row-level
+The optional hosted surface at https://vyra.aevrin.ai is a managed Postgres database with row-level
 security, Google sign-in, a Cloudflare-hosted dashboard and landing page, and the authenticated
 control-plane API. It stays optional: the free CLI + local-model path remains a complete deployment. All
 platform credentials are supplied out of band through the deploy secret store - never committed to this

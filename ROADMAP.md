@@ -86,8 +86,10 @@ Razorpay, kept entirely in the cloud (no Razorpay secret ever ships in Docker, M
 Live cloud setup is staged in [`deploy/`](deploy/README.md) and run by the maintainer; nothing
 irreversible is done automatically.
 
-**Live today at https://app.aevrin.net:** landing page, dashboard (`/dashboard/`), staff admin console
-(`/admin`), the control-plane API Worker on `app.aevrin.net/api/*`, and Supabase with RLS applied.
+**Live today at https://vyra.aevrin.ai:** landing page, dashboard (`/dashboard/`), staff admin console
+(`/admin`), the control-plane API Worker (on `vyra.aevrin.ai/api/*` and `app.aevrin.net/api/*`), and
+Supabase with RLS applied. `app.aevrin.net` 301-redirects page loads to vyra.aevrin.ai but keeps
+`app.aevrin.net/api/*` serving the Worker for already-installed CLI clients.
 Pages project `modelwrecker-app` (the older `aevrin-app` site is kept for rollback). CI redeploys the
 sites and the Worker on push, and publishes to PyPI on a `v*` tag; both have run. `modelwrecker` 0.0.2
 is on PyPI. The maintainer signed in with Google, approved a device with `modelwrecker login`, and
