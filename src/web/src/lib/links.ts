@@ -1,6 +1,6 @@
 // Every address the site links to, in one place.
-export const APP_URL = "https://app.aevrin.net/dashboard/";
-export const BILLING_URL = "https://app.aevrin.net/dashboard/billing";
+export const APP_URL = "https://vyra.aevrin.ai/dashboard/";
+export const BILLING_URL = "https://vyra.aevrin.ai/dashboard/billing";
 export const DEMO_URL = "https://aevrin.net/contact";
 export const AEVRIN_URL = "https://aevrin.net";
 export const AEVRIN_MCP_URL = "https://mcp.aevrin.net";

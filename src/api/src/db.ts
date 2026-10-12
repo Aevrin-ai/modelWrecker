@@ -104,6 +104,9 @@ export interface Deps {
   /** Verify a Supabase access token. Returns null when it is invalid or expired. */
   verifyUser(accessToken: string): Promise<AuthUser | null>;
   appOrigin: string;
+  /** Issuer stamped into signed entitlements. Stays app.aevrin.net across a browser-origin move so every
+   *  shipped engine keeps trusting tokens. Falls back to appOrigin when unset (tests). */
+  entitlementIssuer?: string;
   now(): Date;
   /** Razorpay checkout and webhooks. Billing routes answer 503 when it is not configured. */
   billing?: BillingConfig;

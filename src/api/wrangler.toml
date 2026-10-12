@@ -1,4 +1,5 @@
-# Aevrin control-plane API. Served on the dashboard's own origin at app.aevrin.net/api/*.
+# Aevrin control-plane API. Served on the dashboard's own origin at vyra.aevrin.ai/api/*, and still on
+# app.aevrin.net/api/* so already-installed modelwrecker CLI clients (which default to app.aevrin.net) keep working.
 # Nothing secret lives in this public file. Secrets are set once per Worker with
 # `npx wrangler secret put <NAME>`:
 #   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY   database (deploy/cloudflare/README.md)
@@ -13,11 +14,19 @@ main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
-# app.aevrin.net/api/* reaches this Worker; the Pages project serves everything else on the domain.
-routes = [{ pattern = "app.aevrin.net/api/*", zone_name = "aevrin.net" }]
+# Both /api/* hosts reach this Worker; the Pages project serves everything else on each domain. The
+# browser app lives on vyra.aevrin.ai; app.aevrin.net stays for the CLI (its page loads 301 to vyra).
+routes = [
+  { pattern = "vyra.aevrin.ai/api/*", zone_name = "aevrin.ai" },
+  { pattern = "app.aevrin.net/api/*", zone_name = "aevrin.net" },
+]
 
 [vars]
-APP_ORIGIN = "https://app.aevrin.net"
+# The browser app's own origin: CORS/anti-CSRF guard, the device-login URL, and the analytics host.
+APP_ORIGIN = "https://vyra.aevrin.ai"
+# The entitlement issuer stays app.aevrin.net: every shipped engine trusts only this issuer, so it must
+# not change when the browser origin moves (src/modelwrecker/entitlements/token.py ISSUERS).
+ENTITLEMENT_ISSUER = "https://app.aevrin.net"
 # The public half of the entitlement signing key. The engine ships the same value in
 # src/modelwrecker/entitlements/token.py; GET /api/v1/entitlements/keys publishes it.
 ENTITLEMENT_KEY_ID = "2026-10-a"

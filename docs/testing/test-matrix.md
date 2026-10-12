@@ -234,8 +234,10 @@ findings with a full attempt transcript, the payload/transform engine, the campa
 storage, the CLI, and the MCP harness server with its guardrails. Docker builds and runs a full attack
 loop as a non-root user. Live OpenRouter runs work, and `modelwrecker` 0.0.2 installs from PyPI.
 
-The **hosted platform** is live at https://app.aevrin.net: landing page, dashboard, control-plane API,
-Supabase with RLS, device login, metadata sync, and opt-in evidence and transcript sync. Billing,
+The **hosted platform** is live at https://vyra.aevrin.ai (the browser app moved there from
+app.aevrin.net, which now 301-redirects page loads and keeps only `/api/*` for installed CLI clients):
+landing page, dashboard, control-plane API, Supabase with RLS, device login, metadata sync, and opt-in
+evidence and transcript sync. Billing,
 signed entitlements, and the admin console are built and tested offline, with their migrations applied
 live.
 

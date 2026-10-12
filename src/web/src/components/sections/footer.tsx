@@ -52,7 +52,7 @@ function FooterLink({ href, children }: { href: string; children: string }) {
       </Link>
     );
   }
-  const sameSite = href.startsWith("https://app.aevrin.net");
+  const sameSite = href.startsWith("https://vyra.aevrin.ai");
   return (
     <a href={href} className={className} {...(sameSite ? {} : { target: "_blank", rel: "noreferrer" })}>
       {children}

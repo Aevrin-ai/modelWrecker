@@ -18,6 +18,7 @@ to paste. Replace `<SUPABASE_PROJECT_REF>` with your Supabase project ref.
 ### Authorized JavaScript origins
 
 ```text
+https://vyra.aevrin.ai
 https://app.aevrin.net
 http://localhost:5173
 http://localhost:5174
@@ -28,6 +29,10 @@ http://localhost:5174
 ```text
 https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback
 ```
+
+Note: sign-in goes browser -> Supabase -> Google -> Supabase -> browser, so the only Google-registered
+redirect URI is the Supabase callback above. It does **not** change when the browser app moves to
+vyra.aevrin.ai. The JavaScript origins only matter if Google One Tap / GSI is used directly.
 
 (For local Supabase only, if you run it: `http://localhost:54321/auth/v1/callback`.)
 

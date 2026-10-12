@@ -306,7 +306,8 @@ async function devicePolicy(deps: Deps, device: Row) {
 /** A fresh signed entitlement for a device, or nothing when signing is not configured (free baseline). */
 async function entitlementFor(deps: Deps, device: Row): Promise<{ entitlement?: string; plan?: string; expires_at?: string }> {
   if (!deps.signer) return {};
-  const { token, payload } = await issueEntitlement(deps.signer, deps.serviceDb, deps.appOrigin, device, deps.now());
+  const issuer = deps.entitlementIssuer ?? deps.appOrigin;
+  const { token, payload } = await issueEntitlement(deps.signer, deps.serviceDb, issuer, device, deps.now());
   return { entitlement: token, plan: payload.plan, expires_at: new Date(payload.exp * 1000).toISOString() };
 }
 

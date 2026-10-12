@@ -18,10 +18,10 @@ tells the app who the user is). modelWrecker never sees or stores the user's Goo
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant A as app.aevrin.net
+  participant A as vyra.aevrin.ai
   participant G as Google
   participant API as Cloud API
-  U->>A: Open app.aevrin.net
+  U->>A: Open vyra.aevrin.ai
   A->>G: Start Google sign-in
   G->>A: Identity result
   A->>API: Create or load account
@@ -106,7 +106,7 @@ sequenceDiagram
   open, but it cannot read or carry off the refresh token. The Content-Security-Policy
   ([`SECURITY.md`](SECURITY.md)) limits which scripts can run at all.
 - **Signed-in visitors.** Sign-in also sets `mw_signed_in=1`, a cookie with no secret in it that the landing
-  page can read. Opening `app.aevrin.net/` with it goes straight to `/dashboard/` (a check in the landing
+  page can read. Opening `vyra.aevrin.ai/` with it goes straight to `/dashboard/` (a check in the landing
   page's `index.html`, before anything renders). If the session has ended, the dashboard shows its sign-in
   screen. A link to a landing section, such as `/#pricing`, or a link from the site itself still shows the
   landing page.

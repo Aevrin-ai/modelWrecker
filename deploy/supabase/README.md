@@ -27,10 +27,12 @@ supabase db push
 
 1. In the Supabase dashboard: Authentication -> Providers -> Google -> enable.
 2. Paste the Google OAuth Client ID and Client Secret from `deploy/google/README.md`.
-3. Authentication -> URL Configuration:
-   - Site URL: `https://app.aevrin.net`
+3. Authentication -> URL Configuration (the browser app is on vyra.aevrin.ai now; sign-in returns to
+   `<origin>/dashboard/`, so the app's own origin must be allowed):
+   - Site URL: `https://vyra.aevrin.ai`
    - Additional redirect URLs:
-     - `https://app.aevrin.net/dashboard/`
+     - `https://vyra.aevrin.ai/dashboard/`
+     - `https://app.aevrin.net/dashboard/`  (kept so anyone still on the old origin can finish signing in)
      - `http://localhost:5173/`  (landing dev)
      - `http://localhost:5174/dashboard/`  (dashboard dev; the sign-in returns to `<origin>/dashboard/`)
 

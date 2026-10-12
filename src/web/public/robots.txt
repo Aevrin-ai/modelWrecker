@@ -3,4 +3,4 @@ Allow: /
 Disallow: /dashboard/
 Disallow: /admin
 
-Sitemap: https://app.aevrin.net/sitemap.xml
+Sitemap: https://vyra.aevrin.ai/sitemap.xml

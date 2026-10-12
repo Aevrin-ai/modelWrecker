@@ -1,4 +1,4 @@
-// Cloudflare Pages advanced-mode Worker for app.aevrin.net (copied to the site root by deploy-web.yml).
+// Cloudflare Pages advanced-mode Worker for vyra.aevrin.ai (copied to the site root by deploy-web.yml).
 //
 // Why this exists: Pages applies _redirects rules BEFORE static files, so a catch-all SPA rewrite such as
 // "/dashboard/* /dashboard/ 200" also answers the dashboard's own JS and CSS with HTML. This Worker only

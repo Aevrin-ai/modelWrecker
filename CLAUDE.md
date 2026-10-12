@@ -29,7 +29,9 @@ garak are integrated.** Live-verified against OpenRouter. 274 offline tests pass
 Run tests: `.venv\Scripts\python -m pytest -q`. Phase 10 (local-first product) is in progress: docs, the
 hardened Docker product, egress enforcement, and local MCP guardrails are done; the landing page
 (`src/web`), dashboard (`src/dash`), control-plane API (`src/api`, Cloudflare Worker + Supabase RLS), and
-device login + metadata sync are built and live on https://app.aevrin.net (`modelwrecker` is on PyPI).
+device login + metadata sync are built and live on https://vyra.aevrin.ai (`modelwrecker` is on PyPI).
+The browser app moved to vyra.aevrin.ai; app.aevrin.net 301-redirects page loads there but still serves
+`app.aevrin.net/api/*` for installed CLI clients, and the entitlement issuer stays `https://app.aevrin.net`.
 Prepaid Razorpay billing, prices (`src/shared/plans.json`, `docs/billing/pricing.md`), and signed
 entitlements the engine verifies offline (free baseline without one) are built (#11, #12, #42). The staff
 admin console at `/admin` (verified @aevrin.net + TOTP authenticator, audited) is built (#43, #44, #45).

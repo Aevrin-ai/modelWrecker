@@ -10,8 +10,9 @@ The control-plane API is the only network surface of the Aevrin cloud. It stores
 never runs attacks, never calls a model, and never accepts raw prompts or model responses by default.
 
 - Code: `src/api` (a Cloudflare Worker, TypeScript).
-- Base URL: `https://app.aevrin.net/api/v1`. The same origin as the dashboard, so the browser needs no
-  cross-origin calls in production.
+- Base URL: served at `https://vyra.aevrin.ai/api/v1` (the dashboard's own origin, so the browser needs no
+  cross-origin calls) and at `https://app.aevrin.net/api/v1`, which is the default the `modelwrecker` CLI
+  uses and stays live for already-installed clients.
 - Data: Supabase Postgres with row-level security (RLS). Schema in `deploy/supabase/migrations/`.
 
 ## Who can call what
@@ -110,8 +111,8 @@ Response `200`:
 {
   "device_code": "<43 url-safe characters>",
   "user_code": "WDJB-MJHT",
-  "verification_uri": "https://app.aevrin.net/dashboard/connect",
-  "verification_uri_complete": "https://app.aevrin.net/dashboard/connect?code=WDJB-MJHT",
+  "verification_uri": "https://vyra.aevrin.ai/dashboard/connect",
+  "verification_uri_complete": "https://vyra.aevrin.ai/dashboard/connect?code=WDJB-MJHT",
   "expires_in": 900,
   "interval": 5
 }
@@ -375,7 +376,8 @@ project-specific is in the public repo:
 | `SUPABASE_URL` | secret | Supabase project URL |
 | `SUPABASE_ANON_KEY` | secret | public key, used with the user's token so RLS applies |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | server key, used only for device routes and device sign-in |
-| `APP_ORIGIN` | var | `https://app.aevrin.net`, used for verification links and CORS |
+| `APP_ORIGIN` | var | `https://vyra.aevrin.ai` (the browser origin), used for verification links, the anti-CSRF guard, and the analytics host |
+| `ENTITLEMENT_ISSUER` | var | `https://app.aevrin.net`; the issuer stamped into signed entitlements, kept stable so every shipped engine keeps trusting them. Defaults to app.aevrin.net when unset |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | secret | Razorpay API keys. Without them billing routes answer 503 |
 | `RAZORPAY_WEBHOOK_SECRET` | secret | Checks webhook signatures. Without it the webhook answers 503 |
 | `ENTITLEMENT_SIGNING_KEY` | secret | Ed25519 private key (PKCS#8, base64). Without it no entitlement is issued |
