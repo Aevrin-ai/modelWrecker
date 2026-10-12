@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Loader2, Moon, ShieldCheck, Sun } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, Loader2, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LOGO_SRC } from "@/components/Logo";
@@ -29,31 +28,40 @@ function GoogleMark() {
   );
 }
 
-/** Full-height centered frame shared by the sign-in, loading, and configuration screens. */
+/**
+ * Full-height centered frame shared by the sign-in, loading, admin, and configuration screens.
+ * A soft, theme-aware backdrop (a radial wash and a faint dot grid that fades at the edges) sits
+ * behind a single elevated card, so every auth screen reads as one calm, focused surface.
+ */
 export function AuthFrame({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
   return (
-    <div className="relative flex min-h-full w-full items-center justify-center overflow-y-auto bg-muted/40 px-4 py-10">
+    <div className="relative flex min-h-full w-full items-center justify-center overflow-y-auto bg-background px-4 py-10">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-[-12%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-muted/70 blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.4] [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]" />
+      </div>
       <button
         type="button"
         onClick={toggle}
         aria-label="Toggle theme"
-        className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
       >
         {theme === "dark" ? <Sun className="size-[1.15rem]" /> : <Moon className="size-[1.15rem]" />}
       </button>
-      <div className="w-full max-w-sm animate-fade-in">{children}</div>
+      <div className="relative z-10 w-full max-w-md animate-fade-in">{children}</div>
     </div>
   );
 }
 
-function BrandMark() {
+/** Logo square and wordmark, locked up horizontally like a product mark. */
+function BrandLockup() {
   return (
-    <div className="flex flex-col items-center gap-3 pb-6">
-      <span className="flex size-12 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-800">
-        <img src={LOGO_SRC} alt="Aevrin" className="size-8 object-contain" draggable={false} />
+    <div className="flex items-center justify-center gap-2.5">
+      <span className="flex size-9 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-800">
+        <img src={LOGO_SRC} alt="" className="size-6 object-contain" draggable={false} />
       </span>
-      <span className="text-sm font-semibold tracking-tight">Aevrin</span>
+      <span className="text-lg font-semibold tracking-tight">Aevrin</span>
     </div>
   );
 }
@@ -62,10 +70,12 @@ function BrandMark() {
 export function AuthLoading() {
   return (
     <AuthFrame>
-      <BrandMark />
-      <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
-        <Loader2 className="size-4 animate-spin" /> Checking your session...
-      </p>
+      <div className="flex flex-col items-center gap-6">
+        <BrandLockup />
+        <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+          <Loader2 className="size-4 animate-spin" /> Checking your session...
+        </p>
+      </div>
     </AuthFrame>
   );
 }
@@ -90,38 +100,50 @@ export function SignIn() {
 
   return (
     <AuthFrame>
-      <BrandMark />
-      <Card>
-        <CardHeader className="items-center text-center">
-          {mode === "mock" && <Badge className="mb-1">Demo mode</Badge>}
-          <CardTitle className="text-xl font-semibold">Sign in to Aevrin</CardTitle>
-          <CardDescription>Manage ModelWrecker projects, campaigns, findings, and devices.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button variant="outline" size="lg" className="w-full" onClick={start} disabled={starting}>
-            {starting ? <Loader2 className="animate-spin" /> : <GoogleMark />}
-            Continue with Google
-          </Button>
-          {error && (
-            <p
-              role="alert"
-              className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+      <div className="rounded-2xl border bg-card p-8 shadow-popover sm:p-10">
+        <div className="flex flex-col items-center gap-7 text-center">
+          <BrandLockup />
+
+          <div className="space-y-2.5">
+            {mode === "mock" && <Badge className="mb-1">Demo mode</Badge>}
+            <h1 className="text-2xl font-semibold leading-snug tracking-tight">
+              Attack your AI before attackers do.
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Sign in to Aevrin to manage your projects, campaigns, and findings.
+            </p>
+          </div>
+
+          <div className="w-full space-y-4">
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-11 w-full text-sm font-medium"
+              onClick={start}
+              disabled={starting}
             >
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              {error}
-            </p>
-          )}
-          {mode === "mock" && (
-            <p className="text-center text-xs text-muted-foreground">
-              This build runs on sample data, so no real sign-in happens. Continue opens the demo workspace.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      <p className="mt-6 px-2 text-center text-xs text-muted-foreground">
-        <ShieldCheck className="mr-1.5 inline size-3.5 -translate-y-px align-middle" />
-        Google confirms who you are. Aevrin never sees your Google password.
-      </p>
+              {starting ? <Loader2 className="animate-spin" /> : <GoogleMark />}
+              Continue with Google
+            </Button>
+
+            {error && (
+              <p
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-left text-sm text-destructive"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                {error}
+              </p>
+            )}
+
+            {mode === "mock" && (
+              <p className="text-xs text-muted-foreground">
+                This build runs on sample data, so no real sign-in happens. Continue opens the demo workspace.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
     </AuthFrame>
   );
 }
