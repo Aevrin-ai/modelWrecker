@@ -13,8 +13,9 @@ Option A - SQL editor (simplest):
    `0002_devices_and_sync.sql`, then `0003_evidence_and_transcripts.sql` (opt-in evidence and
    transcript storage), then `0004_billing.sql` (prepaid billing, credit, refunds; see
    `docs/billing/razorpay.md`), then `0005_admin.sql` (admin console, audit log, page analytics; see
-   `docs/security/admin.md`). All are safe to re-run. Apply a new migration **before** deploying the API
-   that uses it.
+   `docs/security/admin.md`), then `0006_scheduled_cleanup.sql` (turns on Supabase Cron and runs the
+   daily data cleanup at 03:17 UTC). All are safe to re-run. Apply a new migration **before** deploying
+   the API that uses it.
 
 Option B - Supabase CLI:
 

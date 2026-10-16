@@ -1,7 +1,7 @@
 // Admin console (issues #43, #44, #45), offline. Staff access, authenticator codes, sessions, user
 // management, audit, and page analytics.
 import { beforeEach, describe, expect, it } from "vitest";
-import { createApp, runMaintenance } from "../src/app";
+import { createApp } from "../src/app";
 import { MemoryDb } from "../src/db/memory";
 import type { AuthAccount, AuthAdmin, AuthUser, Deps } from "../src/db";
 import { base32Encode, decryptSecret, encryptSecret, totpAt, verifyTotp } from "../src/admin/totp";
@@ -348,12 +348,5 @@ describe("page analytics (issue #45)", () => {
     expect(referrerHost("javascript:alert(1)", "app.aevrin.net")).toBeNull();
     expect(deviceType("Mozilla/5.0 (iPad; CPU OS 17_0)")).toBe("tablet");
     expect(deviceType("Mozilla/5.0 (Windows NT 10.0)")).toBe("desktop");
-  });
-});
-
-describe("daily maintenance", () => {
-  it("runs retention", async () => {
-    db.functions.admin_maintenance = () => ({ page_views: 0 });
-    expect(await runMaintenance(deps())).toMatchObject({ retention: { page_views: 0 }, reconciled: 0 });
   });
 });

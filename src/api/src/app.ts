@@ -14,7 +14,7 @@ import {
   userCode,
 } from "./lib";
 import { DeviceApproveReq, DeviceCodeReq, DeviceTokenReq, HeartbeatReq, SyncReq, type SyncEvidenceBody } from "./schemas";
-import { reconcileOwner, registerBillingRoutes } from "./routes/billing";
+import { registerBillingRoutes } from "./routes/billing";
 import { registerAdminRoutes } from "./routes/admin";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerCollectRoute } from "./routes/collect";
@@ -278,24 +278,6 @@ async function refuseSuspended(deps: Deps, ownerId: string) {
   if (profile?.suspended_at) {
     throw new ApiError(403, "account_suspended", "This account is suspended. Contact Aevrin support.");
   }
-}
-
-/** Daily upkeep, run by the Worker's scheduled trigger: retention, and confirming recent unpaid orders. */
-export async function runMaintenance(deps: Deps): Promise<Record<string, unknown>> {
-  const out: Record<string, unknown> = {};
-  try {
-    out.retention = await deps.serviceDb.rpc("admin_maintenance", {});
-  } catch (err) {
-    out.retention = `failed: ${err instanceof Error ? err.message : String(err)}`;
-  }
-  if (deps.billing) {
-    const since = new Date(deps.now().getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
-    const open = await deps.serviceDb.table("payments").select({ eq: { status: "created" }, gte: { created_at: since }, limit: 200 });
-    const owners = [...new Set(open.map((p) => String(p.owner_id)).filter((o) => o && o !== "null"))];
-    for (const owner of owners) await reconcileOwner(deps, owner, 10);
-    out.reconciled = owners.length;
-  }
-  return out;
 }
 
 async function devicePolicy(deps: Deps, device: Row) {

@@ -1,5 +1,5 @@
 // Cloudflare Worker entry point. Wires the real Supabase-backed dependencies into the app.
-import { createApp, runMaintenance } from "./app";
+import { createApp } from "./app";
 import { supabaseDeps } from "./db/supabase";
 import { createSigner, type EntitlementSigner } from "./entitlements";
 import { HttpRazorpay, type BillingConfig } from "./razorpay";
@@ -92,15 +92,5 @@ export default {
     }
     return app.fetch(request, env, ctx);
   },
-
-  // Daily upkeep (wrangler.toml [triggers]): data retention and confirming recent unpaid orders.
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
-    ctx.waitUntil(
-      depsFor(env)
-        .then(runMaintenance)
-        .then((r) => console.log("maintenance", JSON.stringify(r)))
-        .catch((err) => console.error("maintenance failed", err instanceof Error ? err.message : String(err))),
-    );
-  },
+  // No scheduled handler: the daily data cleanup runs in Supabase with pg_cron (migration 0006).
 };
