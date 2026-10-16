@@ -55,7 +55,8 @@ Analytics).
 
 ## Retention
 
-Page views older than 400 days are deleted by the daily upkeep job.
+Page views older than 400 days are deleted by the daily cleanup job, which runs inside Supabase with
+`pg_cron` at 03:17 UTC (migration `0006_scheduled_cleanup.sql`).
 
 ## Security considerations
 
