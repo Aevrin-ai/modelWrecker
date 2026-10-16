@@ -7,6 +7,12 @@ happened - never invent historical entries.
 ## [Unreleased]
 
 ### Changed
+- The daily data cleanup moved from the API Worker's Cloudflare cron to Supabase Cron (#83). Migration
+  `0006_scheduled_cleanup.sql` turns on `pg_cron` and calls `admin_maintenance()` every day at 03:17 UTC
+  (page views older than 400 days, expired admin sessions, webhook event ids older than 90 days). The
+  Worker no longer has a cron trigger or a scheduled handler, which frees a Cloudflare cron slot.
+  Confirming unpaid Razorpay orders is no longer scheduled: the webhook applies payments and the Billing
+  page reconciles an account's recent orders; a payment both miss is handled by support.
 - Redesigned the dashboard sign-in screen (#81): an airier, Activepieces-inspired layout with a logo and
   wordmark lockup, a bold tagline headline, a prominent Continue with Google button, and a soft elevated
   card on a subtle theme-aware backdrop. Removed the "Google confirms who you are" reassurance line. The

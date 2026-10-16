@@ -222,7 +222,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- admin_maintenance: retention, run daily by the Worker's scheduled trigger.
+-- admin_maintenance: retention, run daily by Supabase pg_cron (0006_scheduled_cleanup.sql).
 -- ---------------------------------------------------------------------------
 create or replace function public.admin_maintenance() returns jsonb
 language plpgsql security definer set search_path = public as $$

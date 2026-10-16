@@ -32,6 +32,8 @@ ENTITLEMENT_ISSUER = "https://app.aevrin.net"
 ENTITLEMENT_KEY_ID = "2026-10-a"
 ENTITLEMENT_PUBLIC_KEY = "trSV1ue_ymSzW9Ga60p5rH2maEuebDE_Dk72NHicYp4"
 
-# Daily upkeep at 03:17 UTC: page-view and session retention, and confirming recent unpaid orders.
+# No cron trigger. The daily data cleanup runs inside Supabase with pg_cron
+# (deploy/supabase/migrations/0006_scheduled_cleanup.sql). The empty list makes `wrangler deploy` remove
+# the trigger this Worker used to have.
 [triggers]
-crons = ["17 3 * * *"]
+crons = []

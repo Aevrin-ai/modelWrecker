@@ -84,8 +84,12 @@ user, the time, the address, and the details. Audit entries are kept when a user
 - Database: `deploy/supabase/migrations/0005_admin.sql`. `admin_mfa`, `admin_sessions`, `admin_audit`, and
   `page_views` have RLS on and **no policies**, so only the API's server key can read them. The aggregate
   functions are revoked from every client role.
-- Daily upkeep (Worker cron, 03:17 UTC): delete page views older than 400 days, expired admin sessions,
-  and webhook event ids older than 90 days; confirm recent unpaid orders with Razorpay.
+- Daily cleanup (Supabase Cron, the `pg_cron` extension, 03:17 UTC, job `aevrin-daily-cleanup`, migration
+  `0006_scheduled_cleanup.sql`): `admin_maintenance()` deletes page views older than 400 days, expired
+  admin sessions, and webhook event ids older than 90 days. The API Worker has no cron trigger.
+- Unpaid orders are not confirmed on a schedule. The Razorpay webhook applies a payment, and opening the
+  Billing page checks that account's recent orders with Razorpay. If both miss a payment, the customer
+  contacts support and staff confirm it.
 
 ## Setting it up
 
