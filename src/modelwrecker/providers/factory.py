@@ -31,9 +31,11 @@ def build_provider(endpoint: Endpoint, egress: EgressPolicy | None = None) -> Ba
     if endpoint.protocol in _OPENAI_WIRE:
         base_url = endpoint.base_url or _default_base_url(endpoint.protocol)
         if not base_url:
+            # configuration errors fail the same way on every try, so they are never retried
             raise ProviderError(
                 f"protocol {endpoint.protocol!r} needs a base_url "
-                "(e.g. an OpenRouter or Ollama URL)"
+                "(e.g. an OpenRouter or Ollama URL)",
+                retryable=False,
             )
         provider: BaseProvider = OpenAICompatibleProvider(
             model=endpoint.model,
@@ -45,10 +47,11 @@ def build_provider(endpoint: Endpoint, egress: EgressPolicy | None = None) -> Ba
     elif endpoint.protocol == "anthropic":
         raise ProviderError(
             "direct 'anthropic' adapter is not implemented yet; use 'openai_compatible' "
-            "(Anthropic via an OpenAI-compatible gateway) or 'any_llm'"
+            "(Anthropic via an OpenAI-compatible gateway) or 'any_llm'",
+            retryable=False,
         )
     else:
-        raise ProviderError(f"unknown protocol {endpoint.protocol!r}")
+        raise ProviderError(f"unknown protocol {endpoint.protocol!r}", retryable=False)
 
     b = _bucket.get()
     if b is not None:

@@ -10,6 +10,7 @@ import type { Hono } from "hono";
 import type { AppEnv } from "../app";
 import type { Deps } from "../db";
 import { RateLimiter, sha256Hex } from "../lib";
+import { errorFields, log } from "../log";
 import { CollectReq } from "../schemas";
 
 const MAX_BYTES = 2048;
@@ -80,7 +81,8 @@ export function registerCollectRoute(app: Hono<AppEnv>, deps: Deps) {
         visitor: (await sha256Hex(`${deps.analyticsSalt}|${day}|${ip}|${ua}`)).slice(0, 32),
       });
     } catch (err) {
-      console.error("page view not stored", err instanceof Error ? err.message : String(err));
+      // analytics must never fail the page; note it and move on
+      log.warn("page_view_not_stored", errorFields(err));
     }
     return done();
   });

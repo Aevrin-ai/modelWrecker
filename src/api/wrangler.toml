@@ -32,6 +32,12 @@ ENTITLEMENT_ISSUER = "https://app.aevrin.net"
 ENTITLEMENT_KEY_ID = "2026-10-a"
 ENTITLEMENT_PUBLIC_KEY = "trSV1ue_ymSzW9Ga60p5rH2maEuebDE_Dk72NHicYp4"
 
+# Keep the Worker's logs in Cloudflare's Workers Logs, so a request id a person quotes later still finds
+# its log lines. Each line is JSON (src/log.ts), already redacted, so the dashboard can filter by field.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # No cron trigger. The daily data cleanup runs inside Supabase with pg_cron
 # (deploy/supabase/migrations/0006_scheduled_cleanup.sql). The empty list makes `wrangler deploy` remove
 # the trigger this Worker used to have.

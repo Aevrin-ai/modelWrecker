@@ -1,9 +1,13 @@
 // The control-plane API. Metadata only: there is deliberately no route that runs an attack, calls a
 // model or a target, runs a command, or fetches a URL. See docs/architecture/control-plane-api.md.
 import { Hono, type Context } from "hono";
-import { ZodError, type z } from "zod";
+import type { z } from "zod";
 import { MAX_SYNC_BODY_BYTES, parseBody } from "./body";
 import type { AuthUser, Db, Deps, Row } from "./db";
+import { classifyError } from "./errors";
+import { checkDatabase } from "./health";
+import { errorFields, log } from "./log";
+import { requestIdFor } from "./requestId";
 import {
   ApiError,
   DEVICE_TOKEN_PREFIX,
@@ -25,6 +29,7 @@ import { ensureDefaultProject, readSyncPolicy, type SyncPolicy } from "./routes/
 
 export type AppEnv = {
   Variables: {
+    requestId: string;
     user: AuthUser;
     db: Db;
     device: Row;
@@ -48,29 +53,43 @@ export function createApp(deps: Deps) {
     }
   };
 
-  // Security headers on every response. Same-origin only: no CORS headers are emitted, so a browser
-  // on another origin cannot read responses.
+  // A request id on every response, set first so the error handler and every log line can use it. Then the
+  // security headers. Same-origin only: no CORS headers are emitted, so a browser on another origin cannot
+  // read responses.
   app.use("*", async (c, next) => {
+    c.set("requestId", requestIdFor(c.req.raw));
     await next();
+    c.header("X-Request-Id", c.get("requestId"));
     c.header("Cache-Control", "no-store");
     c.header("X-Content-Type-Options", "nosniff");
     c.header("Referrer-Policy", "no-referrer");
   });
 
+  // The one place a thrown error becomes a response. Known failures pass their safe message through;
+  // anything unexpected is logged with diagnostics and answered with a message that reveals nothing.
   app.onError((err, c) => {
-    if (err instanceof ApiError) return c.json({ error: err.code, message: err.message }, err.status);
-    if (err instanceof ZodError) {
-      const issue = err.issues[0];
-      const where = issue?.path.join(".") || "body";
-      return c.json({ error: "invalid_request", message: `${where}: ${issue?.message ?? "invalid"}` }, 422);
+    const requestId = c.get("requestId");
+    const failure = classifyError(err);
+    if (failure.unexpected) {
+      const fields = { requestId, method: c.req.method, path: c.req.path, status: failure.status, ...errorFields(err) };
+      if (failure.status === 503) log.warn("request_unavailable", fields);
+      else log.error("request_failed", fields);
     }
-    console.error("unhandled error", err instanceof Error ? err.message : String(err));
-    return c.json({ error: "internal", message: "Something went wrong. Please try again." }, 500);
+    return c.json({ error: failure.code, message: failure.message, requestId }, failure.status);
   });
 
-  app.notFound((c) => c.json({ error: "not_found", message: "No such route." }, 404));
+  app.notFound((c) => c.json({ error: "not_found", message: "No such route.", requestId: c.get("requestId") }, 404));
 
+  // Liveness: the Worker runs. It reads no database and says nothing about configuration.
   app.get("/health", (c) => c.json({ ok: true }));
+
+  // Readiness: the database answers too. Public, so it is rate limited and returns no internals.
+  app.get("/health/ready", async (c) => {
+    limit(c, "health-ready", 30, 60_000);
+    const database = await checkDatabase(deps.serviceDb);
+    const isReady = database === "ok";
+    return c.json({ ok: isReady, checks: { database } }, isReady ? 200 : 503);
+  });
 
   // The public half of the entitlement signing key, so anyone can check a token the engine holds.
   app.get("/entitlements/keys", (c) =>

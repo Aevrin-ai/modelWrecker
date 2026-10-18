@@ -12,6 +12,7 @@ import type { AppEnv } from "../app";
 import { parseBody } from "../body";
 import type { Db, Deps, Row } from "../db";
 import { ApiError, RateLimiter, randomToken } from "../lib";
+import { errorFields, log } from "../log";
 import { CURRENCY, INTERVAL_MONTHS, effectivePlan, isPurchasable, planById, priceFor, type Interval } from "../plans";
 import {
   RazorpayError,
@@ -37,7 +38,7 @@ function requireBilling(deps: Deps): BillingConfig {
 
 function gatewayError(err: unknown): never {
   if (err instanceof RazorpayError) {
-    console.error("razorpay call failed", err.status, err.code);
+    log.error("payment_provider_failed", { providerStatus: err.status, providerCode: err.code });
     throw new ApiError(502, "payment_provider_error", "The payment provider did not respond as expected. Try again shortly.");
   }
   throw err;
@@ -52,7 +53,7 @@ type ConfirmResult = "paid" | "pending" | "failed" | "mismatch";
 async function confirmPayment(deps: Deps, billing: BillingConfig, order: Row, payment: RzpPayment): Promise<ConfirmResult> {
   const db = deps.serviceDb;
   if (payment.order_id !== order.razorpay_order_id || payment.amount !== Number(order.amount_paise) || payment.currency !== order.currency) {
-    console.error("payment does not match its order", str(order.id));
+    log.error("payment_order_mismatch", { orderId: str(order.id) });
     return "mismatch";
   }
   let p = payment;
@@ -101,7 +102,7 @@ export async function reconcileOwner(deps: Deps, owner: string, limit = 3): Prom
       if (best) await confirmPayment(deps, deps.billing, order, best);
     } catch (err) {
       // Reconciliation is a backstop; a failure here must never break the Billing page.
-      console.error("reconcile failed", err instanceof Error ? err.message : String(err));
+      log.warn("payment_reconcile_failed", { orderId: str(order.id), ...errorFields(err) });
     }
   }
 }
@@ -301,7 +302,7 @@ export function registerBillingRoutes(app: Hono<AppEnv>, deps: Deps, requireUser
     if (raw.length > MAX_WEBHOOK_BYTES) throw new ApiError(413, "payload_too_large", "Request body is too large.");
     const signature = c.req.header("x-razorpay-signature") ?? "";
     if (!signature || !(await verifyWebhookSignature(billing.webhookSecret, raw, signature))) {
-      console.error("webhook signature rejected");
+      log.warn("payment_webhook_signature_rejected");
       throw new ApiError(400, "invalid_signature", "Signature check failed.");
     }
     let event: { event?: string; payload?: Record<string, { entity?: Record<string, unknown> }> };

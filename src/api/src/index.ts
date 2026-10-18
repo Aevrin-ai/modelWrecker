@@ -1,8 +1,11 @@
-// Cloudflare Worker entry point. Wires the real Supabase-backed dependencies into the app.
+// Cloudflare Worker entry point: checks the settings, then wires the Supabase-backed dependencies into the app.
 import { createApp } from "./app";
+import { checkConfig } from "./config";
 import { supabaseDeps } from "./db/supabase";
 import { createSigner, type EntitlementSigner } from "./entitlements";
+import { log } from "./log";
 import { HttpRazorpay, type BillingConfig } from "./razorpay";
+import { requestIdFor } from "./requestId";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -34,7 +37,7 @@ async function signerFor(env: Env): Promise<EntitlementSigner | undefined> {
   try {
     return await createSigner(env.ENTITLEMENT_KEY_ID, env.ENTITLEMENT_SIGNING_KEY, env.ENTITLEMENT_PUBLIC_KEY);
   } catch {
-    console.error("entitlement signing key could not be loaded; devices get the free baseline");
+    log.error("entitlement_key_invalid", { effect: "devices get the free baseline" });
     return undefined;
   }
 }
@@ -66,10 +69,22 @@ async function build(env: Env): Promise<App> {
   return createApp(await depsFor(env));
 }
 
+// logged once per isolate, so a bad setting shows in the logs without repeating on every request
+const reported = new Set<string>();
+
+function reportOnce(level: "warn" | "error", event: string, problem: string): void {
+  if (reported.has(problem)) return;
+  reported.add(problem);
+  log[level](event, { problem });
+}
+
 function appFor(env: Env): Promise<App> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("missing Supabase configuration");
+  const config = checkConfig({ ...env });
+  if (config.errors.length > 0) {
+    for (const problem of config.errors) reportOnce("error", "config_invalid", problem);
+    throw new Error("the Worker is not configured");
   }
+  for (const problem of config.warnings) reportOnce("warn", "config_incomplete", problem);
   const key = `${env.SUPABASE_URL}|${env.APP_ORIGIN}|${env.ENTITLEMENT_ISSUER ?? ""}`;
   if (cached?.key === key) return cached.app;
   const app = build(env);
@@ -86,9 +101,12 @@ export default {
     try {
       app = await appFor(env);
     } catch {
-      // Never reveal which setting is missing to the caller; the deploy logs show it.
-      console.error("api misconfigured: set SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY");
-      return Response.json({ error: "unavailable", message: "The service is not configured." }, { status: 503 });
+      // never tell the caller which setting is wrong; the deploy logs name it
+      const requestId = requestIdFor(request);
+      return Response.json(
+        { error: "unavailable", message: "The service is not available right now. Try again later.", requestId },
+        { status: 503, headers: { "X-Request-Id": requestId } },
+      );
     }
     return app.fetch(request, env, ctx);
   },

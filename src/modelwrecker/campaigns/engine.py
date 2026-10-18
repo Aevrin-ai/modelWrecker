@@ -7,7 +7,9 @@ full single-objective loop, keeping provider construction (and its test seams) i
 
 Design rules it enforces:
 - A single objective failing never kills the campaign (errors are isolated per objective).
-- Transient provider errors are retried up to a bounded count; other errors are not retried.
+- Transient provider errors are retried up to a bounded count, with backoff, jitter, and the
+  provider's Retry-After. A permanent provider error (bad key, bad request, blocked address) and
+  every other error are not retried.
 - A budget or stop condition ends the campaign cleanly, with partial results and a note.
 - Stopping is cooperative: no objective is hard-cancelled mid-attack, so artifacts are never torn.
 """
@@ -15,6 +17,7 @@ Design rules it enforces:
 from __future__ import annotations
 
 import asyncio
+import random
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -29,6 +32,23 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 # What run_one returns: the (optional) finding for an objective plus its attempt transcript.
 RunOne = Callable[[Objective], Awaitable["tuple[Finding | None, list[AttemptRecord]]"]]
+
+_BASE_DELAY_S = 0.1
+_MAX_BACKOFF_S = 2.0
+# a longer Retry-After is capped, so one objective cannot hold a campaign for minutes
+_MAX_RETRY_AFTER_S = 30.0
+
+
+def retry_delay(tries: int, retry_after: float | None = None,
+                rand: Callable[[], float] = random.random) -> float:
+    """Seconds to wait before retry number `tries`: exponential backoff with jitter, or the
+    provider's Retry-After when that is longer (capped)."""
+    ceiling = min(_BASE_DELAY_S * 2**tries, _MAX_BACKOFF_S)
+    # half fixed, half random, so objectives that failed together do not retry in lockstep
+    delay = ceiling / 2 + rand() * ceiling / 2
+    if retry_after is not None:
+        delay = max(delay, min(retry_after, _MAX_RETRY_AFTER_S))
+    return delay
 
 
 @dataclass
@@ -150,7 +170,13 @@ async def _run_isolated(
     while True:
         try:
             return await run_one(objective)
-        except ProviderError as e:  # transient: retry up to the bound
+        except ProviderError as e:
+            if not e.retryable:  # permanent: trying again would fail the same way
+                msg = (f"objective '{objective.title}' failed (not retried, it would fail "
+                       f"again): {e}")
+                result.notes.append(msg)
+                emit(msg)
+                return None, []
             if tries >= retries:
                 msg = f"objective '{objective.title}' failed after {tries + 1} attempt(s): {e}"
                 result.notes.append(msg)
@@ -158,7 +184,7 @@ async def _run_isolated(
                 return None, []
             tries += 1
             emit(f"retry {tries}/{retries} for '{objective.title}' after a transient error: {e}")
-            await asyncio.sleep(min(0.1 * 2**tries, 2.0))
+            await asyncio.sleep(retry_delay(tries, e.retry_after))
         except Exception as e:  # non-transient: isolate, never retry, never kill the campaign
             msg = f"objective '{objective.title}' errored (not retried): {e}"
             result.notes.append(msg)
