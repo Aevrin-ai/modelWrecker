@@ -100,6 +100,7 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Campaign engine | stop_on first_finding | PASS | `tests/test_campaign.py`; real CLI stopped after first, skipped the rest |
 | Campaign engine | budgets (max_objectives / max_attempts) | PASS | `tests/test_campaign.py` |
 | Campaign engine | retry + per-objective error isolation | PASS | `tests/test_campaign.py` (transient error retried; campaign survives) |
+| Campaign engine | a permanent provider error (rejected key, bad request, missing model, blocked address, bad config) is not retried; backoff has jitter; `Retry-After` honored up to 30 s | PASS | `tests/test_campaign.py`, `tests/test_fault_tolerance.py` (#85) |
 | Campaign engine | invalid campaign config rejected | PASS | `tests/test_campaign.py`; real CLI exit 2 clean message |
 | Campaign engine | money budget / wall-clock deadline live | NOT TESTED | money pricing not built (#25); deadline tested only via unit budget |
 | Harness integration | MCP server + JSON driver | PASS | see the `MCP server` and `MCP guardrails` rows |
@@ -217,6 +218,13 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Live | a staff member enrolling an authenticator and using the console | NOT TESTED | needs an @aevrin.net Google account (maintainer) |
 | API | dashboard sign-in tokens: code exchange, refresh rotation, reuse revokes the session, expired and revoked refresh tokens, outage keeps the cookie, legacy session moved once, logout with a live or expired access token, cross-site and header checks, rate limit, cookie flags (HttpOnly, Secure, SameSite=Strict, path) | PASS | `src/api/test/auth.test.ts` (#59) |
 | API | missing, malformed, expired, or revoked user token answers `401 unauthenticated` | PASS | `src/api/test/api.test.ts` (#58) |
+| API | a request id on every response and in every error body; Cloudflare's ray id used only when well formed | PASS | `src/api/test/reliability.test.ts` (#85) |
+| API | database failures classified by code: availability problems answer `503 service_unavailable`, anything else a `500`; neither leaks the internal text | PASS | `src/api/test/errors.test.ts`, `reliability.test.ts` (#85) |
+| API | outbound calls: one time budget, GET and HEAD retried once with backoff and jitter, `Retry-After` honored or passed on, a POST never retried | PASS | `src/api/test/http.test.ts` (#85) |
+| API | logs are one JSON line per event and redact tokens, keys, and email addresses | PASS | `src/api/test/log.test.ts` (#85) |
+| API | readiness answers 200 when the database answers and 503 with no internals when it fails or is slow; rate limited; liveness touches no database | PASS | `src/api/test/reliability.test.ts` (#85) |
+| API | config check names a missing or invalid setting without its value, and warns about a half-set optional feature | PASS | `src/api/test/config.test.ts` (#85) |
+| Dashboard + CLI | a server error shows the request id; an id with the wrong shape is dropped | PASS | `src/dash/src/api/errorMessage.test.ts`, `tests/test_fault_tolerance.py` (#85) |
 | Dashboard | refresh once and retry once on `401 unauthenticated`; one shared refresh for concurrent failures; no loop; other 401s and errors untouched | PASS | `src/dash/src/api/session.test.ts`, `npm test` (#58) |
 | Dashboard + API + Pages worker | Google sign-in (PKCE) through the API, refresh cookie unreadable by script, reload restores the session, expired access token refreshed and the request retried, signed-in `/` goes to the dashboard and `/#pricing` does not, sign-out revokes and clears cookies, an old localStorage session moved into the cookie | PASS | Chrome against a local harness: the built site through `_worker.js`, the real API app, a fake Supabase Auth (2026-10-11) |
 | Pages worker | Content-Security-Policy on landing, dashboard, admin; no violations; landing inline scripts run by hash; Google Fonts and Razorpay Checkout (script and payment iframe) load | PASS | same local harness in Chrome (#60) |

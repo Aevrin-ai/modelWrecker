@@ -35,6 +35,7 @@ exist, and which one do I read next?* Keep it updated whenever a doc is added or
 | Installing, CI, and run modes | [`workflows/DEPLOYMENT.md`](workflows/DEPLOYMENT.md) |
 | Writing and running tests | [`workflows/TESTING.md`](workflows/TESTING.md), [`testing/test-matrix.md`](testing/test-matrix.md) |
 | Logs, events, and metrics | [`workflows/OBSERVABILITY.md`](workflows/OBSERVABILITY.md) |
+| Something is broken in production | [`workflows/INCIDENT-RUNBOOK.md`](workflows/INCIDENT-RUNBOOK.md) |
 | Sign-in, devices, entitlements | [`security/authentication.md`](security/authentication.md), [`security/entitlements.md`](security/entitlements.md) |
 | The staff admin console | [`security/admin.md`](security/admin.md), [`analytics/page-analytics.md`](analytics/page-analytics.md) |
 | Driving modelWrecker over MCP | [`mcp/overview.md`](mcp/overview.md), [`mcp/tools.md`](mcp/tools.md), [`security/mcp.md`](security/mcp.md) |

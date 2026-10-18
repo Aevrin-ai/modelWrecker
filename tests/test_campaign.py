@@ -143,6 +143,27 @@ def test_objective_error_is_isolated_and_retried(monkeypatch) -> None:
     assert any("failed after 3" in n for n in result.notes)
 
 
+def test_a_permanent_provider_error_is_not_retried(monkeypatch) -> None:
+    calls = {"n": 0}
+
+    def rejected(_messages: list[dict]) -> str:
+        calls["n"] += 1
+        raise ProviderError("HTTP 401 from http://x: invalid api key", retryable=False)
+
+    def fake_build(ep, egress=None):
+        if ep.model == "target":
+            return FakeProvider("target", rejected)
+        if ep.model == "judge":
+            return FakeProvider("judge", _judge)
+        return FakeProvider("attacker", lambda _m: "ok")
+
+    monkeypatch.setattr(loop_module, "build_provider", fake_build)
+    cfg = _config(objectives=1, campaign=CampaignConfig(retries=3))
+    result = asyncio.run(loop_module.run_config(cfg))  # must not raise
+    assert calls["n"] == 1  # a rejected key fails the same way every time
+    assert any("not retried" in n for n in result.notes)
+
+
 def test_invalid_campaign_config_is_rejected() -> None:
     with pytest.raises(ValueError):
         CampaignConfig(stop_on="whenever")

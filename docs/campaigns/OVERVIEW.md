@@ -50,7 +50,11 @@ flowchart TD
   (run until a budget is hit), or `complete` (run every objective, the default).
 - **Retry policy** - bounded retries (`retries`) on transient provider errors only; other errors are not
   retried, and any single objective's failure is isolated so it never kills the campaign (an Aevrin
-  retry-cost principle).
+  retry-cost principle). A provider error says whether it is retryable: a timeout, a dropped connection,
+  a `408`, `425`, `429`, or a `5xx` is; a rejected key, a bad request, a missing model (`400`, `401`,
+  `403`, `404`), a blocked address, or a bad configuration is not, so it stops after one attempt. The
+  wait before a retry grows exponentially with jitter (0.1 s, then 0.2 s, up to 2 s), and a provider's
+  `Retry-After` is honored up to 30 seconds.
 
 Stopping is cooperative: no in-flight objective is hard-cancelled, so run artifacts are never torn.
 

@@ -48,14 +48,69 @@ Rules that hold on every route:
 - Device routes use the server key, and every write is pinned to the owner and project stored on the
   device record. Owner or project ids in the request body are ignored.
 - Every body is validated with a schema and capped at 256 KB. Unknown fields are rejected.
-- Errors are `{"error": "<code>", "message": "<safe text>"}`. Never a stack trace.
+- Errors are `{"error": "<code>", "message": "<safe text>", "requestId": "<id>"}`. Never a stack trace.
+  Every response carries the same id in `X-Request-Id`. See [Errors, timeouts, and retries](#errors-timeouts-and-retries).
 
-## Health check
+## Health checks
+
+Two checks, because "the Worker runs" and "the Worker can do its job" are different questions.
 
 ### `GET /health` (public)
 
 Response `200`: `{ "ok": true }`. A liveness check only: it reads no database and says nothing about
 configuration.
+
+### `GET /health/ready` (public)
+
+A readiness check: the database answers too. It reads one row from `subscriptions` with a 3 second
+timeout, so a slow probe never adds load during an incident.
+
+| Status | Body |
+| --- | --- |
+| 200 | `{ "ok": true, "checks": { "database": "ok" } }` |
+| 503 | `{ "ok": false, "checks": { "database": "unavailable" } }` |
+
+It never says why a check failed; the log line `readiness_database_failed` does. It is rate limited to
+30 calls a minute per address, because it is public and touches the database.
+
+## Errors, timeouts, and retries
+
+One place turns a failure into a response. Routes throw a typed error (`src/api/src/errors.ts`); the
+app's error handler classifies it and answers with the shape above. The device-polling replies in
+[`POST /device/token`](#post-devicetoken-public) keep their standard RFC 8628 shape instead.
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400, 401, 403, 404, 409, 410, 413, 422, 429 | route-specific | The request is wrong, unauthorized, or too frequent. The message says what to change. |
+| 502 | `payment_provider_error` | Razorpay failed or did not answer. |
+| 503 | `service_unavailable` | The database cannot answer right now. Try again. |
+| 503 | `*_unavailable`, `unavailable` | A feature or the whole API is not configured. |
+| 500 | `internal` | Anything unexpected. The message reveals nothing; the log has the detail. |
+
+Database failures are classified by code, never by message text. A Postgres connection error (class
+`08`), too many connections (`53300`), a statement timeout (`57014`), a deadlock (`40P01`), a
+serialization failure (`40001`), a PostgREST connection code (`PGRST000` to `PGRST002`), or no answer at
+all becomes `503 service_unavailable`, so the CLI and the dashboard know to retry. A constraint violation
+or a bad query stays a `500`: retrying a bug only repeats it.
+
+Every outbound call has a time budget (`src/api/src/http.ts`). One budget covers every attempt and
+every wait, so a retry can never push a call past it.
+
+| Service | Budget | Retries |
+| --- | --- | --- |
+| Supabase database and Auth | 10 s | 1, for GET and HEAD only |
+| Razorpay | 15 s | 1, for GET only |
+
+A retry happens only after a network failure, a `429`, or a `502`, `503`, or `504`, with exponential
+backoff and jitter (a random part, so callers that failed together do not retry together). A server's
+`Retry-After` is honored when it fits in the budget; a longer one means the answer is passed on at once.
+A POST is never retried: repeating one could create a second order, refund twice, or send a
+single-use refresh token twice and end the session.
+
+Logs are one JSON line per event (`src/api/src/log.ts`), with the request id, so a reference a
+person quotes finds the exact request. Tokens, keys, and email addresses are redacted before anything
+is written. See [`../workflows/OBSERVABILITY.md`](../workflows/OBSERVABILITY.md) and the
+[incident runbook](../workflows/INCIDENT-RUNBOOK.md).
 
 ## Dashboard sign-in tokens
 
@@ -384,6 +439,12 @@ project-specific is in the public repo:
 | `ENTITLEMENT_KEY_ID`, `ENTITLEMENT_PUBLIC_KEY` | var | Key id and public key, also shipped in the engine |
 | `ADMIN_TOTP_KEY` | secret | Encrypts admin authenticator secrets at rest (admin console) |
 | `ANALYTICS_SALT` | secret | Mixed into the daily visitor hash (page analytics) |
+
+The settings are checked before the first request is served (`src/api/src/config.ts`). A missing or
+invalid required setting (the first four rows, plus `SUPABASE_URL` and `APP_ORIGIN` must be https) makes
+every request answer `503 unavailable`, and the log line `config_invalid` names the setting, never its
+value. An optional group that is only half set (one Razorpay key without the other, or part of the
+entitlement key) stays off, and `config_incomplete` says which setting is missing.
 
 ## Known limits
 

@@ -10,6 +10,7 @@ short timeouts, and refuses a non-https base URL unless the host is `localhost` 
 from __future__ import annotations
 
 import os
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -29,12 +30,19 @@ _TIMEOUT = httpx.Timeout(15.0, connect=5.0)
 
 
 class CloudError(Exception):
-    """A call to the cloud API failed. `status` is None for network failures."""
+    """A call to the cloud API failed. `status` is None for network failures.
 
-    def __init__(self, code: str, message: str = "", status: int | None = None) -> None:
+    `request_id` is the API's reference for the call, when it sent one. It is shown with the message
+    so a person can quote it to support, and support can find the exact request in the API's logs.
+    """
+
+    def __init__(self, code: str, message: str = "", status: int | None = None,
+                 request_id: str | None = None) -> None:
         self.code = code
         self.status = status
-        self.message = redact_text(message or code)
+        self.request_id = request_id
+        text = redact_text(message or code)
+        self.message = f"{text} (request id {request_id})" if request_id else text
         super().__init__(self.message)
 
     @property
@@ -280,7 +288,8 @@ def _remember_entitlement(data: dict) -> None:
     try:
         save_token(token)
     except (EntitlementError, OSError):
-        pass
+        # a bad or unsavable token must never break a heartbeat; the stored one stays in force
+        return
 
 
 def _json(resp: httpx.Response) -> dict:
@@ -296,15 +305,25 @@ def _json(resp: httpx.Response) -> dict:
 
 def _error_from(resp: httpx.Response) -> CloudError:
     code, message = f"http_{resp.status_code}", ""
+    request_id = _request_id(resp.headers.get("x-request-id"))
     try:
         data = resp.json()
-        if isinstance(data, dict):
-            code = str(data.get("error") or code)[:64]
-            message = str(data.get("message") or "")[:300]
     except ValueError:
-        pass
+        data = None  # a proxy's HTML error page: the HTTP status alone describes the failure
+    if isinstance(data, dict):
+        code = str(data.get("error") or code)[:64]
+        message = str(data.get("message") or "")[:300]
+        request_id = _request_id(data.get("requestId")) or request_id
     return CloudError(code, message or f"the cloud API returned HTTP {resp.status_code}",
-                      resp.status_code)
+                      resp.status_code, request_id)
+
+
+# a UUID, or a Cloudflare ray id such as 8a1b2c3d4e5f6789-SIN; anything else is dropped
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
+
+
+def _request_id(value: object) -> str | None:
+    return value if isinstance(value, str) and _REQUEST_ID.match(value) else None
 
 
 # --- device login polling ------------------------------------------------------------------------

@@ -8,6 +8,8 @@ docs/providers/OVERVIEW.md). One adapter, many providers, selected by `base_url`
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 
 import httpx
 
@@ -16,6 +18,30 @@ from .base import BaseProvider, Completion, ProviderCapabilities, ProviderError,
 
 _DEFAULT_TIMEOUT = 120.0
 _POOL = httpx.Limits(max_keepalive_connections=10, max_connections=50, keepalive_expiry=30.0)
+
+# 4xx answers that can change later; any other 4xx (bad key, bad body, no model) fails again
+_RETRYABLE_4XX = {408, 425, 429}
+
+
+def _is_retryable_status(status: int) -> bool:
+    return status >= 500 or status in _RETRYABLE_4XX
+
+
+def _retry_after_seconds(value: str | None) -> float | None:
+    """A Retry-After header in seconds: delay-seconds or an HTTP date. None when absent or
+    unreadable."""
+    if not value:
+        return None
+    value = value.strip()
+    if value.isdigit():
+        return float(value)
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - datetime.now(UTC)).total_seconds())
 
 
 class OpenAICompatibleProvider(BaseProvider):
@@ -63,7 +89,8 @@ class OpenAICompatibleProvider(BaseProvider):
         try:
             self._egress.check(url)  # re-checked on every request (DNS can change between calls)
         except EgressBlocked as e:
-            raise ProviderError(f"egress blocked: {e}") from e
+            # the address is refused by policy; asking again cannot change that
+            raise ProviderError(f"egress blocked: {e}", retryable=False) from e
         client = self._get_client()
         start = time.perf_counter()
         try:
@@ -73,23 +100,32 @@ class OpenAICompatibleProvider(BaseProvider):
         except httpx.HTTPError as e:
             raise ProviderError(f"network error calling {url}: {e}") from e
         latency = int((time.perf_counter() - start) * 1000)
+        return _parse_chat_completion(self._read_json(resp), latency, self.model)
 
+    def _read_json(self, resp: httpx.Response) -> dict:
+        """The response body, or a ProviderError that says whether trying again could help."""
         if 300 <= resp.status_code < 400:
             # Never follow: the redirect target has not passed the egress guard.
             raise ProviderError(
-                f"HTTP {resp.status_code} redirect from {self.base_url} refused by the egress guard"
+                f"HTTP {resp.status_code} redirect from {self.base_url} refused by the "
+                "egress guard",
+                retryable=False,
             )
         if resp.status_code >= 400:
             # Keep the provider's error text (trimmed) but never leak our own auth header.
             detail = resp.text[:500]
-            raise ProviderError(f"HTTP {resp.status_code} from {self.base_url}: {detail}")
-
+            raise ProviderError(
+                f"HTTP {resp.status_code} from {self.base_url}: {detail}",
+                retryable=_is_retryable_status(resp.status_code),
+                retry_after=_retry_after_seconds(resp.headers.get("retry-after")),
+            )
         try:
-            data = resp.json()
+            return resp.json()
         except ValueError as e:
-            raise ProviderError(f"non-JSON response from {self.base_url}: {resp.text[:200]}") from e
-
-        return _parse_chat_completion(data, latency, self.model)
+            # a 200 that is not JSON is a wrong base_url, not a passing failure
+            raise ProviderError(
+                f"non-JSON response from {self.base_url}: {resp.text[:200]}", retryable=False
+            ) from e
 
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(streaming=True, tools=True, reasoning=True)
@@ -109,7 +145,7 @@ def _parse_chat_completion(data: dict, latency_ms: int, model: str) -> Completio
         reasoning = message.get("reasoning") or message.get("reasoning_content") or ""
         tool_calls = message.get("tool_calls") or []
     except (AttributeError, IndexError, TypeError) as e:
-        raise ProviderError(f"unexpected response shape: {e}") from e
+        raise ProviderError(f"unexpected response shape: {e}", retryable=False) from e
 
     usage_raw = data.get("usage") or {}
     usage = Usage(

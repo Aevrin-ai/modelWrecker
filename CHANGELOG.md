@@ -6,7 +6,23 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Added
+- Fault tolerance across the hosted service and the engine (#85, ADR-0023). The API puts a request id on
+  every response (`X-Request-Id`) and in every error body (`requestId`), writes one redacted JSON log line
+  per event, and keeps its logs in Cloudflare Workers Logs. `GET /api/v1/health/ready` checks that the
+  database answers. Database failures are classified by Postgres or PostgREST code: availability problems
+  answer `503 service_unavailable` so clients retry, and anything else stays a `500` that reveals nothing.
+  Every Supabase and Razorpay call has a time budget, and only GET and HEAD are retried, once, with
+  backoff, jitter, and a capped `Retry-After`; a POST is never retried. The Worker names any missing or
+  invalid setting in its logs and warns about half-configured optional features. The dashboard and the
+  CLI show the request id on server errors. In the engine, a provider error says whether it is
+  retryable, and the campaign loop no longer retries a permanent one (a rejected key, a bad request, a
+  missing model, a blocked address), adds jitter, and honors `Retry-After` up to 30 seconds. New
+  incident runbook: `docs/workflows/INCIDENT-RUNBOOK.md`.
+
 ### Changed
+- Error messages no longer say "Something went wrong". An unexpected API error now says what happened and
+  to quote the reference id, and the dashboard's fallback says the request did not reach the server.
 - The daily data cleanup moved from the API Worker's Cloudflare cron to Supabase Cron (#83). Migration
   `0006_scheduled_cleanup.sql` turns on `pg_cron` and calls `admin_maintenance()` every day at 03:17 UTC
   (page views older than 400 days, expired admin sessions, webhook event ids older than 90 days). The

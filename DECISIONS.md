@@ -28,7 +28,7 @@ Format of each ADR: Decision · Why · Alternatives · Trade-offs · Date · Sta
 | 0018 | Entitlement enforcement: cloud issues a signed scoped entitlement the local engine verifies; enforced outside the UI; no pricing logic in the engine | Accepted | [ADR-0018](docs/decisions/ADR-0018-entitlement-enforcement.md) |
 | 0019 | Prepaid plans (month or year) through Razorpay Orders; a payment is applied once, on the server, from verify (signature plus Razorpay fetch), webhook, or reconciliation | Accepted | [ADR-0019](docs/decisions/ADR-0019-prepaid-billing.md) |
 | 0020 | Admin console at /admin: verified @aevrin.net email plus a TOTP authenticator plus a hashed admin session, checked on every request; every change audited; first-party cookie-free page analytics | Accepted | [ADR-0020](docs/decisions/ADR-0020-admin-console.md) |
-| 0021 | Dashboard refresh token in an HttpOnly cookie: the API makes Supabase Auth's token calls for the browser; access token in memory only; Content-Security-Policy on every page | Accepted | [ADR-0021](docs/decisions/ADR-0021-refresh-token-cookie.md) |
+| 0021 | Dashboard refresh token in an HttpOnly cookie: the API makes Supabase Auth's token calls for the browser; access token in memory only; Content-Security-Policy on every page | Accepted | [ADR-0021](docs/decisions/ADR-0021-refresh-token-cookie.md) |
 | 0022 | Promptfoo interop by a one-way config translator (no Node runtime, no hosted dependency, no second engine); unsupported ids error | Accepted | [ADR-0022](docs/decisions/ADR-0022-promptfoo-translator.md) |
 
 ## Resolved maintainer decisions
@@ -61,5 +61,7 @@ Confirmed by the maintainer on 2026-10-02 (issues #11, #12, #42):
   (ADR-0019)
 - **Prices include 18% GST** and keep a 30 to 40 percent margin under the cost model in
   `docs/billing/pricing.md`.
+- **Errors carry a request id, database failures are classified by code, and only safe methods are
+  retried** inside one time budget. A permanent provider error is never retried. (ADR-0023)
 
 No open decisions remain.
