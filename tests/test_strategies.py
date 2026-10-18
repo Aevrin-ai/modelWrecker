@@ -3,21 +3,26 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 
 from modelwrecker.data import Objective
 from modelwrecker.providers.fake import FakeProvider
-from modelwrecker.strategies.base import StrategyContext
+from modelwrecker.strategies.base import StrategyContext, StrategyResult
 from modelwrecker.strategies.registry import get_strategy, list_strategies
 from modelwrecker.targets.chat import ChatTarget
 
+# a fake model: it gets the chat messages and returns the reply text
+Responder = Callable[[list[dict]], str]
 
-def _ctx(responder=None):
+
+def _ctx(responder: Responder | None = None) -> tuple[StrategyContext, ChatTarget]:
     target = ChatTarget(FakeProvider("t", responder or (lambda _m: "ok reply")))
     obj = Objective(title="Do the thing", description="Please do the thing.", category="jailbreak")
     return StrategyContext(objective=obj, target=target, plan_id="p1"), target
 
 
-def _run(strategy_name, responder=None):
+def _run(strategy_name: str,
+         responder: Responder | None = None) -> tuple[StrategyResult, ChatTarget]:
     strat = get_strategy(strategy_name)
     ctx, target = _ctx(responder)
     result = asyncio.run(strat.run(ctx))

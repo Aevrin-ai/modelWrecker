@@ -40,8 +40,12 @@ class Breakdown:
         return self.successes / self.attempts if self.attempts else 0.0
 
     @property
-    def ci(self) -> tuple[float, float]:
+    def confidence_interval(self) -> tuple[float, float]:
+        """The Wilson 95% interval around `asr`."""
         return wilson_interval(self.successes, self.attempts)
+
+    # the short name stays for existing callers
+    ci = confidence_interval
 
 
 @dataclass
@@ -74,50 +78,58 @@ class Analytics:
         return 1.0 - self.asr
 
 
-def compute_analytics(
-    findings: list[Finding], attempts: list[object], label: str = "run"
-) -> Analytics:
+def compute_analytics(findings: list[Finding], attempts: list[object],
+                      label: str = "run") -> Analytics:
     """Build the analytics for one run from its findings and attempt transcript."""
-    a = Analytics(label=label)
-    strat: dict[str, Breakdown] = {}
-    cat: dict[str, Breakdown] = {}
+    analytics = Analytics(label=label)
+    by_strategy: dict[str, Breakdown] = {}
+    by_category: dict[str, Breakdown] = {}
 
-    for rec in attempts:
-        outcome = str(_field(rec, "outcome", ""))
-        strategy = str(_field(rec, "strategy", "")) or "unknown"
-        category = str(_field(rec, "category", "")) or "uncategorized"
+    for record in attempts:
+        outcome = str(_field(record, "outcome", ""))
+        strategy = str(_field(record, "strategy", "")) or "unknown"
+        category = str(_field(record, "category", "")) or "uncategorized"
+        _count_outcome(analytics, outcome)
+        for breakdown in (by_strategy.setdefault(strategy, Breakdown(key=strategy)),
+                          by_category.setdefault(category, Breakdown(key=category))):
+            _count_slice(breakdown, outcome)
 
-        a.total_attempts += 1
-        if outcome == "success":
-            a.successes += 1
-        elif outcome == "partial":
-            a.partials += 1
-        elif outcome == "error":
-            a.errors += 1
-        else:  # refused or anything else counts as held
-            a.refusals += 1
+    # most-exercised slices first, then alphabetical for stable output
+    analytics.by_strategy = sorted(by_strategy.values(), key=lambda b: (-b.attempts, b.key))
+    analytics.by_category = sorted(by_category.values(), key=lambda b: (-b.attempts, b.key))
+    _count_findings(analytics, findings)
+    return analytics
 
-        sb = strat.setdefault(strategy, Breakdown(key=strategy))
-        cb = cat.setdefault(category, Breakdown(key=category))
-        for b in (sb, cb):
-            b.attempts += 1
-            if outcome == "success":
-                b.successes += 1
-            elif outcome == "partial":
-                b.partials += 1
 
-    # Most-exercised slices first, then alphabetical for stable output.
-    a.by_strategy = sorted(strat.values(), key=lambda b: (-b.attempts, b.key))
-    a.by_category = sorted(cat.values(), key=lambda b: (-b.attempts, b.key))
+def _count_outcome(analytics: Analytics, outcome: str) -> None:
+    analytics.total_attempts += 1
+    if outcome == "success":
+        analytics.successes += 1
+    elif outcome == "partial":
+        analytics.partials += 1
+    elif outcome == "error":
+        analytics.errors += 1
+    else:  # refused or anything else counts as held
+        analytics.refusals += 1
 
-    a.findings_total = len(findings)
-    for f in findings:
-        sev = f.severity.value
-        a.findings_by_severity[sev] = a.findings_by_severity.get(sev, 0) + 1
-        for t in f.taxonomy:
-            key = f"{t.framework}:{t.id}"
-            a.by_taxonomy[key] = a.by_taxonomy.get(key, 0) + 1
-    return a
+
+def _count_slice(breakdown: Breakdown, outcome: str) -> None:
+    breakdown.attempts += 1
+    if outcome == "success":
+        breakdown.successes += 1
+    elif outcome == "partial":
+        breakdown.partials += 1
+
+
+def _count_findings(analytics: Analytics, findings: list[Finding]) -> None:
+    analytics.findings_total = len(findings)
+    for finding in findings:
+        severity = finding.severity.value
+        analytics.findings_by_severity[severity] = (
+            analytics.findings_by_severity.get(severity, 0) + 1)
+        for ref in finding.taxonomy:
+            key = f"{ref.framework}:{ref.id}"
+            analytics.by_taxonomy[key] = analytics.by_taxonomy.get(key, 0) + 1
 
 
 @dataclass
@@ -139,7 +151,8 @@ def build_leaderboard(runs: list[Analytics]) -> list[LeaderboardRow]:
     rows: list[LeaderboardRow] = []
     for i, r in enumerate(ordered, start=1):
         low, high = r.asr_ci
-        high_sev = sum(v for k, v in r.findings_by_severity.items() if k in _HIGH_SEVERITY)
+        high_sev = sum(count for severity, count in r.findings_by_severity.items()
+                       if severity in _HIGH_SEVERITY)
         rows.append(
             LeaderboardRow(
                 rank=i,

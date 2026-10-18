@@ -18,7 +18,7 @@ secrets.
   computed from the run artifacts. See [`../attack-engine/ANALYTICS.md`](../attack-engine/ANALYTICS.md).
 - **Redacted refusal logs** from the MCP server guardrails (Python `logging`, logger
   `modelwrecker.mcp`). See [`../security/mcp.md`](../security/mcp.md).
-- **Structured logs from the control-plane API** (`src/api/src/log.ts`): one JSON line per event, with a
+- **Structured logs from the control-plane API** (`src/api/src/lib/log.ts`): one JSON line per event, with a
   level, an event name such as `request_failed` or `payment_provider_failed`, and the request id.
   Tokens, keys, and email addresses are redacted before a line is written, and field values are flat on
   purpose, so a whole request body can never be logged. Cloudflare Workers Logs keeps them, so a

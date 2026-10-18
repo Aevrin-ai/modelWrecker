@@ -34,11 +34,9 @@ class StrategyContext:
 class StrategyRun:
     attempt: Attempt
     observation: Observation
-    # A benign control: the same scenario without the attack. Judged and reported, never a finding;
-    # if it fails too, the attack's result is not attributable to the attack (a false positive).
+    # a benign control (the scenario without the attack) is judged and reported, never a finding
     control: bool = False
-    # Re-runs this exact scenario for the reliability check. Without it the loop re-sends the
-    # payload with target.send_message, which is right for single-message strategies only.
+    # re-runs this exact scenario for the reliability check; without it the payload is re-sent
     replay: Callable[[], Awaitable[Observation]] | None = None
 
 
@@ -58,9 +56,8 @@ class BaseStrategy:
     async def run(self, ctx: StrategyContext) -> StrategyResult:  # pragma: no cover - abstract
         raise NotImplementedError
 
-    def _attempt(
-        self, ctx: StrategyContext, payload: str, delivery: str = "single_turn"
-    ) -> Attempt:
+    def _attempt(self, ctx: StrategyContext, payload: str,
+                 delivery: str = "single_turn") -> Attempt:
         return Attempt(
             plan_id=ctx.plan_id,
             objective_id=ctx.objective.id,

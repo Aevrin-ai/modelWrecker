@@ -21,6 +21,15 @@ happened - never invent historical entries.
   incident runbook: `docs/workflows/INCIDENT-RUNBOOK.md`.
 
 ### Changed
+- The owner's code style is applied across the repository (#87, ADR-0024), without changing behavior. The
+  style checker went from 805 findings (97 errors) over 296 files to no errors. Every file is under 300
+  lines, `any` is gone, no catch block is empty or silent, and test fixtures no longer look like real
+  credentials. The control-plane API is now layered: `middleware/`, `routes/` (route tables only),
+  `controllers/`, `validators/`, `services/`, `database/`, `lib/`, `types/`, and `config/`, with only the
+  Worker entry, the pipeline (`app.ts`), and the composition root (`container.ts`) at the top. The CLI is
+  a package (`src/modelwrecker/cli/`), and large engine, dashboard, and landing modules are split by job.
+  Old import paths still work. The same tests pass, the CLI help output is byte-identical, and the landing
+  page prerenders to the same HTML.
 - Error messages no longer say "Something went wrong". An unexpected API error now says what happened and
   to quote the reference id, and the dashboard's fallback says the request did not reach the server.
 - The daily data cleanup moved from the API Worker's Cloudflare cron to Supabase Cron (#83). Migration

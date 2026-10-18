@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .base import BaseProvider, Completion, ProviderCapabilities
+from .base import BaseProvider, Completion, HealthStatus, ProviderCapabilities
 
 
 @dataclass
@@ -75,7 +75,7 @@ class MeteredProvider(BaseProvider):
     def capabilities(self) -> ProviderCapabilities:
         return self._inner.capabilities()
 
-    async def health_check(self):
+    async def health_check(self) -> HealthStatus:
         return await self._inner.health_check()
 
     async def aclose(self) -> None:

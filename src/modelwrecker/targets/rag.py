@@ -38,9 +38,8 @@ class RagTarget:
     name = "rag"
     version = "1"
 
-    def __init__(
-        self, provider: BaseProvider, system: str | None = None, options: dict | None = None
-    ) -> None:
+    def __init__(self, provider: BaseProvider, system: str | None = None,
+                 options: dict | None = None) -> None:
         self._provider = provider
         self._system = system
         opts = options or {}

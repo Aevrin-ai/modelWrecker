@@ -48,18 +48,12 @@ class OpenAICompatibleProvider(BaseProvider):
     name = "openai_compatible"
     version = "1"
 
-    def __init__(
-        self,
-        model: str,
-        base_url: str,
-        api_key: str | None = None,
-        timeout: float | None = None,
-        extra_headers: dict[str, str] | None = None,
-        egress: EgressPolicy | None = None,
-    ) -> None:
+    def __init__(self, model: str, base_url: str, api_key: str | None = None,
+                 timeout: float | None = None, extra_headers: dict[str, str] | None = None,
+                 egress: EgressPolicy | None = None) -> None:
         super().__init__(model)
         self.base_url = base_url.rstrip("/")
-        # Strict by default: without an explicit policy a provider may only reach public HTTPS.
+        # strict by default: without an explicit policy a provider may only reach public HTTPS
         self._egress = egress or EgressPolicy()
         self._api_key = api_key
         self._timeout = timeout or _DEFAULT_TIMEOUT
@@ -71,7 +65,7 @@ class OpenAICompatibleProvider(BaseProvider):
             headers = {"Content-Type": "application/json", **self._extra_headers}
             if self._api_key:
                 headers["Authorization"] = f"Bearer {self._api_key}"
-            # Redirects are never followed: a 3xx could point at a blocked address after the check.
+            # redirects are never followed: a 3xx could point at a blocked address after the check
             self._client = httpx.AsyncClient(
                 timeout=self._timeout, limits=_POOL, headers=headers, follow_redirects=False
             )
@@ -79,9 +73,7 @@ class OpenAICompatibleProvider(BaseProvider):
 
     async def generate(self, messages: list[dict], **params: object) -> Completion:
         body: dict = {"model": self.model, "messages": messages}
-        # Only pass through known, safe params. `tools`/`tool_choice` let an agent target declare
-        # its (simulated) tools, so a model with native function-calling returns a structured tool
-        # call instead of failing the request (some providers reject a tool call with none set).
+        # only known, safe params; `tools` lets a native tool-calling model reply instead of failing
         for k in ("max_tokens", "temperature", "top_p", "stop", "tools", "tool_choice"):
             if k in params and params[k] is not None:
                 body[k] = params[k]

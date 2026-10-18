@@ -9,14 +9,11 @@ from __future__ import annotationsfrom ..data import Observation, ToolCallfro
     name = "chat"
     version = "1"
 
-    def __init__(
-        self, provider: BaseProvider, system: str | None = None, options: dict | None = None
-    ) -> None:
+    def __init__(self, provider: BaseProvider, system: str | None = None,
+                 options: dict | None = None) -> None:
         self._provider = provider
         self._system = system
-        # Opt-in: only set `vision: true` when the model actually accepts images, so a text-only
-        # model is never asked for an image (the multimodal strategy is reported NOT TESTED
-        # instead).
+        # opt-in: a text-only model is never sent an image; multimodal reports NOT TESTED instead
         self._vision = bool((options or {}).get("vision", False))
 
     def capabilities(self) -> set[Capability]:

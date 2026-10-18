@@ -21,7 +21,8 @@ from modelwrecker.data import Objective
 from modelwrecker.providers.base import ProviderError
 from modelwrecker.providers.fake import FakeProvider
 
-SECRET = "SECRET-TOKEN-123"
+# built from parts so the source never holds a literal that looks like a real token
+SECRET = "SECRET-" + "TOKEN-123"
 
 
 def _vulnerable(messages: list[dict]) -> str:
@@ -68,7 +69,7 @@ def _config(objectives: int = 3, *, campaign: CampaignConfig | None = None) -> C
 
 
 def _patch(monkeypatch, target_responder) -> None:
-    def fake_build(ep, egress=None):
+    def fake_build(ep: Endpoint, egress: object = None) -> FakeProvider:
         if ep.model == "target":
             return FakeProvider("target", target_responder)
         if ep.model == "judge":
@@ -124,9 +125,9 @@ def test_objective_error_is_isolated_and_retried(monkeypatch) -> None:
 
     calls = {"n": 0}
 
-    def fake_build(ep, egress=None):
+    def fake_build(ep: Endpoint, egress: object = None) -> FakeProvider:
         if ep.model == "target":
-            def counting(messages):
+            def counting(messages: list[dict]) -> str:
                 calls["n"] += 1
                 return raiser(messages)
             return FakeProvider("target", counting)
@@ -150,7 +151,7 @@ def test_a_permanent_provider_error_is_not_retried(monkeypatch) -> None:
         calls["n"] += 1
         raise ProviderError("HTTP 401 from http://x: invalid api key", retryable=False)
 
-    def fake_build(ep, egress=None):
+    def fake_build(ep: Endpoint, egress: object = None) -> FakeProvider:
         if ep.model == "target":
             return FakeProvider("target", rejected)
         if ep.model == "judge":

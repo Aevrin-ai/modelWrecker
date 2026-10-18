@@ -45,7 +45,9 @@ flowchart TD
 Tool permission comes first because no other check makes sense for a tool that does not exist. The run
 slot comes last so a refused run never uses up a slot.
 
-The code lives in `src/modelwrecker/mcp/guardrails.py`. The service (`mcp/service.py`) calls it, and the
+The code lives in `src/modelwrecker/mcp/guardrails.py` (the `Guard`), with the caps in `mcp/limits.py`, the
+config path check in `mcp/path_scope.py`, the entitlement hook in `mcp/entitlement_hook.py`, and the run-id
+checks in `mcp/run_paths.py`. The service (`mcp/service.py`) calls it, and the
 server (`mcp/server.py`) overrides the MCP SDK's `call_tool` so the tool and argument checks see the raw
 arguments before the SDK filters them.
 

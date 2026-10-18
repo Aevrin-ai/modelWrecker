@@ -14,7 +14,8 @@ from __future__ import annotations
 from ..data import Observation
 from ..interfaces import Capability
 from ..providers.base import BaseProvider
-from .agent import _merge_tools, run_tool_session, tools_from_options
+from .tool_catalog import merge_tools, tools_from_options
+from .tool_session import run_tool_session
 
 _SAVE_TOOL = {"name": "save_note", "description": "Save a short note to long-term memory.",
               "sensitive": False}
@@ -24,9 +25,8 @@ class MemoryTarget:
     name = "memory"
     version = "1"
 
-    def __init__(
-        self, provider: BaseProvider, system: str | None = None, options: dict | None = None
-    ) -> None:
+    def __init__(self, provider: BaseProvider, system: str | None = None,
+                 options: dict | None = None) -> None:
         self._provider = provider
         self._system = system
         self._tools = tools_from_options(options or {})
@@ -64,16 +64,14 @@ class MemoryTarget:
         notes = "\n".join(f"- {n}" for n in self._memory)
         return f"{base}\n\nYour long-term memory notes (from earlier sessions):\n{notes}"
 
-    async def run_scenario(
-        self, task: str, environment: dict[str, str], tools: list[dict] | None = None,
-        **opts: object,
-    ) -> Observation:
+    async def run_scenario(self, task: str, environment: dict[str, str],
+                           tools: list[dict] | None = None, **opts: object) -> Observation:
         """One session. The agent can save a note (persisted); notes are injected on later sessions.
 
         `save_note` writes to memory after the session, from the recorded calls, so a saved note
         carries into the next session's system prompt. No tool is executed.
         """
-        merged = _merge_tools([*self._tools, _SAVE_TOOL], tools or [])
+        merged = merge_tools([*self._tools, _SAVE_TOOL], tools or [])
         obs = await run_tool_session(
             self._provider, self._system_with_memory(), merged, task, environment,
             self._max_steps, **opts,

@@ -15,9 +15,7 @@ from ..security.egress import EgressPolicy
 from .base import BaseProvider, ProviderError
 from .openai_compatible import OpenAICompatibleProvider
 
-# Protocols that are served by the OpenAI-compatible wire adapter today. any_llm is the documented
-# default multiplexer; until the any-llm SDK adapter lands (issue #23) it falls back to the
-# OpenAI-compatible wire, which already reaches OpenRouter/Ollama/vLLM/OpenAI (see ADR-0003).
+# served by the OpenAI-compatible wire; any_llm uses it until its SDK adapter lands (ADR-0003)
 _OPENAI_WIRE = {"openai", "openai_compatible", "any_llm", "litellm", "portkey"}
 
 _bucket: ContextVar[list[BaseProvider] | None] = ContextVar("mw_provider_bucket", default=None)
@@ -53,9 +51,9 @@ def build_provider(endpoint: Endpoint, egress: EgressPolicy | None = None) -> Ba
     else:
         raise ProviderError(f"unknown protocol {endpoint.protocol!r}", retryable=False)
 
-    b = _bucket.get()
-    if b is not None:
-        b.append(provider)
+    bucket = _bucket.get()
+    if bucket is not None:
+        bucket.append(provider)
     return provider
 
 
@@ -74,8 +72,13 @@ async def provider_scope() -> AsyncIterator[None]:
         yield
     finally:
         _bucket.reset(token)
-        for p in bucket:
-            try:
-                await p.aclose()
-            except Exception:
-                pass
+        for provider in bucket:
+            await _close_quietly(provider)
+
+
+async def _close_quietly(provider: BaseProvider) -> None:
+    try:
+        await provider.aclose()
+    except Exception:
+        # one failed close must not stop the others from closing or hide the run's own result
+        return

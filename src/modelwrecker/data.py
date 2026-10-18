@@ -24,9 +24,6 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-# --- enums ----------------------------------------------------------------------------------------
-
-
 class Outcome(StrEnum):
     REFUSED = "refused"
     PARTIAL = "partial"
@@ -55,9 +52,6 @@ class FindingStatus(StrEnum):
     ACCEPTED_RISK = "accepted-risk"
 
 
-# --- taxonomy -------------------------------------------------------------------------------------
-
-
 class TaxonomyRef(BaseModel):
     """One mapping to a standard security taxonomy entry.
 
@@ -69,9 +63,6 @@ class TaxonomyRef(BaseModel):
     id: str  # e.g. "LLM01", "ASI01", "MCP03", "AML.T0051"
     edition: str | None = None  # e.g. "2025" or "2026"
     title: str | None = None
-
-
-# --- pipeline objects -----------------------------------------------------------------------------
 
 
 class Objective(BaseModel):

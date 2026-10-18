@@ -23,7 +23,8 @@ from modelwrecker.data import Finding, Severity, TaxonomyRef
 from modelwrecker.reliability.replay import wilson_interval
 
 
-def _attempt(strategy, outcome, category="jailbreak", score=0):
+def _attempt(strategy: str, outcome: str, category: str = "jailbreak",
+             score: int = 0) -> dict:
     return {"strategy": strategy, "outcome": outcome, "category": category, "score": score}
 
 
@@ -32,9 +33,6 @@ def _finding(sev: Severity) -> Finding:
         objective_id="o", attempt_id="a", severity=sev, title="t",
         taxonomy=[TaxonomyRef(framework="owasp_llm", id="LLM01", edition="2026", title="x")],
     )
-
-
-# --- Wilson interval ---
 
 
 def test_wilson_never_zero_width_at_extremes() -> None:
@@ -49,9 +47,6 @@ def test_wilson_tightens_with_more_samples() -> None:
     narrow = wilson_interval(50, 100)
     wide = wilson_interval(5, 10)
     assert (narrow[1] - narrow[0]) < (wide[1] - wide[0])  # same 50% rate, more data = tighter
-
-
-# --- compute_analytics ---
 
 
 def test_compute_analytics_counts_and_breakdowns() -> None:
@@ -91,9 +86,6 @@ def test_compute_analytics_empty_run() -> None:
     assert a.by_strategy == []
 
 
-# --- leaderboard ---
-
-
 def test_leaderboard_ranks_most_robust_first() -> None:
     weak = compute_analytics(
         [_finding(Severity.CRITICAL)],
@@ -109,9 +101,6 @@ def test_leaderboard_ranks_most_robust_first() -> None:
     assert rows[0].rank == 1
     assert rows[1].label == "weak-model"
     assert rows[1].high_severity == 1
-
-
-# --- renderers (static artifacts) ---
 
 
 def test_json_renderer_is_valid_and_complete() -> None:

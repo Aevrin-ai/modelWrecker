@@ -41,8 +41,7 @@ _REGISTRY: dict[str, type[BaseStrategy]] = {
     McpToolPoisoning.name: McpToolPoisoning,
 }
 
-# PyRIT-backed strategies (PAIR/TAP/send) register only when a working PyRIT is importable, so the
-# engine runs fine without the optional `modelwrecker[attacks]` dependency. See ADR-0006.
+# PyRIT-backed strategies register only when PyRIT imports, so the attacks extra stays optional
 from .pyrit_adapter import pyrit_available  # noqa: E402
 
 if pyrit_available()[0]:
@@ -52,8 +51,7 @@ if pyrit_available()[0]:
     for _cls in (PyRITPromptSending, PyRITPair, PyRITTap, PyRITXpia):
         _REGISTRY[_cls.name] = _cls
 
-# garak-backed strategy registers only when the optional `modelwrecker[scan]` dependency is
-# importable.
+# the garak-backed strategy registers only when the optional scan extra is importable
 from .garak_adapter import garak_available  # noqa: E402
 
 if garak_available()[0]:

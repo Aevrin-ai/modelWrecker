@@ -14,15 +14,11 @@ from __future__ import annotationsfrom collections.abc import AsyncIteratorfr
     CALL_TOOL = "call_tool"
     OBSERVE_TOOL_CALL = "observe_tool_call"
     INGEST_DOCUMENT = "ingest_document"  # a RAG target can take attacker-controlled documents
-    # The target runs a bounded multi-step tool session in which the harness supplies tool results
-    # (fixtures). Calls are recorded, never executed. Needed for indirect injection via tool
-    # output.
+    # a bounded tool session with harness-supplied results; calls are recorded, never executed
     TOOL_ENVIRONMENT = "tool_environment"
-    # The target keeps memory across sessions, so an instruction saved now can affect a later
-    # session.
+    # memory across sessions, so an instruction saved now can affect a later session
     PERSISTENT_MEMORY = "persistent_memory"
-    # The target passes work between agents, so one agent's output can reach another as
-    # instructions.
+    # work passes between agents, so one agent's output can reach another as instructions
     MULTI_AGENT = "multi_agent"
     RESET_SESSION = "reset_session"
     GET_METADATA = "get_metadata"

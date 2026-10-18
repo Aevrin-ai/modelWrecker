@@ -1,145 +1,59 @@
 """A small HTTP client for the cloud control-plane API (docs/architecture/control-plane-api.md).
 
 It speaks five routes only: `device/code`, `device/token`, `device/heartbeat`, `device/entitlement`,
-and `sync`. A signed entitlement in a heartbeat or entitlement reply is verified and stored (issue
-#11). It never follows redirects (a redirect could carry the device token to another host), uses
-short timeouts, and refuses a non-https base URL unless the host is `localhost` or `127.0.0.1`
-(local Worker development). RFC 8628 polling errors are mapped to a typed `TokenStatus`.
+and `sync`. A signed entitlement in a heartbeat or entitlement reply is verified and stored. It
+never follows redirects (a redirect could carry the device token to another host), uses short
+timeouts, and sends the token only to a URL that `api_url.validate_api_url` accepts.
 """
 
 from __future__ import annotations
 
-import os
-import re
-import time
-from collections.abc import Callable
-from dataclasses import dataclass
-from enum import StrEnum
-from urllib.parse import urlsplit
+from typing import TYPE_CHECKING
 
 import httpx
 
 from .. import __version__
-from ..security.redaction import redact_text
+from .api_responses import error_from, read_json
+from .api_url import DEFAULT_API_URL, ENV_URL, resolve_api_url, validate_api_url
+from .client_errors import CloudError, InsecureUrlError
+from .device_login import (
+    POLL_ERRORS,
+    DeviceCode,
+    LoginOutcome,
+    TokenResult,
+    TokenStatus,
+    poll_for_token,
+)
 from .policy import SyncPolicy
 
-DEFAULT_API_URL = "https://app.aevrin.net/api/v1"
-ENV_URL = "MODELWRECKER_CLOUD_URL"
-_LOCAL_HOSTS = {"localhost", "127.0.0.1"}
+if TYPE_CHECKING:
+    from ..entitlements import Entitlement
+
+# re-exported: these lived in this module before it was split, and callers import them from here
+__all__ = [
+    "DEFAULT_API_URL",
+    "ENV_URL",
+    "CloudClient",
+    "CloudError",
+    "DeviceCode",
+    "InsecureUrlError",
+    "LoginOutcome",
+    "TokenResult",
+    "TokenStatus",
+    "poll_for_token",
+    "resolve_api_url",
+    "validate_api_url",
+]
+
 _TIMEOUT = httpx.Timeout(15.0, connect=5.0)
-
-
-class CloudError(Exception):
-    """A call to the cloud API failed. `status` is None for network failures.
-
-    `request_id` is the API's reference for the call, when it sent one. It is shown with the message
-    so a person can quote it to support, and support can find the exact request in the API's logs.
-    """
-
-    def __init__(self, code: str, message: str = "", status: int | None = None,
-                 request_id: str | None = None) -> None:
-        self.code = code
-        self.status = status
-        self.request_id = request_id
-        text = redact_text(message or code)
-        self.message = f"{text} (request id {request_id})" if request_id else text
-        super().__init__(self.message)
-
-    @property
-    def refused(self) -> bool:
-        """True when the API answered and said no (a 4xx other than rate limiting or timeout).
-
-        A network failure, a 5xx, a 408, or a 429 means "try again later", not a refusal.
-        """
-        s = self.status
-        return s is not None and 400 <= s < 500 and s not in (408, 429)
-
-
-class InsecureUrlError(CloudError):
-    def __init__(self, message: str) -> None:
-        super().__init__("insecure_url", message)
-
-
-def validate_api_url(url: str) -> str:
-    """Return the base URL without a trailing slash, or raise if a token must not go there."""
-    parts = urlsplit(url.strip())
-    host = (parts.hostname or "").lower()
-    if not host:
-        raise InsecureUrlError(f"not a valid cloud API URL: {url!r}")
-    if parts.username or parts.password:
-        raise InsecureUrlError("the cloud API URL must not contain credentials")
-    if parts.query or parts.fragment:
-        raise InsecureUrlError("the cloud API URL must not contain a query or fragment")
-    if parts.scheme == "https":
-        pass
-    elif parts.scheme == "http" and host in _LOCAL_HOSTS:
-        pass  # local Worker development only
-    else:
-        raise InsecureUrlError(
-            f"refusing cloud API URL {url!r}: it must use https (http is allowed only for "
-            "localhost or 127.0.0.1)"
-        )
-    return url.strip().rstrip("/")
-
-
-def resolve_api_url(explicit: str | None = None) -> str:
-    """The base URL to use: an explicit value, else MODELWRECKER_CLOUD_URL, else the default."""
-    url = explicit or os.environ.get(ENV_URL, "").strip() or DEFAULT_API_URL
-    return validate_api_url(url)
-
-
-# --- typed results -------------------------------------------------------------------------------
-
-
-@dataclass
-class DeviceCode:
-    device_code: str
-    user_code: str
-    verification_uri: str
-    verification_uri_complete: str
-    expires_in: int
-    interval: int
-
-    def __repr__(self) -> str:  # the device code is a bearer secret until it is used
-        return f"DeviceCode(user_code={self.user_code!r}, expires_in={self.expires_in})"
-
-
-class TokenStatus(StrEnum):
-    OK = "ok"
-    PENDING = "authorization_pending"
-    SLOW_DOWN = "slow_down"
-    EXPIRED = "expired_token"
-    DENIED = "access_denied"
-
-
-@dataclass
-class TokenResult:
-    status: TokenStatus
-    device_token: str = ""
-    device_id: str = ""
-    project_id: str | None = None
-
-    def __repr__(self) -> str:
-        return f"TokenResult(status={self.status.value!r}, device_id={self.device_id!r})"
-
-
-_POLL_ERRORS = {s.value: s for s in TokenStatus if s is not TokenStatus.OK}
-
-
-# --- client --------------------------------------------------------------------------------------
 
 
 class CloudClient:
     """Synchronous client. Pass `transport` in tests (httpx.MockTransport); never a live network."""
 
-    def __init__(
-        self,
-        api_url: str | None = None,
-        token: str | None = None,
-        *,
-        transport: httpx.BaseTransport | None = None,
-        timeout: httpx.Timeout | float = _TIMEOUT,
-    ) -> None:
+    def __init__(self, api_url: str | None = None, token: str | None = None, *,
+                 transport: httpx.BaseTransport | None = None,
+                 timeout: httpx.Timeout | float = _TIMEOUT) -> None:
         self.api_url = resolve_api_url(api_url)
         self._token = token
         self._http = httpx.Client(
@@ -159,11 +73,8 @@ class CloudClient:
     def close(self) -> None:
         self._http.close()
 
-    # public routes -----------------------------------------------------------------------------
-
-    def device_code(
-        self, *, name: str, os_name: str, engine_version: str = __version__
-    ) -> DeviceCode:
+    def device_code(self, *, name: str, os_name: str,
+                    engine_version: str = __version__) -> DeviceCode:
         data = self._post("device/code", {"name": name, "os": os_name,
                                           "engine_version": engine_version})
         try:
@@ -183,7 +94,7 @@ class CloudClient:
         """One poll. Returns a typed status for the RFC 8628 errors; raises CloudError otherwise."""
         resp = self._send("device/token", {"device_code": device_code}, auth=False)
         if resp.status_code == 200:
-            data = _json(resp)
+            data = read_json(resp)
             token = data.get("device_token")
             if not isinstance(token, str) or not token:
                 raise CloudError("bad_response", "the token response had no device token", 200)
@@ -191,12 +102,10 @@ class CloudClient:
                                device_id=str(data.get("device_id") or ""),
                                project_id=data.get("project_id"))
         if resp.status_code == 400:
-            code = _json(resp).get("error")
-            if isinstance(code, str) and code in _POLL_ERRORS:
-                return TokenResult(_POLL_ERRORS[code])
-        raise _error_from(resp)
-
-    # device routes -----------------------------------------------------------------------------
+            code = read_json(resp).get("error")
+            if isinstance(code, str) and code in POLL_ERRORS:
+                return TokenResult(POLL_ERRORS[code])
+        raise error_from(resp)
 
     def heartbeat(self, engine_version: str = __version__) -> bool:
         data = self._post("device/heartbeat", {"engine_version": engine_version}, auth=True)
@@ -209,14 +118,14 @@ class CloudClient:
         _remember_entitlement(data)
         return SyncPolicy.from_api(data.get("sync"))
 
-    def refresh_entitlement(self):
+    def refresh_entitlement(self) -> Entitlement:
         """Fetch, verify, and store a fresh signed entitlement. Returns it, or raises."""
         from ..entitlements import EntitlementError, save_token
 
-        resp = self._send_get("device/entitlement")
+        resp = self._request("GET", "device/entitlement", headers=self._auth_headers())
         if resp.status_code != 200:
-            raise _error_from(resp)
-        token = _json(resp).get("entitlement")
+            raise error_from(resp)
+        token = read_json(resp).get("entitlement")
         if not isinstance(token, str) or not token:
             raise CloudError("bad_response", "the entitlement response had no token", 200)
         try:
@@ -231,38 +140,24 @@ class CloudClient:
             raise CloudError("bad_response", "the sync response did not confirm ok", 200)
         return data
 
-    # plumbing ----------------------------------------------------------------------------------
-
     def _post(self, path: str, body: dict, *, auth: bool = False) -> dict:
         resp = self._send(path, body, auth=auth)
         if resp.status_code != 200:
-            raise _error_from(resp)
-        return _json(resp)
-
-    def _send_get(self, path: str) -> httpx.Response:
-        if not self._token:
-            raise CloudError("not_logged_in", "no device credential; run `modelwrecker login`")
-        try:
-            resp = self._http.get(path, headers={"Authorization": f"Bearer {self._token}"})
-        except httpx.TimeoutException as e:
-            raise CloudError("timeout", "the cloud API did not answer in time") from e
-        except httpx.HTTPError as e:
-            raise CloudError("network_error",
-                             f"could not reach the cloud API: {type(e).__name__}") from e
-        if resp.is_redirect:
-            raise CloudError("redirect_refused",
-                             "the cloud API answered with a redirect; not followed",
-                             resp.status_code)
-        return resp
+            raise error_from(resp)
+        return read_json(resp)
 
     def _send(self, path: str, body: dict, *, auth: bool) -> httpx.Response:
-        headers = {}
-        if auth:
-            if not self._token:
-                raise CloudError("not_logged_in", "no device credential; run `modelwrecker login`")
-            headers["Authorization"] = f"Bearer {self._token}"
+        headers = self._auth_headers() if auth else {}
+        return self._request("POST", path, json=body, headers=headers)
+
+    def _auth_headers(self) -> dict[str, str]:
+        if not self._token:
+            raise CloudError("not_logged_in", "no device credential; run `modelwrecker login`")
+        return {"Authorization": f"Bearer {self._token}"}
+
+    def _request(self, method: str, path: str, **kwargs: object) -> httpx.Response:
         try:
-            resp = self._http.post(path, json=body, headers=headers)
+            resp = self._http.request(method, path, **kwargs)
         except httpx.TimeoutException as e:
             raise CloudError("timeout", "the cloud API did not answer in time") from e
         except httpx.HTTPError as e:
@@ -290,72 +185,3 @@ def _remember_entitlement(data: dict) -> None:
     except (EntitlementError, OSError):
         # a bad or unsavable token must never break a heartbeat; the stored one stays in force
         return
-
-
-def _json(resp: httpx.Response) -> dict:
-    try:
-        data = resp.json()
-    except ValueError as e:
-        raise CloudError("bad_response", "the cloud API returned non-JSON", resp.status_code) from e
-    if not isinstance(data, dict):
-        raise CloudError("bad_response", "the cloud API returned an unexpected shape",
-                         resp.status_code)
-    return data
-
-
-def _error_from(resp: httpx.Response) -> CloudError:
-    code, message = f"http_{resp.status_code}", ""
-    request_id = _request_id(resp.headers.get("x-request-id"))
-    try:
-        data = resp.json()
-    except ValueError:
-        data = None  # a proxy's HTML error page: the HTTP status alone describes the failure
-    if isinstance(data, dict):
-        code = str(data.get("error") or code)[:64]
-        message = str(data.get("message") or "")[:300]
-        request_id = _request_id(data.get("requestId")) or request_id
-    return CloudError(code, message or f"the cloud API returned HTTP {resp.status_code}",
-                      resp.status_code, request_id)
-
-
-# a UUID, or a Cloudflare ray id such as 8a1b2c3d4e5f6789-SIN; anything else is dropped
-_REQUEST_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
-
-
-def _request_id(value: object) -> str | None:
-    return value if isinstance(value, str) and _REQUEST_ID.match(value) else None
-
-
-# --- device login polling ------------------------------------------------------------------------
-
-
-@dataclass
-class LoginOutcome:
-    status: TokenStatus  # OK, EXPIRED, or DENIED
-    token: TokenResult | None = None
-
-
-def poll_for_token(
-    client: CloudClient,
-    code: DeviceCode,
-    *,
-    sleep: Callable[[float], None] = time.sleep,
-    clock: Callable[[], float] = time.monotonic,
-) -> LoginOutcome:
-    """Poll `device/token` until approved, denied, or expired (RFC 8628 section 3.5).
-
-    Waits `interval` seconds before every poll and adds 5 seconds on each `slow_down`.
-    """
-    interval = max(1, code.interval)
-    deadline = clock() + max(1, code.expires_in)
-    while True:
-        if clock() + interval > deadline:
-            return LoginOutcome(TokenStatus.EXPIRED)
-        sleep(interval)
-        result = client.device_token(code.device_code)
-        if result.status is TokenStatus.OK:
-            return LoginOutcome(TokenStatus.OK, result)
-        if result.status in (TokenStatus.EXPIRED, TokenStatus.DENIED):
-            return LoginOutcome(result.status)
-        if result.status is TokenStatus.SLOW_DOWN:
-            interval += 5

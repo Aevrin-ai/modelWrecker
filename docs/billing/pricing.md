@@ -18,7 +18,7 @@ flowchart LR
   CFG[src/shared/plans.json] --> API[API: checkout charges this]
   CFG --> DASH[Dashboard Billing page]
   CFG --> WEB[Landing page Pricing section]
-  MODEL[src/api/src/pricing.ts cost model] --> TEST[test: margin inside 30-40 percent]
+  MODEL[src/api/src/services/billing/pricing.ts cost model] --> TEST[test: margin inside 30-40 percent]
   CFG --> TEST
 ```
 
@@ -68,7 +68,7 @@ inside the band.
 
 ## Changing a price or a cost
 
-1. Change the input in `src/api/src/pricing.ts` (costs) or `src/shared/plans.json` (prices).
+1. Change the input in `src/api/src/services/billing/pricing.ts` (costs) or `src/shared/plans.json` (prices).
 2. Run `npm test` in `src/api`. The margin test prints which plan and interval left the band.
 3. Update the table above and the CHANGELOG. Existing purchases keep the price they paid; the change
    applies to the next checkout.

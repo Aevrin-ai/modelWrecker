@@ -5,7 +5,7 @@ NOT TESTED. Last updated 2026-10-08.
 
 Run the automated suite in the project venv: `.venv\Scripts\python -m pytest -q` (offline, no API key;
 create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That gives **226 passing + 1
-skipped** (the symlink case in `tests/test_mcp.py`, skipped on Windows without symlink rights). The garak
+skipped** (the symlink case in `tests/test_mcp_path_scope.py`, skipped on Windows without symlink rights). The garak
 tests skip without the `scan` extra and the PyRIT tests skip without the `attacks` extra. Lint:
 `.venv\Scripts\python -m ruff check src tests` is clean and CI runs it. The control-plane API has **63
 tests** (vitest): `npm test` in `src/api`.
@@ -55,7 +55,7 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Strategy | multi_agent_injection (new `multi_agent` target) | PASS | `tests/test_planned_strategies.py`; live on Groq the attack succeeded once and the benign control stayed clean, but it did not hold on replay, so correctly no finding (reliability working) |
 | Strategy | multimodal_injection (requires a vision target) | PASS offline | `tests/test_planned_strategies.py`; NOT TESTED live - no vision model on the test key |
 | Target | models with native function-calling (Groq gpt-oss) run the tool environment without a 400 | PASS | live on Groq gpt-oss-20b after #71; indirect_prompt_injection produced a finding via a native send_message call |
-| API | sync accepts the new target types `memory` and `multi_agent` | PASS | `src/api/src/schemas.ts` TARGET_TYPES; `src/api/test` (84 tests) |
+| API | sync accepts the new target types `memory` and `multi_agent` | PASS | `src/api/src/validators/schemas/fields.ts` TARGET_TYPES; `src/api/test` (84 tests at the time) |
 | Strategy | pyrit_xpia (PyRIT XPIA workflow) | PASS | `tests/test_pyrit.py` (runs through the bridge); live on Groq gpt-oss-20b it scored 10/10 once but did not hold on replay, so correctly no finding; registers with the `attacks` extra |
 | Datasets | InjecAgent, AgentInjectionBench, HarmBench text, and JailbreakBench parse, normalize, keep benign controls, read JSON/JSONL/CSV, convert to objectives; offline guard | PASS | `tests/test_datasets.py` on pinned fixtures; all four also loaded live from their pinned commits (500/182/400/200 cases) |
 | Target | live MCP-server tool discovery (streamable HTTP); poisoned tool feeds the catalog; discovery only, never calls a tool; cached | PASS | `tests/test_mcp_live_connection.py` (stubbed client); verified against a real local MCP server exposing a poisoned tool; a live mcp_tool_poisoning run on Groq discovered the tools and ran end to end |
@@ -104,20 +104,20 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Campaign engine | invalid campaign config rejected | PASS | `tests/test_campaign.py`; real CLI exit 2 clean message |
 | Campaign engine | money budget / wall-clock deadline live | NOT TESTED | money pricing not built (#25); deadline tested only via unit budget |
 | Harness integration | MCP server + JSON driver | PASS | see the `MCP server` and `MCP guardrails` rows |
-| MCP server | builds; tools registered | PASS | `tests/test_mcp.py` |
-| MCP server | real client round-trip (list_tools + call_tool) over in-memory streams | PASS | `tests/test_mcp.py` |
+| MCP server | builds; tools registered | PASS | `tests/test_mcp_server.py` |
+| MCP server | real client round-trip (list_tools + call_tool) over in-memory streams | PASS | `tests/test_mcp_server.py` |
 | MCP guardrails | only safe tools exposed (no shell/file/http) | PASS | round-trip asserts their absence |
-| MCP guardrails | unauthorized target rejected before any run | PASS | `tests/test_mcp.py` |
-| MCP guardrails | path traversal / out-of-scope run id rejected | PASS | `tests/test_mcp.py` |
-| MCP guardrails | registered tools equal the allowlist exactly; unknown tool refused | PASS | `tests/test_mcp.py` |
-| MCP guardrails | endpoint override in a tool argument refused (`base_url`, `target`, ...) | PASS | `tests/test_mcp.py` |
-| MCP guardrails | unknown target (none in config) refused | PASS | `tests/test_mcp.py` |
+| MCP guardrails | unauthorized target rejected before any run | PASS | `tests/test_mcp_service.py` |
+| MCP guardrails | path traversal / out-of-scope run id rejected | PASS | `tests/test_mcp_path_scope.py` |
+| MCP guardrails | registered tools equal the allowlist exactly; unknown tool refused | PASS | `tests/test_mcp_server.py` |
+| MCP guardrails | endpoint override in a tool argument refused (`base_url`, `target`, ...) | PASS | `tests/test_mcp_service.py` |
+| MCP guardrails | unknown target (none in config) refused | PASS | `tests/test_mcp_service.py` |
 | MCP guardrails | config path confined to `--config-dir` (traversal, absolute, URL, non-yaml) | PASS | symlink case SKIPPED on Windows without symlink rights |
-| MCP guardrails | oversized campaign refused; values exactly at each limit allowed (calibrated) | PASS | `tests/test_mcp.py` |
-| MCP guardrails | call rate, run rate, and one-active-run limits | PASS | `tests/test_mcp.py` |
-| MCP guardrails | entitlement hook: deny, error, and malformed answer all refuse (fail safe) | PASS | `tests/test_mcp.py` |
-| MCP guardrails | refusal is structured, logged with secrets redacted, engine never called | PASS | `tests/test_mcp.py`; mutation-checked |
-| MCP guardrails | denials reach a real in-process MCP client as `is_error` results | PASS | `tests/test_mcp.py` |
+| MCP guardrails | oversized campaign refused; values exactly at each limit allowed (calibrated) | PASS | `tests/test_mcp_limits.py` |
+| MCP guardrails | call rate, run rate, and one-active-run limits | PASS | `tests/test_mcp_limits.py` |
+| MCP guardrails | entitlement hook: deny, error, and malformed answer all refuse (fail safe) | PASS | `tests/test_mcp_entitlement.py` |
+| MCP guardrails | refusal is structured, logged with secrets redacted, engine never called | PASS | `tests/test_mcp_entitlement.py`; mutation-checked |
+| MCP guardrails | denials reach a real in-process MCP client as `is_error` results | PASS | `tests/test_mcp_server.py` |
 | Packaging | `pip install .` in a clean venv | PASS | fresh venv install succeeded |
 | Packaging | console script runs (--help/version/validate/strategies) | PASS | clean-env run |
 | Packaging | `uv build` wheel + install in a fresh venv | PASS | wheel installs; contains findings/evidence/mcp |
@@ -171,7 +171,7 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | API `src/api` | sync refuses any field outside the contract (payload, response, system prompt, owner, project) | PASS | deliberately loosening the schema makes this test fail |
 | API `src/api` | one account cannot read or change another's rows | PASS | deliberately removing the owner filter makes this test fail; Postgres RLS is a second layer not exercised offline |
 | API `src/api` | revoked device refused | PASS | |
-| Engine 10.4/10.8/10.9 | login, credential storage, client, summarizer, outbox | PASS | 46 tests in `tests/test_cloud_sync.py` (MockTransport) |
+| Engine 10.4/10.8/10.9 | login, credential storage, client, summarizer, outbox | PASS | the seven `tests/test_cloud_*.py` files (MockTransport) |
 | Engine 10.9 | secret planted in payload, response, reasoning, system prompt, URLs, tool args never in the sync body | PASS | with a calibration test that fails a leaky summarizer |
 | End to end | real `modelwrecker login` + `sync` against the real API code over local HTTP | PASS | in-memory database; the run's planted secret appeared in 3 local files and 0 cloud responses |
 | Live | Supabase migrations applied; 10 tables, RLS on every one; signup trigger present | PASS | checked with SQL after applying, 2026-10-02 |
@@ -183,10 +183,10 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Live | Google sign-in redirect | PASS | "Continue with Google" reaches the Google account screen with the Supabase callback, no `redirect_uri_mismatch` |
 | Live | full sign-in, device login, and sync with a real Google account | PASS (maintainer) | the maintainer signed in, approved a device with `modelwrecker login`, and synced (2026-10-02) |
 | Live | two campaigns through OpenRouter (targets openai/gpt-4o-mini and meta-llama/llama-3.1-8b-instruct, auto strategies, 5 replays) | PASS | 4 real attempts each, all refused, 0 findings; the API key appears in no run file |
-| Engine | `sync` lists pending runs before sending; `sync --dry-run` sends nothing and needs no sign-in | PASS | 3 tests in `tests/test_cloud_sync.py`; live `--dry-run` listed exactly the two OpenRouter runs |
+| Engine | `sync` lists pending runs before sending; `sync --dry-run` sends nothing and needs no sign-in | PASS | 3 tests in `tests/test_cloud_sync_cli.py`; live `--dry-run` listed exactly the two OpenRouter runs |
 | Live | the two OpenRouter runs synced and shown in the dashboard | PASS (maintainer) | synced by the maintainer; 2 campaigns, 8 attempts, 0 findings in the account |
-| Engine | opt-in evidence and transcripts: allowed fields only, never config or endpoint URLs; redacted then capped; size budget; back-fill of runs synced without detail; `--resync`; `--metadata-only`; metadata fallback when settings cannot be read | PASS | 11 tests in `tests/test_cloud_sync.py` (#28) |
-| API | detail kept only when the setting is on; shown on finding and campaign routes; metadata-only re-sync keeps it; turning off deletes it; other accounts get 404; strict schema; 4 MB sync cap | PASS | 5 tests in `src/api/test/api.test.ts` (#28) |
+| Engine | opt-in evidence and transcripts: allowed fields only, never config or endpoint URLs; redacted then capped; size budget; back-fill of runs synced without detail; `--resync`; `--metadata-only`; metadata fallback when settings cannot be read | PASS | 11 tests in `tests/test_cloud_sync_detail.py`, `tests/test_cloud_sync_cli_detail.py` (#28) |
+| API | detail kept only when the setting is on; shown on finding and campaign routes; metadata-only re-sync keeps it; turning off deletes it; other accounts get 404; strict schema; 4 MB sync cap | PASS | 5 tests in `src/api/test/sync.test.ts` (#28) |
 | End to end | real `modelwrecker sync` of the 8 real local runs to the real API code (in-memory database) with both settings on | PASS | all 8 back-filled; 4 findings with evidence, 18 attempts in transcripts; second sync sent nothing; turning evidence off removed it; no API key in cloud data |
 | Dashboard | transcript card (on and off states), finding evidence view, settings copy | PASS | Chrome, mock mode |
 | Live | maintainer's re-sync with detail on | PASS (maintainer) | all 8 runs have transcripts in the account (4 attempts each for the two OpenRouter runs); 4 findings have evidence |
@@ -202,17 +202,17 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | API | every paid price keeps a 30-40% margin under the cost model; plans and prices are public | PASS | `src/api/test/billing.test.ts` (#42) |
 | API | checkout uses the server price, never the client's; verify needs a valid signature AND Razorpay's captured record; amount mismatch, another account's order, and forged signatures refused; a payment applies once across verify, retries, and webhook; renewals add to the end date; a lapsed plan falls back to Free | PASS | `src/api/test/billing.test.ts` with a fake Razorpay (#12) |
 | API | account credit at checkout and full-credit purchases; reconciliation of a paid order nobody reported; webhook signature, duplicate event ids, full refund takes back the time; 503 when billing or the webhook secret is not configured | PASS | `src/api/test/billing.test.ts` (#12) |
-| API | device and project limits, Pro-only detail sync and leaderboard | PASS | `src/api/test/billing.test.ts`, `api.test.ts` |
-| API | signed entitlement on heartbeat verifies with the public key; an edited payload fails; Pro after payment expires at the paid-until date and includes a bonus; none without a signing key | PASS | `src/api/test/billing.test.ts` (#11) |
-| Engine | entitlement verification: valid, edited payload, signature, or header, expired, unknown key, wrong issuer, future-dated; the production key is 32 bytes and not the test key | PASS | `tests/test_entitlements.py` (#11) |
-| Engine | free baseline without a token or with a tampered file; MCP targets and explicit PyRIT strategies refused; auto-selected ones skipped; monthly caps from local and signed usage; attempt budget capped and the run counted; `plan` output; `run` refuses before creating a run folder; heartbeat stores only a valid token | PASS | 19 tests in `tests/test_entitlements.py` (#11); merged on `main`, not in a PyPI release yet |
+| API | device and project limits, Pro-only detail sync and leaderboard | PASS | `src/api/test/entitlements.test.ts`; the leaderboard in `sync.test.ts` |
+| API | signed entitlement on heartbeat verifies with the public key; an edited payload fails; Pro after payment expires at the paid-until date and includes a bonus; none without a signing key | PASS | `src/api/test/entitlements.test.ts` (#11) |
+| Engine | entitlement verification: valid, edited payload, signature, or header, expired, unknown key, wrong issuer, future-dated; the production key is 32 bytes and not the test key | PASS | `tests/test_entitlement_tokens.py` (#11) |
+| Engine | free baseline without a token or with a tampered file; MCP targets and explicit PyRIT strategies refused; auto-selected ones skipped; monthly caps from local and signed usage; attempt budget capped and the run counted; `plan` output; `run` refuses before creating a run folder; heartbeat stores only a valid token | PASS | `tests/test_entitlements.py` and `tests/test_entitlement_tokens.py` (#11); merged on `main`, not in a PyPI release yet |
 | Live | migration `0004` applied; `payments` and `credit_ledger` owner read only, `billing_events` server only; `fulfil_payment`, `refund_payment`, `adjust_credit` executable by the server key only | PASS | checked with SQL after applying, 2026-10-02 |
 | Live | `fulfil_payment` (credit applied, invoice numbered, second call a no-op, 31 days of Pro), `refund_payment` (credit returned) on the real database | PASS | inside a block that always raised, so nothing was kept; invoice counter reset afterwards |
 | Live | Razorpay live key accepted (read-only orders listing) | PASS | 2026-10-02 |
 | API | staff access: only a verified email exactly on aevrin.net (look-alike domains refused); every admin route needs an admin session; 503 when not configured | PASS | `src/api/test/admin.test.ts` (#43) |
 | API | TOTP matches the RFC 6238 test vector; codes cannot be reused; 5 wrong codes lock for 15 minutes; recovery codes work once; secrets stored encrypted with a fresh IV; sessions bound to the staff member, ended after 30 idle minutes, 8 hours, or on request | PASS | `src/api/test/admin.test.ts` (#43) |
-| API | plan, bonus, credit, refund, device revoke, sync settings (deletes cloud copies), suspend and restore (user and device routes refused), delete with typed email (payments kept, audit kept, staff refused), reset another admin's authenticator; every change audited with its reason | PASS | `src/api/test/admin.test.ts` (#44) |
-| API | page beacon stores a cleaned path, referrer host, country, device, and a daily hash, never the IP or query; Do Not Track, Global Privacy Control, bots, bad bodies, and a missing salt are not counted | PASS | `src/api/test/admin.test.ts` (#45) |
+| API | plan, bonus, credit, refund, device revoke, sync settings (deletes cloud copies), suspend and restore (user and device routes refused), delete with typed email (payments kept, audit kept, staff refused), reset another admin's authenticator; every change audited with its reason | PASS | `src/api/test/admin-users.test.ts` (#44) |
+| API | page beacon stores a cleaned path, referrer host, country, device, and a daily hash, never the IP or query; Do Not Track, Global Privacy Control, bots, bad bodies, and a missing salt are not counted | PASS | `src/api/test/collect.test.ts` (#45) |
 | Dashboard | admin console in mock mode: authenticator setup with a locally drawn QR code, recovery codes, Users, user detail and dialogs, Platform analytics, Page analytics | PASS | Chrome, local stand-in for the Pages worker |
 | Live | migration `0005` applied: admin tables and `page_views` have RLS on and no policies; admin functions executable by the server key only; payments keep their rows on user deletion (`ON DELETE SET NULL`); `admin_user_list`, `admin_metrics`, `admin_traffic` return live numbers | PASS | checked with SQL, 2026-10-02 |
 | Live | a staff member enrolling an authenticator and using the console | NOT TESTED | needs an @aevrin.net Google account (maintainer) |
@@ -232,6 +232,12 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Live | Supabase Auth token settings (expiry, rotation, reuse interval, refresh rate limit) | PASS | `deploy/supabase/auth-settings.mjs` run by the maintainer 2026-10-11: `jwt_exp` 3600, rotation on, reuse interval 10 s were already set; `rate_limit_token_refresh` raised from 150 to 1800 (#61) |
 | Live | Cloudflare's injected bot-check script runs under the CSP nonce | PASS | clean Chrome profile on app.aevrin.net 2026-10-11: the injected bot check and Web Analytics scripts carry the nonce and run; no CSP violations (#60) |
 | Live | a real purchase, renewal, and refund on the live key | NOT TESTED | needs the maintainer to buy once and refund it from the admin console or Razorpay dashboard |
+| Live | the browser app on vyra.aevrin.ai, with app.aevrin.net kept for the CLI | PASS | 2026-10-12 after #80: `vyra.aevrin.ai/` and `/dashboard/` 200 with the CSP header; `app.aevrin.net/` and deep paths 301 to vyra with path and query kept; `app.aevrin.net/api/v1/health` 200 and not redirected; Supabase Auth site URL and redirect list include vyra |
+| Live | the redesigned sign-in page | PASS | 2026-10-12 after #82: production sign-in on vyra rendered in Chrome with no demo badge and no browser console errors |
+| Live | the daily cleanup moved from the Worker cron to Supabase pg_cron | PASS | 2026-10-16 after #84: the `aevrin-api` Worker has no cron trigger (the account has 4); Supabase job `aevrin-daily-cleanup` active at `17 3 * * *`; a manual `admin_maintenance()` run returned its counts |
+| Live | request ids, readiness, and error bodies on both API hosts | PASS | 2026-10-18 after #86, on `vyra.aevrin.ai` and `app.aevrin.net`: `/api/v1/health` 200 with `X-Request-Id`; `/api/v1/health/ready` 200 with `database: ok`; a 404 and a 401 each carry `requestId` (Cloudflare's ray id); the page redirect and the dashboard still work |
+| Local runtime | the Worker on Cloudflare's runtime with an unreachable database | PASS | 2026-10-18, `wrangler dev --local`: readiness answered 503 `unavailable` after its 3 s budget, liveness 200, every error carried a request id, logs were JSON, no uncaught errors |
+| Live | a quoted request id finds its request in Cloudflare Workers Logs | PASS | 2026-10-18: the `requestId` from a 404 on vyra (`a4c6db74aab53fa8`) found exactly that request (service `aevrin-api`, its path, status 404) through the Workers Observability query API, filtering `$workers.event.request.headers.cf-ray`; it appeared within about 30 seconds |
 
 ## Summary
 

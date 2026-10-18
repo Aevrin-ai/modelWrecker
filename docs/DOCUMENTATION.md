@@ -9,6 +9,7 @@ and update everything in the right column.
 | New CLI command or flag | `docs/reference/CLI.md` |
 | API error shape, status codes, timeouts, retry policy, log events, or health checks | `docs/architecture/control-plane-api.md` (Errors, timeouts, and retries); `docs/workflows/INCIDENT-RUNBOOK.md` if an operator would act on it; ADR-0023 if the policy itself changes |
 | Engine retry policy or provider error classification | `docs/campaigns/OVERVIEW.md` (Retry policy) |
+| A new API folder, or a file moved between API layers | `docs/architecture/control-plane-api.md` (Code layout); any doc that names the moved path |
 | New provider / provider adapter | `docs/providers/OVERVIEW.md`; `docs/DEPENDENCIES.md` if a new SDK |
 | New attack strategy | `docs/attack-engine/STRATEGIES.md`; its spec in code; `docs/testing/test-matrix.md`; `docs/research/incident-to-strategy.md` if it comes from an incident |
 | New benchmark dataset or research source | `docs/datasets.md`; `docs/research/research-sources.md` |

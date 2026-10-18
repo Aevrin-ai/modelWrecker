@@ -61,9 +61,8 @@ class DeviceCredential:
         }
 
 
-def default_credential_path(
-    env: dict[str, str] | None = None, platform: str | None = None
-) -> Path:
+def default_credential_path(env: dict[str, str] | None = None,
+                            platform: str | None = None) -> Path:
     """Where `login` stores the credential on this platform."""
     env = dict(os.environ) if env is None else env
     platform = platform or sys.platform

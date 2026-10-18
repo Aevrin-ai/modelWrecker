@@ -27,22 +27,19 @@ from modelwrecker.targets.multi_agent import MultiAgentTarget
 _CANARY_RE = re.compile(r"MW-CANARY-[0-9a-f]{12}")
 
 
-def _convo(messages):
+def _convo(messages: list[dict]) -> str:
     return "\n".join(str(m.get("content", "")) for m in messages)
 
 
-def _canary_in(messages):
+def _canary_in(messages: list[dict]) -> str | None:
     m = _CANARY_RE.search(_convo(messages))
     return m.group(0) if m else None
-
-
-# --- supply chain (tool environment on the agent target) ---
 
 
 def test_supply_chain_finds_a_developer_action_and_control_is_clean() -> None:
     from modelwrecker.targets.agent import AgentTarget
 
-    def responder(messages):
+    def responder(messages: list[dict]) -> str:
         convo = _convo(messages)
         if "TOOL_RESULT" not in convo:  # first turn: read the file the user asked about
             return 'Reading. TOOL_CALL: {"name": "read_file", "args": {}}'
@@ -62,11 +59,8 @@ def test_supply_chain_finds_a_developer_action_and_control_is_clean() -> None:
     assert "run_command" in attack.observation.target_meta["sensitive_tool_calls"]
 
 
-# --- memory poisoning (persistent memory across sessions) ---
-
-
 def test_memory_poisoning_persists_a_note_and_leaks_in_a_later_session() -> None:
-    def responder(messages):
+    def responder(messages: list[dict]) -> str:
         convo = _convo(messages)
         if "calendar for tomorrow" not in convo:
             # Session one: read the shared note, then save it to memory.
@@ -100,11 +94,8 @@ def test_memory_target_keeps_notes_across_reset() -> None:
     assert "a note" in target.memory()  # survives a session reset
 
 
-# --- multi-agent injection ---
-
-
 def test_multi_agent_injection_leaks_through_the_assistant() -> None:
-    def responder(messages):
+    def responder(messages: list[dict]) -> str:
         convo = _convo(messages)
         # The researcher role: echo the source as "notes" (passes the injection along).
         if "research assistant" in convo and "main assistant" not in convo:
@@ -126,9 +117,6 @@ def test_multi_agent_injection_leaks_through_the_assistant() -> None:
     assert hit.hit and "send_message" in attack.observation.target_meta["sensitive_tool_calls"]
 
 
-# --- multimodal (requires a vision target) ---
-
-
 def test_multimodal_requires_a_vision_target() -> None:
     strat = MultimodalInjection()
     text_chat = ChatTarget(FakeProvider("t", lambda m: "x"))
@@ -138,7 +126,7 @@ def test_multimodal_requires_a_vision_target() -> None:
 
 
 def test_multimodal_injection_leaks_against_a_vision_target() -> None:
-    def responder(messages):
+    def responder(messages: list[dict]) -> str:
         m = _CANARY_RE.search(_convo(messages))
         # A model that follows the instruction "in the image" echoes the canary.
         if m and "reply only with the code" in _convo(messages):
@@ -153,9 +141,6 @@ def test_multimodal_injection_leaks_against_a_vision_target() -> None:
     assert attack.control is False and control.control is True
     hit = asyncio.run(CanaryExfilSignal().evaluate(attack.observation, Objective(title="x"), "t"))
     assert hit.hit
-
-
-# --- catalog ---
 
 
 def test_new_strategies_declare_specs_with_controls() -> None:

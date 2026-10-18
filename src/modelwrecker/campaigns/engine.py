@@ -18,19 +18,19 @@ from __future__ import annotations
 
 import asyncio
 import random
-import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from ..data import Finding, Objective
 from ..providers.base import ProviderError
+from .budget import Budget
+from .budget import build_budget as build_budget
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from ..attacker.loop import AttemptRecord, RunResult
-    from ..config import Config
+    from ..attacker.run_result import AttemptRecord, RunResult
+    from ..config import CampaignConfig, Config
 
-# What run_one returns: the (optional) finding for an objective plus its attempt transcript.
+# run_one returns the objective's finding (or None) plus its attempt transcript
 RunOne = Callable[[Objective], Awaitable["tuple[Finding | None, list[AttemptRecord]]"]]
 
 _BASE_DELAY_S = 0.1
@@ -41,8 +41,10 @@ _MAX_RETRY_AFTER_S = 30.0
 
 def retry_delay(tries: int, retry_after: float | None = None,
                 rand: Callable[[], float] = random.random) -> float:
-    """Seconds to wait before retry number `tries`: exponential backoff with jitter, or the
-    provider's Retry-After when that is longer (capped)."""
+    """Seconds to wait before retry number `tries`.
+
+    Exponential backoff with jitter, or the provider's Retry-After when that is longer (capped).
+    """
     ceiling = min(_BASE_DELAY_S * 2**tries, _MAX_BACKOFF_S)
     # half fixed, half random, so objectives that failed together do not retry in lockstep
     delay = ceiling / 2 + rand() * ceiling / 2
@@ -51,127 +53,85 @@ def retry_delay(tries: int, retry_after: float | None = None,
     return delay
 
 
-@dataclass
-class Budget:
-    """A shared, cooperative budget for one campaign.
-
-    Checked before each objective and before each strategy. Because asyncio runs on one thread, the
-    plain counters are only mutated at these await-free points, so no lock is needed.
-    """
-
-    max_attempts: int | None = None
-    max_tokens: int | None = None
-    max_requests: int | None = None
-    max_cost_usd: float | None = None
-    deadline: float | None = None  # a time.monotonic() value, or None for no wall-clock cap
-    attempts: int = 0
-    tokens: int = 0
-    meter: object = None  # a providers.meter.Meter; requests and cost are read from it
-
-    def time_exceeded(self) -> bool:
-        return self.deadline is not None and time.monotonic() >= self.deadline
-
-    def exhausted(self) -> tuple[bool, str]:
-        """Return (is_exhausted, reason)."""
-        if self.time_exceeded():
-            return True, "time budget exhausted"
-        if self.max_attempts is not None and self.attempts >= self.max_attempts:
-            return True, "attempt budget exhausted"
-        if self.max_tokens is not None and self.tokens >= self.max_tokens:
-            return True, "token budget exhausted"
-        if self.max_requests is not None and self.meter is not None \
-                and self.meter.requests >= self.max_requests:
-            return True, "request budget exhausted"
-        if self.max_cost_usd is not None and self.meter is not None \
-                and self.meter.cost_usd >= self.max_cost_usd:
-            return True, "cost budget exhausted"
-        return False, ""
-
-    def record(self, *, attempts: int = 0, tokens: int = 0) -> None:
-        self.attempts += attempts
-        self.tokens += tokens
-
-
-def build_budget(config: Config) -> Budget:
-    """Build the budget from config. The wall-clock cap falls back to engine.deadline_seconds."""
-    b = config.campaign.budget
-    secs = b.max_seconds if b.max_seconds is not None else config.engine.deadline_seconds
-    deadline = time.monotonic() + secs if secs and secs > 0 else None
-    return Budget(max_attempts=b.max_attempts, max_tokens=b.max_tokens,
-                  max_requests=b.max_requests, max_cost_usd=b.max_cost_usd, deadline=deadline)
-
-
-async def execute_campaign(
-    *,
-    config: Config,
-    objectives: list[Objective],
-    run_one: RunOne,
-    result: RunResult,
-    budget: Budget,
-    emit: Callable[[str], None] = lambda _m: None,
-) -> None:
+async def execute_campaign(*, config: Config, objectives: list[Objective], run_one: RunOne,
+                           result: RunResult, budget: Budget,
+                           emit: Callable[[str], None] = lambda _m: None) -> None:
     """Schedule every objective and aggregate findings/attempts into `result`.
 
     `run_one` runs the full single-objective loop and consults `budget` per strategy. This function
     owns concurrency, the stop condition, retries, and per-objective error isolation.
     """
-    camp = config.campaign
-
-    # max_objectives caps how many we schedule at all.
-    if camp.budget.max_objectives is not None:
-        if len(objectives) > camp.budget.max_objectives:
-            result.notes.append(
-                f"objective budget: running {camp.budget.max_objectives} of "
-                f"{len(objectives)} objectives"
-            )
-        objectives = objectives[: camp.budget.max_objectives]
-
-    sem = asyncio.Semaphore(max(1, camp.concurrency))
-    stop = asyncio.Event()  # set when a stop condition fires; prevents new objectives from starting
+    campaign = config.campaign
+    objectives = _cap_objectives(objectives, campaign.budget.max_objectives, result)
+    gate = asyncio.Semaphore(max(1, campaign.concurrency))
+    # set when a stop condition fires; prevents new objectives from starting
+    stop = asyncio.Event()
 
     async def worker(objective: Objective) -> None:
-        # Cooperative stop checks happen before acquiring the gate so queued work exits cheaply.
-        if stop.is_set():
-            result.notes.append(f"skipped '{objective.title}': stop condition reached")
+        # cooperative stop checks happen before acquiring the gate so queued work exits cheaply
+        if _skip_before_start(objective, stop, budget, result):
             return
-        exhausted, why = budget.exhausted()
-        if exhausted:
-            stop.set()
-            result.notes.append(f"skipped '{objective.title}': {why}")
-            return
-        async with sem:
+        async with gate:
             if stop.is_set():
                 result.notes.append(f"skipped '{objective.title}': stop condition reached")
                 return
             emit(f"objective: {objective.title}")
-            finding, records = await _run_isolated(run_one, objective, camp.retries, emit, result)
-            result.objectives_run += 1
-            result.attempts.extend(records)
-            if finding is not None:
-                result.findings.append(finding)
-                if camp.stop_on == "first_finding":
-                    stop.set()
-                    emit("stop condition: first finding reached; not starting further objectives")
-            if camp.stop_on == "budget" and budget.exhausted()[0]:
-                stop.set()
+            outcome = await _run_isolated(run_one, objective, campaign.retries, emit, result)
+            _record_outcome(outcome, campaign, budget, result, stop, emit)
 
     await asyncio.gather(*(worker(o) for o in objectives))
 
 
-async def _run_isolated(
-    run_one: RunOne,
-    objective: Objective,
-    retries: int,
-    emit: Callable[[str], None],
-    result: RunResult,
-) -> tuple[Finding | None, list[AttemptRecord]]:
+def _cap_objectives(objectives: list[Objective], max_objectives: int | None,
+                    result: RunResult) -> list[Objective]:
+    """max_objectives caps how many objectives are scheduled at all."""
+    if max_objectives is None:
+        return objectives
+    if len(objectives) > max_objectives:
+        result.notes.append(
+            f"objective budget: running {max_objectives} of {len(objectives)} objectives"
+        )
+    return objectives[:max_objectives]
+
+
+def _skip_before_start(objective: Objective, stop: asyncio.Event, budget: Budget,
+                       result: RunResult) -> bool:
+    if stop.is_set():
+        result.notes.append(f"skipped '{objective.title}': stop condition reached")
+        return True
+    exhausted, why = budget.exhausted()
+    if exhausted:
+        stop.set()
+        result.notes.append(f"skipped '{objective.title}': {why}")
+    return exhausted
+
+
+def _record_outcome(outcome: tuple[Finding | None, list[AttemptRecord]],
+                    campaign: CampaignConfig, budget: Budget, result: RunResult,
+                    stop: asyncio.Event, emit: Callable[[str], None]) -> None:
+    finding, records = outcome
+    result.objectives_run += 1
+    result.attempts.extend(records)
+    if finding is not None:
+        result.findings.append(finding)
+        if campaign.stop_on == "first_finding":
+            stop.set()
+            emit("stop condition: first finding reached; not starting further objectives")
+    if campaign.stop_on == "budget" and budget.exhausted()[0]:
+        stop.set()
+
+
+async def _run_isolated(run_one: RunOne, objective: Objective, retries: int,
+                        emit: Callable[[str], None],
+                        result: RunResult) -> tuple[Finding | None, list[AttemptRecord]]:
     """Run one objective with error isolation and bounded retries on transient errors only."""
     tries = 0
     while True:
         try:
             return await run_one(objective)
         except ProviderError as e:
-            if not e.retryable:  # permanent: trying again would fail the same way
+            # permanent: trying again would fail the same way
+            if not e.retryable:
                 msg = (f"objective '{objective.title}' failed (not retried, it would fail "
                        f"again): {e}")
                 result.notes.append(msg)

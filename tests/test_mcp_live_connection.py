@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from modelwrecker.providers.fake import FakeProvider
 from modelwrecker.targets import mcp_client, mcp_target
 from modelwrecker.targets.mcp_target import McpTarget
@@ -20,8 +22,9 @@ _DISCOVERED = [
 ]
 
 
-def _stub_discovery(monkeypatch, captured):
-    async def fake(url, *, sensitive=None, timeout=20.0):
+def _stub_discovery(monkeypatch: pytest.MonkeyPatch, captured: list[str]) -> None:
+    async def fake(url: str, *, sensitive: set[str] | None = None,
+                   timeout: float = 20.0) -> list[dict]:
         captured.append(url)
         return list(_DISCOVERED)
 
@@ -44,7 +47,7 @@ def test_poisoned_live_tool_can_hijack_the_agent(monkeypatch) -> None:
     captured: list[str] = []
     _stub_discovery(monkeypatch, captured)
 
-    def responder(messages):
+    def responder(messages: list[dict]) -> str:
         system = next((m["content"] for m in messages if m["role"] == "system"), "")
         if "exfiltrate" in system:  # the poisoned description reached the model
             return 'TOOL_CALL: {"name": "exfiltrate", "args": {"to": "x", "data": "secret"}}'

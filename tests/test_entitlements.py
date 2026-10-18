@@ -1,15 +1,15 @@
-"""Signed entitlements, engine side (issue #11). Offline: tokens are signed with the test key from
-conftest.py, and the engine trusts only that key here.
+"""Signed entitlements, engine side: the run gate, plan limits, the plan command, and the cloud.
+
+Offline: tokens are signed with the test key from conftest.py, and the engine trusts only that key.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
-import time
 
 import httpx
 import pytest
+from entitlement_fakes import FREE_FEATURES
 from typer.testing import CliRunner
 
 from modelwrecker.attacker import loop as loop_module
@@ -18,22 +18,13 @@ from modelwrecker.cloud import CloudClient
 from modelwrecker.config import AttackConfig, Config, Endpoint, EngineConfig
 from modelwrecker.data import Objective
 from modelwrecker.entitlements import (
-    FREE_BASELINE,
     EntitlementDenied,
-    EntitlementError,
     check_run,
     load,
     record_run,
-    save_token,
-    verify_token,
 )
 from modelwrecker.entitlements import store as ent_store
-from modelwrecker.entitlements import token as ent_token
 from modelwrecker.providers.fake import FakeProvider
-
-FREE_LIMITS = {"campaigns": 20, "attacks": 2000, "devices": 1, "projects": 2}
-FREE_FEATURES = {"advanced_strategies": False, "mcp": False, "analytics": False,
-                 "evidence_storage": False, "enterprise": False}
 
 
 def _config(strategy: str = "auto", target_type: str | None = None) -> Config:
@@ -49,96 +40,13 @@ def _config(strategy: str = "auto", target_type: str | None = None) -> Config:
     )
 
 
-def _fake_providers(monkeypatch) -> None:
-    def build(ep, egress=None):
+def _fake_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    def build(ep: Endpoint, egress: object = None) -> FakeProvider:
         if ep.model == "judge":
             return FakeProvider("judge", lambda _m: '{"refused": 1, "score": 1, "rationale": "no"}')
         return FakeProvider(ep.model, lambda _m: "I can't help with that.")
     monkeypatch.setattr(loop_module, "build_provider", build)
 
-
-# --- verification ---------------------------------------------------------------------------------
-
-def test_the_production_key_is_a_32_byte_ed25519_key() -> None:
-    import base64
-
-    for kid, key in ent_token.TRUSTED_KEYS.items():
-        assert len(base64.urlsafe_b64decode(key + "=" * (-len(key) % 4))) == 32, kid
-    assert ent_token.ISSUERS == frozenset({"https://app.aevrin.net"})
-
-
-def test_a_valid_token_verifies(sign_entitlement) -> None:
-    ent = verify_token(sign_entitlement(plan="pro", limits=FREE_LIMITS | {"attacks": 100000}))
-    assert ent.signed and ent.plan == "pro" and ent.limit("attacks") == 100000
-
-
-@pytest.mark.parametrize("mutate", ["payload", "signature", "header"])
-def test_an_edited_token_is_rejected(sign_entitlement, mutate) -> None:
-    h, p, s = sign_entitlement(plan="free", features=FREE_FEATURES).split(".")
-    if mutate == "payload":
-        import base64
-        claims = json.loads(base64.urlsafe_b64decode(p + "=" * (-len(p) % 4)))
-        claims["plan"] = "enterprise"
-        claims["features"]["mcp"] = True
-        p = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
-    elif mutate == "signature":
-        s = s[:-2] + ("AA" if not s.endswith("AA") else "BB")
-    else:
-        import base64
-        h = base64.urlsafe_b64encode(b'{"alg":"none","typ":"mw-entitlement","kid":"test-key"}'
-                                     ).decode().rstrip("=")
-    with pytest.raises(EntitlementError):
-        verify_token(f"{h}.{p}.{s}")
-
-
-def test_expired_unknown_key_wrong_issuer_and_future_tokens_are_rejected(sign_entitlement) -> None:
-    now = int(time.time())
-    with pytest.raises(EntitlementError, match="expired"):
-        verify_token(sign_entitlement(iat=now - 100, exp=now - 1))
-    with pytest.raises(EntitlementError, match="unknown key"):
-        verify_token(sign_entitlement(kid="someone-else"))
-    with pytest.raises(EntitlementError, match="issuer"):
-        verify_token(sign_entitlement(iss="https://evil.example"))
-    with pytest.raises(EntitlementError, match="future"):
-        verify_token(sign_entitlement(iat=now + 3600, exp=now + 7200))
-
-
-def test_a_token_from_the_real_key_is_not_trusted_by_a_different_key(monkeypatch,
-                                                                     sign_entitlement) -> None:
-    monkeypatch.setattr(ent_token, "_keys_override",
-                        {"test-key": "trSV1ue_ymSzW9Ga60p5rH2maEuebDE_Dk72NHicYp4"})
-    with pytest.raises(EntitlementError, match="signature"):
-        verify_token(sign_entitlement())
-
-
-# --- what the engine falls back to ----------------------------------------------------------------
-
-@pytest.mark.free_plan
-def test_no_token_means_the_free_baseline() -> None:
-    ent, source = load()
-    assert ent == FREE_BASELINE and not ent.signed
-    assert "not signed in" in source
-
-
-@pytest.mark.free_plan
-def test_a_tampered_stored_file_falls_back_to_free(sign_entitlement) -> None:
-    save_token(sign_entitlement(plan="pro"))
-    assert load()[0].plan == "pro"
-    path = ent_store.token_path()
-    h, p, s = path.read_text().split(".")
-    path.write_text(f"{h}.{p}x.{s}")
-    ent, source = load()
-    assert ent == FREE_BASELINE and "rejected" in source
-
-
-@pytest.mark.free_plan
-def test_save_refuses_an_invalid_token() -> None:
-    with pytest.raises(EntitlementError):
-        save_token("not.a.token")
-    assert not ent_store.token_path().exists()
-
-
-# --- the run gate ---------------------------------------------------------------------------------
 
 @pytest.mark.free_plan
 def test_free_baseline_refuses_mcp_targets_and_explicit_advanced_strategies() -> None:
@@ -191,8 +99,7 @@ def test_a_run_on_free_skips_advanced_strategies_caps_attempts_and_is_counted(mo
     assert any("2 attack attempts left" in n for n in result.notes)
     assert any("free baseline" in n for n in result.notes)
     assert ent_store.read_usage()["campaigns"] == 1
-    # The cap is checked before each strategy (like every campaign budget), so the one strategy that
-    # started under it may finish a few attempts over. The next run is then refused.
+    # checked before each strategy, so the one that started under the cap may finish a few over
     assert 2000 <= ent_store.read_usage()["attacks"] < 2010
     with pytest.raises(EntitlementDenied):
         check_run(_config())
@@ -209,8 +116,6 @@ def test_the_planner_skips_a_strategy_the_plan_lacks(monkeypatch) -> None:
     asyncio.run(loop_module.run_config(_config(), emit=events.append))
     assert any("skip garak_probe: not included in your plan" in e for e in events)
 
-
-# --- CLI and cloud client -------------------------------------------------------------------------
 
 @pytest.mark.free_plan
 def test_plan_command_shows_the_free_baseline() -> None:
