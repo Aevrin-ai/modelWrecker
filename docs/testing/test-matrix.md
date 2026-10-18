@@ -4,10 +4,10 @@ Honest status of what has actually been tested. Legend: PASS (ran and verified),
 NOT TESTED. Last updated 2026-10-08.
 
 Run the automated suite in the project venv: `.venv\Scripts\python -m pytest -q` (offline, no API key;
-create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That gives **226 passing + 1
+create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That gives **298 passing + 1
 skipped** (the symlink case in `tests/test_mcp_path_scope.py`, skipped on Windows without symlink rights). The garak
 tests skip without the `scan` extra and the PyRIT tests skip without the `attacks` extra. Lint:
-`.venv\Scripts\python -m ruff check src tests` is clean and CI runs it. The control-plane API has **63
+`.venv\Scripts\python -m ruff check src tests` is clean and CI runs it. The control-plane API has **150
 tests** (vitest): `npm test` in `src/api`.
 
 Rows are grouped by area and were added as each phase landed. Older dated snapshots from Phase 4 live in
@@ -238,6 +238,9 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Live | request ids, readiness, and error bodies on both API hosts | PASS | 2026-10-18 after #86, on `vyra.aevrin.ai` and `app.aevrin.net`: `/api/v1/health` 200 with `X-Request-Id`; `/api/v1/health/ready` 200 with `database: ok`; a 404 and a 401 each carry `requestId` (Cloudflare's ray id); the page redirect and the dashboard still work |
 | Local runtime | the Worker on Cloudflare's runtime with an unreachable database | PASS | 2026-10-18, `wrangler dev --local`: readiness answered 503 `unavailable` after its 3 s budget, liveness 200, every error carried a request id, logs were JSON, no uncaught errors |
 | Live | a quoted request id finds its request in Cloudflare Workers Logs | PASS | 2026-10-18: the `requestId` from a 404 on vyra (`a4c6db74aab53fa8`) found exactly that request (service `aevrin-api`, its path, status 404) through the Workers Observability query API, filtering `$workers.event.request.headers.cf-ray`; it appeared within about 30 seconds |
+| API `src/api` | every query is a named repository function; no controller, middleware, or service calls the database directly | PASS | 2026-10-18 (#89): a search for `db.table(` and `db.rpc(` outside `repositories/` and `database/` finds nothing; all 141 earlier API tests pass unchanged |
+| API `src/api` | repositories keep ownership and single use: another account's row is not returned, a device approval and its token claim each work once, a campaign moves only from its expected status, a paid order is never marked failed, a webhook event is recorded once | PASS | `test/repositories.test.ts` (#89) |
+| API `src/api` | a failed query names itself in the log (`operation`), the innermost name wins, other errors pass through untouched | PASS | `test/repositories.test.ts`; and 2026-10-18 on `wrangler dev --local` with an unreachable database: `device/me` and `device/code` logged `devices.findByCredentialHash` and `deviceAuthRequests.findByUserCode` with their 503 |
 
 ## Summary
 

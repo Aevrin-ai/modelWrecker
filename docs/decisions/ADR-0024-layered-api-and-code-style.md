@@ -31,9 +31,10 @@
 - The logger is the one module that calls `console`.
 
 ## Trade-offs
-- Some controllers still read and write through the `Database` interface for one-step operations instead
-  of calling a service. A repository layer with one function per query is a possible next step; it was
-  left out to keep this change a behavior-preserving move.
+- The first version left some controllers reading and writing through the `Database` interface directly.
+  Issue #89 closed that gap: every query now lives in `src/api/src/repositories/`, one named function per
+  query, and a failed query names itself in the logs. One-step handlers may still call a repository
+  directly instead of going through a service, as the owner's style allows for small handlers.
 - More, smaller files. The JavaScript bundles grew by about 1 KB from the extra module structure.
 
 ## References

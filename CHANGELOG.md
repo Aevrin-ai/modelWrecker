@@ -28,6 +28,11 @@ happened - never invent historical entries.
   `controllers/`, `validators/`, `services/`, `database/`, `lib/`, `types/`, and `config/`, with only the
   Worker entry, the pipeline (`app.ts`), and the composition root (`container.ts`) at the top. The CLI is
   a package (`src/modelwrecker/cli/`), and large engine, dashboard, and landing modules are split by job.
+- Every control-plane API query now lives in `src/api/src/repositories/`, one module per table and one
+  named function per query (#89). Controllers, middleware, and services no longer call the database
+  directly. The caller still picks the database client, so access rules are unchanged. A failed query
+  adds an `operation` field to its log line, such as `devices.findByCredentialHash`. Renaming or moving a
+  row that was deleted at the same moment now answers 404 (or 409 during a sync) instead of a 500.
   Old import paths still work. The same tests pass, the CLI help output is byte-identical, and the landing
   page prerenders to the same HTML.
 - Error messages no longer say "Something went wrong". An unexpected API error now says what happened and
