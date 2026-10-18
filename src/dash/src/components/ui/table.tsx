@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-/** A table that scrolls horizontally on small screens (Catmint responsive pattern). */
+// a table that scrolls horizontally on small screens
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
     <div className="w-full overflow-x-auto rounded-md border">

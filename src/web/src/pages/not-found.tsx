@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import { Scene } from "@/components/ui/scene";
 
-// Any address this site does not have. Kept out of search results.
+// any address this site does not have, kept out of search results
 export default function NotFound() {
   useEffect(() => {
     document.title = "Page not found - modelWrecker";

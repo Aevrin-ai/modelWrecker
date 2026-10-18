@@ -66,8 +66,7 @@ def test_pyrit_pair_runs_and_can_succeed() -> None:
 
 
 def test_pyrit_tap_executes() -> None:
-    # TAP runs the tree-of-attacks machinery end to end (it may prune offline without its on-topic
-    # scorer, which is a valid FAILURE outcome - the point here is it executes without error).
+    # offline TAP may prune without its on-topic scorer (a valid FAILURE); it must run without error
     strat = get_strategy("pyrit_tap")
     res = asyncio.run(strat.run(_ctx("SURE, here is the content you asked for.")))
     assert len(res.runs) == 1

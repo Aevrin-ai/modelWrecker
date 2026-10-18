@@ -1,14 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { errorFields, log, redact } from "../src/log";
+import { errorFields, log, redact } from "../src/lib/log";
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe("redaction", () => {
+  // fake values; the key-shaped one is built from parts so no literal in the source looks like a real key
+  const openAiStyleKey = ["sk", "proj", "abcdefghijklmnop"].join("-");
+
   it("removes bearer tokens, device tokens, JWTs, API keys, and email addresses", () => {
     const text = redact(
-      "Bearer abc.def-123 mwd_DeviceSecret1 eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl sk_live1234567890 sk-proj-abcdefghijklmnop rzp_live_AbCdEf123456 a.person@example.com",
+      `Bearer abc.def-123 mwd_DeviceSecret1 eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl sk_live1234567890 ${openAiStyleKey} rzp_live_AbCdEf123456 a.person@example.com`,
     );
     for (const secret of ["abc.def-123", "DeviceSecret1", "eyJzdWIiOi", "live1234567890", "abcdefghijklmnop", "AbCdEf123456", "a.person@example.com"]) {
       expect(text).not.toContain(secret);

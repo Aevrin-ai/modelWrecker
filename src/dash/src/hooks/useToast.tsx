@@ -17,7 +17,7 @@ interface ToastContextValue {
 const Ctx = createContext<ToastContextValue | null>(null);
 let nextId = 1;
 
-/** Small bottom-right toasts for action feedback (saved, marked ready, revoked). */
+// small bottom-right toasts for action feedback (saved, marked ready, revoked)
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Toast[]>([]);
 

@@ -1,13 +1,7 @@
 import { BentoCard, Section, SectionIntro } from "@/components/ui/blocks";
 import { AgentPanel, ApiPanel, ChatbotPanel, McpPanel, RagPanel } from "@/components/mockups/tests-panels";
 
-/*
-  What it tests: the five kinds of AI system modelWrecker can attack, as a
-  bento grid (24 columns on a wide screen, one on a phone). The 9/15 row
-  waits for lg: on a tablet a 9-column card is too narrow for its list. Each
-  card names the system, says the weak spot in one breath, and shows it in a
-  small panel.
-*/
+// a bento grid of the five kinds of AI system; the 9/15 row waits for lg, since a 9-column card is too narrow on a tablet
 export function Tests() {
   return (
     <Section id="tests" labelledBy="tests-heading">

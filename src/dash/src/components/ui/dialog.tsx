@@ -13,10 +13,7 @@ interface DialogProps {
   className?: string;
 }
 
-/**
- * A small accessible modal (no Radix): overlay click and Escape close it, focus moves
- * into the panel on open and returns to the opener on close.
- */
+// an accessible modal: overlay click and Escape close it, focus moves in on open and back on close
 export function Dialog({ open, onClose, title, description, children, footer, className }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();

@@ -1,18 +1,4 @@
-/*
-  HttpApiClient - the real backing for ApiClient (VITE_API_MODE=http).
-
-  A thin mapping onto the control-plane API contract in docs/architecture/control-plane-api.md:
-    - base URL `${VITE_API_BASE ?? "/api/v1"}`, same origin in production
-    - `Authorization: Bearer <access token>` on every call, from the in-memory session (lib/auth.ts),
-      refreshed ahead of expiry. Never a cookie, so no cross-site request forgery.
-    - JSON request and response bodies; responses already use the types in src/types.
-    - errors are `{ "error": "<code>", "message": "<safe text>" }`. Only `message` is ever shown;
-      a raw body, status text, or stack trace never reaches the UI.
-    - a 401 for an expired or invalid token refreshes the session once and retries once (./session.ts);
-      if the refresh fails, the user is signed out of this browser and sees the sign-in screen.
-
-  Like the interface, this client has no way to run an attack, call a model, or fetch an arbitrary URL.
-*/
+// the real ApiClient (VITE_API_MODE=http) for docs/architecture/control-plane-api.md; it cannot run attacks
 
 import type {
   ApiClient,
@@ -48,200 +34,106 @@ import type {
   Target,
   WorkspaceSettings,
 } from "@/types";
-import { authTokens } from "@/lib/auth";
-import { safeError } from "./errorMessage";
-import { sendWithSession } from "./session";
+import { ApiError } from "./apiError";
+import { createHttpTransport, type HttpTransport } from "./httpTransport";
+import { buildFilterQuery, buildQuery } from "./queryString";
 
-const TIMEOUT_MS = 20_000;
+export { ApiError };
 
-/** An API failure with a message that is safe to show. `code` is the contract's error code. */
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-  /** The server's reference for this request, for support. Null when it sent none. */
-  readonly requestId: string | null;
-  constructor(status: number, code: string, message: string, requestId: string | null = null) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-    this.requestId = requestId;
-  }
-}
-
-function qs(params: Record<string, string | undefined>): string {
-  const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
-  const s = sp.toString();
-  return s ? `?${s}` : "";
-}
-
-function filterQs(filter?: ListFilter): string {
-  return qs({
-    projectId: filter?.projectId,
-    campaignId: filter?.campaignId,
-    targetId: filter?.targetId,
-    q: filter?.query,
-  });
-}
-
-const enc = encodeURIComponent;
+const encodeId = encodeURIComponent;
 
 export class HttpApiClient implements ApiClient {
-  constructor(private readonly baseUrl: string) {}
+  private readonly http: HttpTransport;
 
-  private async send(method: string, path: string, token: string, body?: unknown): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      return await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-        },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-        credentials: "omit",
-        redirect: "error",
-        signal: controller.signal,
-      });
-    } catch {
-      throw new ApiError(0, "network_error", "The control plane did not respond.");
-    } finally {
-      clearTimeout(timer);
-    }
+  constructor(baseUrl: string) {
+    this.http = createHttpTransport(baseUrl);
   }
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const res = await sendWithSession(authTokens, (token) => this.send(method, path, token, body));
-    if (!res) throw new ApiError(401, "unauthorized", "Your session has ended. Please sign in again.");
-
-    let parsed: unknown = undefined;
-    const text = res.status === 204 ? "" : await res.text().catch(() => "");
-    if (text) {
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        parsed = undefined; // never surface a non-JSON body
-      }
-    }
-
-    if (!res.ok) {
-      const { code, message, requestId } = safeError(res.status, parsed, res.headers.get("x-request-id"));
-      throw new ApiError(res.status, code, message, requestId);
-    }
-    if (text && parsed === undefined) {
-      throw new ApiError(res.status, "bad_response", "The control plane sent an unexpected response.");
-    }
-    return parsed as T;
-  }
-
-  private get<T>(path: string) {
-    return this.request<T>("GET", path);
-  }
-
-  /** GET a single record; a 404 means "not found" (null), as in the mock. */
-  private async getOrNull<T>(path: string): Promise<T | null> {
-    try {
-      return await this.get<T>(path);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) return null;
-      throw err;
-    }
-  }
-
-  // --- overview ---
   getOverview(projectId?: string) {
-    return this.get<OverviewStats>(`/overview${qs({ projectId })}`);
+    return this.http.get<OverviewStats>(`/overview${buildQuery({ projectId })}`);
   }
 
-  // --- projects ---
   listProjects() {
-    return this.get<Project[]>("/projects");
+    return this.http.get<Project[]>("/projects");
   }
   getProject(id: string) {
-    return this.getOrNull<Project>(`/projects/${enc(id)}`);
+    return this.http.getOrNull<Project>(`/projects/${encodeId(id)}`);
   }
   createProject(input: NewProjectInput) {
-    return this.request<Project>("POST", "/projects", input);
+    return this.http.request<Project>("POST", "/projects", input);
   }
   updateProject(id: string, patch: Partial<Pick<Project, "name" | "description" | "archived">>) {
-    return this.request<Project>("PATCH", `/projects/${enc(id)}`, patch);
+    return this.http.request<Project>("PATCH", `/projects/${encodeId(id)}`, patch);
   }
   async deleteProject(id: string) {
-    await this.request<unknown>("DELETE", `/projects/${enc(id)}`);
+    await this.http.request<unknown>("DELETE", `/projects/${encodeId(id)}`);
   }
 
-  // --- targets ---
   listTargets(filter?: ListFilter) {
-    return this.get<Target[]>(`/targets${filterQs(filter)}`);
+    return this.http.get<Target[]>(`/targets${buildFilterQuery(filter)}`);
   }
   getTarget(id: string) {
-    return this.getOrNull<Target>(`/targets/${enc(id)}`);
+    return this.http.getOrNull<Target>(`/targets/${encodeId(id)}`);
   }
   createTarget(input: NewTargetInput) {
-    return this.request<Target>("POST", "/targets", input);
+    return this.http.request<Target>("POST", "/targets", input);
   }
 
-  // --- campaigns ---
   listCampaigns(filter?: ListFilter) {
-    return this.get<Campaign[]>(`/campaigns${filterQs(filter)}`);
+    return this.http.get<Campaign[]>(`/campaigns${buildFilterQuery(filter)}`);
   }
   getCampaign(id: string) {
-    return this.getOrNull<Campaign>(`/campaigns/${enc(id)}`);
+    return this.http.getOrNull<Campaign>(`/campaigns/${encodeId(id)}`);
   }
   getCampaignTimeline(id: string) {
-    return this.get<CampaignTimelineEvent[]>(`/campaigns/${enc(id)}/timeline`);
+    return this.http.get<CampaignTimelineEvent[]>(`/campaigns/${encodeId(id)}/timeline`);
   }
   getCampaignStats(id: string) {
-    return this.getOrNull<CampaignStats>(`/campaigns/${enc(id)}/stats`);
+    return this.http.getOrNull<CampaignStats>(`/campaigns/${encodeId(id)}/stats`);
   }
   getCampaignTranscript(id: string) {
-    return this.getOrNull<CampaignTranscript>(`/campaigns/${enc(id)}/transcript`);
+    return this.http.getOrNull<CampaignTranscript>(`/campaigns/${encodeId(id)}/transcript`);
   }
   createCampaign(input: NewCampaignInput) {
-    return this.request<Campaign>("POST", "/campaigns", input);
+    return this.http.request<Campaign>("POST", "/campaigns", input);
   }
   renameCampaign(id: string, name: string) {
-    return this.request<Campaign>("PATCH", `/campaigns/${enc(id)}`, { name });
+    return this.http.request<Campaign>("PATCH", `/campaigns/${encodeId(id)}`, { name });
   }
   markCampaignReady(id: string) {
-    return this.request<Campaign>("POST", `/campaigns/${enc(id)}/ready`);
+    return this.http.request<Campaign>("POST", `/campaigns/${encodeId(id)}/ready`);
   }
   unmarkCampaignReady(id: string) {
-    return this.request<Campaign>("POST", `/campaigns/${enc(id)}/draft`);
+    return this.http.request<Campaign>("POST", `/campaigns/${encodeId(id)}/draft`);
   }
   async deleteCampaign(id: string) {
-    await this.request<unknown>("DELETE", `/campaigns/${enc(id)}`);
+    await this.http.request<unknown>("DELETE", `/campaigns/${encodeId(id)}`);
   }
 
-  // --- findings ---
   listFindings(filter?: ListFilter) {
-    return this.get<Finding[]>(`/findings${filterQs(filter)}`);
+    return this.http.get<Finding[]>(`/findings${buildFilterQuery(filter)}`);
   }
   getFinding(id: string) {
-    return this.getOrNull<Finding>(`/findings/${enc(id)}`);
+    return this.http.getOrNull<Finding>(`/findings/${encodeId(id)}`);
   }
   updateFindingStatus(id: string, status: FindingStatus) {
-    return this.request<Finding>("PATCH", `/findings/${enc(id)}`, { status });
+    return this.http.request<Finding>("PATCH", `/findings/${encodeId(id)}`, { status });
   }
 
-  // --- devices ---
   listDevices(filter?: ListFilter) {
-    return this.get<Device[]>(`/devices${filterQs(filter)}`);
+    return this.http.get<Device[]>(`/devices${buildFilterQuery(filter)}`);
   }
   getDevice(id: string) {
-    return this.getOrNull<Device>(`/devices/${enc(id)}`);
+    return this.http.getOrNull<Device>(`/devices/${encodeId(id)}`);
   }
   renameDevice(id: string, name: string) {
-    return this.request<Device>("PATCH", `/devices/${enc(id)}`, { name });
+    return this.http.request<Device>("PATCH", `/devices/${encodeId(id)}`, { name });
   }
   async revokeDevice(id: string) {
-    await this.request<unknown>("POST", `/devices/${enc(id)}/revoke`);
+    await this.http.request<unknown>("POST", `/devices/${encodeId(id)}/revoke`);
   }
   async approveDevice(userCode: string, projectId: string | null, approve: boolean): Promise<DeviceApproval> {
-    const res = await this.request<{ approved?: unknown; denied?: unknown }>("POST", "/device/approve", {
+    const res = await this.http.request<{ approved?: unknown; denied?: unknown }>("POST", "/device/approve", {
       user_code: userCode,
       project_id: projectId,
       approve,
@@ -249,17 +141,15 @@ export class HttpApiClient implements ApiClient {
     return { approved: res?.approved === true || undefined, denied: res?.denied === true || undefined };
   }
 
-  // --- analytics ---
   getAnalytics(projectId?: string) {
-    return this.get<AnalyticsSummary>(`/analytics${qs({ projectId })}`);
+    return this.http.get<AnalyticsSummary>(`/analytics${buildQuery({ projectId })}`);
   }
 
-  // --- reports ---
   listReports(filter?: ListFilter) {
-    return this.get<Report[]>(`/reports${filterQs(filter)}`);
+    return this.http.get<Report[]>(`/reports${buildFilterQuery(filter)}`);
   }
   async exportReport(): Promise<ExportedFile> {
-    // The API has no report files yet; they stay with the engine that wrote them.
+    // the API has no report files yet; they stay with the engine that wrote them
     throw new ApiError(
       0,
       "reports_on_device",
@@ -267,46 +157,44 @@ export class HttpApiClient implements ApiClient {
     );
   }
 
-  // --- billing ---
   getSubscription() {
-    return this.get<Subscription>("/subscription");
+    return this.http.get<Subscription>("/subscription");
   }
   listPlans() {
-    return this.get<Plan[]>("/plans");
+    return this.http.get<Plan[]>("/plans");
   }
   listInvoices() {
-    return this.get<Invoice[]>("/invoices");
+    return this.http.get<Invoice[]>("/invoices");
   }
   startCheckout(planId: "pro", interval: BillingInterval) {
-    return this.request<CheckoutStart>("POST", "/billing/checkout", { plan: planId, interval });
+    return this.http.request<CheckoutStart>("POST", "/billing/checkout", { plan: planId, interval });
   }
   confirmPayment(result: CheckoutSuccess) {
-    return this.request<PaymentConfirmation>("POST", "/billing/verify", {
+    return this.http.request<PaymentConfirmation>("POST", "/billing/verify", {
       razorpay_order_id: result.razorpay_order_id,
       razorpay_payment_id: result.razorpay_payment_id,
       razorpay_signature: result.razorpay_signature,
     });
   }
 
-  // --- settings / account ---
   getSettings() {
-    return this.get<WorkspaceSettings>("/settings");
+    return this.http.get<WorkspaceSettings>("/settings");
   }
   updateSettings(patch: Partial<WorkspaceSettings>) {
-    return this.request<WorkspaceSettings>("PATCH", "/settings", patch);
+    return this.http.request<WorkspaceSettings>("PATCH", "/settings", patch);
   }
   getAccount() {
-    return this.get<Account>("/me");
+    return this.http.get<Account>("/me");
   }
   updateAccount(patch: Pick<Account, "name">) {
-    return this.request<Account>("PATCH", "/me", { name: patch.name });
+    return this.http.request<Account>("PATCH", "/me", { name: patch.name });
   }
   listNotifications() {
-    return this.get<NotificationItem[]>("/notifications");
+    return this.http.get<NotificationItem[]>("/notifications");
   }
   search(query: string) {
-    const q = query.trim();
-    if (!q) return Promise.resolve<SearchResult[]>([]);
-    return this.get<SearchResult[]>(`/search${qs({ q })}`);
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return Promise.resolve<SearchResult[]>([]);
+    return this.http.get<SearchResult[]>(`/search${buildQuery({ q: trimmedQuery })}`);
   }
 }

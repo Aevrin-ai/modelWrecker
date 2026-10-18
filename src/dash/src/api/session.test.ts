@@ -6,7 +6,7 @@ import { sendWithSession, singleFlight, type TokenSource } from "./session.ts";
 const rejected = () => new Response(JSON.stringify({ error: "unauthenticated", message: "Sign in to continue." }), { status: 401 });
 const ok = () => new Response("{}", { status: 200 });
 
-/** A fake session: `valid` is the only token the fake API accepts; refresh rotates to the next one. */
+// a fake session: `valid` is the only token the fake API accepts; refresh rotates to the next one
 function fakeSession(start: string | null, refreshTo: (string | null)[] = []) {
   let token = start;
   let valid = start;

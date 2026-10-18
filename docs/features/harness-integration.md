@@ -6,7 +6,7 @@ without leaving the harness.
 
 **Status: implemented and tested.** The MCP server (`modelwrecker mcp`) and the JSON driver
 (`modelwrecker run --output json`) both work; a real MCP client round-trip and the guardrails are covered
-by `tests/test_mcp.py`. Decision: [`../decisions/ADR-0013-harness-integration.md`](../decisions/ADR-0013-harness-integration.md).
+by the `tests/test_mcp_*.py` files. Decision: [`../decisions/ADR-0013-harness-integration.md`](../decisions/ADR-0013-harness-integration.md).
 
 To add it to a client such as Claude Code, register a stdio MCP server that runs `modelwrecker mcp`.
 Use `--config-dir` to name the only folder the server reads configs from, and `--runs-dir` for the

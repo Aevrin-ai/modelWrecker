@@ -4,11 +4,7 @@ import { Link } from "react-router";
 
 import { cn } from "@/lib/utils";
 
-/*
-  Every call to action on the site is a pill. `primary` is the dark one with a
-  pressed-in edge, `glass` sits on a painted sky, `soft` and `outline` are the
-  quiet second choice on white.
-*/
+// every call to action is a pill: `primary` dark and pressed-in, `glass` on a painted sky, `soft` and `outline` quiet
 const pillVariants = cva(
   "group inline-flex shrink-0 items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-[background-color,color,box-shadow,opacity,scale] duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60 [&_svg]:size-4 [&_svg]:shrink-0",
   {
@@ -34,9 +30,9 @@ const pillVariants = cva(
 type PillProps = VariantProps<typeof pillVariants> & {
   className?: string;
   children: ReactNode;
-  /** A page of this site. */
+  // a page of this site
   to?: string;
-  /** A link off it (opens in a new tab when it is another site). */
+  // a link off it, opened in a new tab when it is another site
   href?: string;
 } & Omit<ComponentProps<"button">, "className" | "children">;
 

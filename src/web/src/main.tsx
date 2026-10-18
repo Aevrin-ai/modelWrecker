@@ -5,12 +5,7 @@ import { BrowserRouter } from "react-router";
 import "./index.css";
 import { AppRoutes } from "./routes";
 
-/*
-  The home page arrives prerendered (scripts/prerender.mjs), so its hero paints
-  before any script runs; here React takes over that HTML. Cloudflare Pages
-  serves the same file for any unknown path, so anywhere else the prerendered
-  home is thrown away and the right page renders fresh.
-*/
+// the home page arrives prerendered, so React hydrates it; any other path throws that HTML away and renders fresh
 const root = document.getElementById("root")!;
 const app = (
   <StrictMode>

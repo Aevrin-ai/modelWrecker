@@ -7,14 +7,6 @@ import { Reveal } from "@/components/ui/reveal";
 import { PaintedPanel } from "@/components/ui/scene";
 import { Book, ChatRoundDots, Database, Layers, type IconComponent } from "@/components/ui/solar-icons";
 
-/*
-  The 20 attack strategies, grouped into their four families on a painted
-  stage, the way Activepieces lays out its pieces. The names are real text,
-  not a picture, so everyone can read the whole list. While the stage is on
-  screen a soft ring walks from family to family; for anyone who asked for
-  less motion it stays still.
-*/
-
 const FAMILIES: { title: string; icon: IconComponent; strategies: string[]; text: string }[] = [
   {
     title: "One message",
@@ -42,9 +34,10 @@ const FAMILIES: { title: string; icon: IconComponent; strategies: string[]; text
   },
 ];
 
-// Seconds the ring rests on each family, the last a little longer.
+// seconds the ring rests on each family, the last a little longer
 const DURATIONS = [2.4, 2.4, 2.4, 3.0];
 
+// the attack strategies in four families as real text; a soft ring walks between them unless motion is reduced
 export function Attacks() {
   const ref = useRef<HTMLDivElement>(null);
   const { phase, playing } = useAutoplay(ref, DURATIONS);
@@ -63,20 +56,20 @@ export function Attacks() {
           <div ref={ref} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
             {FAMILIES.map((family, i) => {
               const Icon = family.icon;
-              const on = lit === i;
+              const isLit = lit === i;
               return (
                 <div
                   key={family.title}
                   className={cn(
                     "rounded-2xl bg-white/80 p-5 text-slate-900 ring-1 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_-16px_rgba(15,23,42,0.35)] backdrop-blur-md transition-[box-shadow,background-color] duration-500 dark:bg-slate-900/80 dark:text-slate-100",
-                    on ? "ring-lime ring-2" : "ring-slate-900/10 dark:ring-white/10",
+                    isLit ? "ring-lime ring-2" : "ring-slate-900/10 dark:ring-white/10",
                   )}
                 >
                   <p id={`attack-family-${i}`} className="flex items-center gap-3 text-[17px] font-semibold">
                     <span
                       className={cn(
                         "grid size-9 shrink-0 place-items-center rounded-lg transition-colors duration-500",
-                        on ? "bg-lime text-slate-950" : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300",
+                        isLit ? "bg-lime text-slate-950" : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300",
                       )}
                     >
                       <Icon aria-hidden="true" className="size-5" />

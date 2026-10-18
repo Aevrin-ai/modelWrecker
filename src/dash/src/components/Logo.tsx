@@ -1,15 +1,23 @@
 import { cn } from "@/lib/utils";
 
-/** The real Aevrin logo, served from public/ under the Vite base ("/dashboard/"). */
+// served from public/ under the Vite base ("/dashboard/")
 export const LOGO_SRC = `${import.meta.env.BASE_URL}aevrin-logo.png`;
 
-/**
- * The Aevrin mark on a dark tile, the same treatment the reference uses for its brand
- * tile in the sidebar (rounded-md, primary ink background).
- */
-export function LogoTile({ size = "md", className }: { size?: "sm" | "md" | "lg"; className?: string }) {
-  const box = size === "sm" ? "size-7" : size === "lg" ? "size-14" : "size-8";
-  const img = size === "sm" ? "size-[1.15rem]" : size === "lg" ? "size-9" : "size-5";
+type LogoSize = "sm" | "md" | "lg";
+
+const TILE_CLASS: Record<LogoSize, { box: string; image: string }> = {
+  sm: { box: "size-7", image: "size-[1.15rem]" },
+  md: { box: "size-8", image: "size-5" },
+  lg: { box: "size-14", image: "size-9" },
+};
+
+export interface LogoTileProps {
+  size?: LogoSize;
+  className?: string;
+}
+
+export function LogoTile({ size = "md", className }: LogoTileProps) {
+  const { box, image } = TILE_CLASS[size];
   return (
     <span
       className={cn(
@@ -18,13 +26,18 @@ export function LogoTile({ size = "md", className }: { size?: "sm" | "md" | "lg"
         className,
       )}
     >
-      <img src={LOGO_SRC} alt="Aevrin" className={cn("object-contain", img)} draggable={false} />
+      <img src={LOGO_SRC} alt="Aevrin" className={cn("object-contain", image)} draggable={false} />
     </span>
   );
 }
 
-/** Tile + product name, for the sidebar header, drawer, and standalone pages. */
-export function LogoLockup({ subtitle = "ModelWrecker console", className }: { subtitle?: string; className?: string }) {
+export interface LogoLockupProps {
+  subtitle?: string;
+  className?: string;
+}
+
+// tile plus product name, for the sidebar header, drawer, and standalone pages
+export function LogoLockup({ subtitle = "ModelWrecker console", className }: LogoLockupProps) {
   return (
     <span className={cn("flex min-w-0 items-center gap-2", className)}>
       <LogoTile />

@@ -21,7 +21,7 @@ export interface SafeError {
   requestId: string | null;
 }
 
-/** The code, message, and reference id to show for a failed response. Never the raw body. */
+// the code, message, and reference id to show for a failed response, never the raw body
 export function safeError(status: number, body: unknown, headerRequestId: string | null = null): SafeError {
   let code = `http_${status}`;
   let message = FALLBACK_MESSAGE[status] ?? (status >= 500 ? "The control plane had a problem. Try again shortly." : "The request failed.");

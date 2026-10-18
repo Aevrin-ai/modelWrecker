@@ -3,7 +3,7 @@ import type { SelectHTMLAttributes } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** A styled native select (no Radix). Matches the Catmint control look. */
+// a styled native select, no Radix
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, children, ...props }, ref) => (
     <div className="relative inline-flex">

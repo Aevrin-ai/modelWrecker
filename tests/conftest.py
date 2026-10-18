@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import json
 import time
+from collections.abc import Callable
 
 import pytest
 
@@ -23,12 +24,12 @@ TEST_ISSUER = "https://test.invalid"
 TEST_KID = "test-key"
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "free_plan: run without an entitlement (the free baseline)")
 
 
 @pytest.fixture(scope="session")
-def _test_signing_key():
+def _test_signing_key() -> tuple[object, str]:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
@@ -42,12 +43,13 @@ def _b64(data: bytes) -> str:
 
 
 @pytest.fixture(scope="session")
-def sign_entitlement(_test_signing_key):
+def sign_entitlement(_test_signing_key: tuple[object, str]) -> Callable[..., str]:
     """Return a function that signs an entitlement the engine will trust in tests."""
     key, _ = _test_signing_key
 
-    def sign(*, plan="pro", limits=None, features=None, usage=None, iat=None, exp=None,
-             kid=TEST_KID, iss=TEST_ISSUER) -> str:
+    def sign(*, plan: str = "pro", limits: dict | None = None, features: dict | None = None,
+             usage: dict | None = None, iat: int | None = None, exp: int | None = None,
+             kid: str = TEST_KID, iss: str = TEST_ISSUER) -> str:
         now = int(time.time())
         payload = {
             "v": 1, "iss": iss, "sub": "test-user", "dev": "test-device", "plan": plan,
@@ -67,7 +69,8 @@ def sign_entitlement(_test_signing_key):
 
 
 @pytest.fixture(autouse=True)
-def _isolate_cloud_credentials(tmp_path_factory, monkeypatch):
+def _isolate_cloud_credentials(tmp_path_factory: pytest.TempPathFactory,
+                               monkeypatch: pytest.MonkeyPatch) -> None:
     from modelwrecker.cloud import credentials
 
     monkeypatch.setattr(credentials, "_config_dir_override", tmp_path_factory.mktemp("mwcfg"))
@@ -76,8 +79,9 @@ def _isolate_cloud_credentials(tmp_path_factory, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def _test_entitlement(request, monkeypatch, _isolate_cloud_credentials, _test_signing_key,
-                      sign_entitlement):
+def _test_entitlement(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch,
+                      _isolate_cloud_credentials: None, _test_signing_key: tuple[object, str],
+                      sign_entitlement: Callable[..., str]) -> None:
     from modelwrecker.entitlements import token
 
     _, public = _test_signing_key

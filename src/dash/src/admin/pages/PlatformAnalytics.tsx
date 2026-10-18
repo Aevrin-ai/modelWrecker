@@ -33,20 +33,20 @@ export function PlatformAnalytics() {
         <DaysSelect days={days} onChange={setDays} />
       </div>
       <DataState loading={data.loading} error={data.error} data={data.data} onRetry={data.refetch} skeleton={<SkeletonCards count={8} className="sm:grid-cols-2 lg:grid-cols-4" />}>
-        {(m) => {
-          const t = m.totals;
-          const mixTotal = Math.max(1, m.planMix.free + m.planMix.pro + m.planMix.enterprise);
+        {(metrics) => {
+          const totals = metrics.totals;
+          const mixTotal = Math.max(1, metrics.planMix.free + metrics.planMix.pro + metrics.planMix.enterprise);
           return (
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Users" value={formatNumber(t.users)} icon={Users} hint={`${formatNumber(t.newUsers)} new in this range`} />
-                <StatCard label="Active users" value={formatNumber(t.activeUsers)} icon={Activity} hint="Synced a run or a device was seen" />
-                <StatCard label="Paying accounts" value={formatNumber(t.paying)} icon={CreditCard} hint={`${formatNumber(t.granted)} more granted by Aevrin`} />
-                <StatCard label="Monthly recurring revenue" value={formatPaise(t.mrrPaise)} icon={IndianRupee} hint="Paid plans in effect, per month, GST included" />
-                <StatCard label="Revenue in range" value={formatPaise(t.revenuePaise)} icon={IndianRupee} hint={t.refundedPaise ? `${formatPaise(t.refundedPaise)} refunded` : "No refunds"} />
-                <StatCard label="New users" value={formatNumber(t.newUsers)} icon={UserPlus} />
-                <StatCard label="Connected devices" value={formatNumber(t.devices)} icon={MonitorSmartphone} hint={`${formatNumber(t.campaigns)} campaigns in total`} />
-                <StatCard label="Runs synced" value={formatNumber(t.runs)} icon={ShieldAlert} hint={`${formatNumber(t.findings)} findings`} />
+                <StatCard label="Users" value={formatNumber(totals.users)} icon={Users} hint={`${formatNumber(totals.newUsers)} new in this range`} />
+                <StatCard label="Active users" value={formatNumber(totals.activeUsers)} icon={Activity} hint="Synced a run or a device was seen" />
+                <StatCard label="Paying accounts" value={formatNumber(totals.paying)} icon={CreditCard} hint={`${formatNumber(totals.granted)} more granted by Aevrin`} />
+                <StatCard label="Monthly recurring revenue" value={formatPaise(totals.mrrPaise)} icon={IndianRupee} hint="Paid plans in effect, per month, GST included" />
+                <StatCard label="Revenue in range" value={formatPaise(totals.revenuePaise)} icon={IndianRupee} hint={totals.refundedPaise ? `${formatPaise(totals.refundedPaise)} refunded` : "No refunds"} />
+                <StatCard label="New users" value={formatNumber(totals.newUsers)} icon={UserPlus} />
+                <StatCard label="Connected devices" value={formatNumber(totals.devices)} icon={MonitorSmartphone} hint={`${formatNumber(totals.campaigns)} campaigns in total`} />
+                <StatCard label="Runs synced" value={formatNumber(totals.runs)} icon={ShieldAlert} hint={`${formatNumber(totals.findings)} findings`} />
               </div>
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card>
@@ -55,7 +55,7 @@ export function PlatformAnalytics() {
                     <CardDescription>New accounts per day.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <TrendLineChart data={m.daily.map((d) => ({ date: d.date, value: d.signups }))} valueLabel="Sign-ups" />
+                    <TrendLineChart data={metrics.daily.map((d) => ({ date: d.date, value: d.signups }))} valueLabel="Sign-ups" />
                   </CardContent>
                 </Card>
                 <Card>
@@ -64,7 +64,7 @@ export function PlatformAnalytics() {
                     <CardDescription>Confirmed payments per day, rupees, after refunds.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <TrendLineChart data={m.daily.map((d) => ({ date: d.date, value: d.revenuePaise / 100 }))} valueLabel="Rupees" />
+                    <TrendLineChart data={metrics.daily.map((d) => ({ date: d.date, value: d.revenuePaise / 100 }))} valueLabel="Rupees" />
                   </CardContent>
                 </Card>
                 <Card>
@@ -73,7 +73,7 @@ export function PlatformAnalytics() {
                     <CardDescription>Campaign runs reaching the dashboard per day.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <TrendLineChart data={m.daily.map((d) => ({ date: d.date, value: d.runs }))} valueLabel="Runs" />
+                    <TrendLineChart data={metrics.daily.map((d) => ({ date: d.date, value: d.runs }))} valueLabel="Runs" />
                   </CardContent>
                 </Card>
                 <Card>
@@ -87,15 +87,15 @@ export function PlatformAnalytics() {
                         <div className="flex justify-between text-sm">
                           <span className="font-medium capitalize">{p}</span>
                           <span className="tabular-nums text-muted-foreground">
-                            {formatNumber(m.planMix[p])} ({Math.round((m.planMix[p] / mixTotal) * 100)}%)
+                            {formatNumber(metrics.planMix[p])} ({Math.round((metrics.planMix[p] / mixTotal) * 100)}%)
                           </span>
                         </div>
                         <div className="mt-2 h-2 rounded-full bg-muted">
-                          <div className="h-2 rounded-full bg-foreground" style={{ width: `${(m.planMix[p] / mixTotal) * 100}%` }} />
+                          <div className="h-2 rounded-full bg-foreground" style={{ width: `${(metrics.planMix[p] / mixTotal) * 100}%` }} />
                         </div>
                       </div>
                     ))}
-                    {t.suspended > 0 && <p className="text-xs text-muted-foreground">{formatNumber(t.suspended)} suspended account(s).</p>}
+                    {totals.suspended > 0 && <p className="text-xs text-muted-foreground">{formatNumber(totals.suspended)} suspended account(s).</p>}
                   </CardContent>
                 </Card>
               </div>

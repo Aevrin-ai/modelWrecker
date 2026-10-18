@@ -24,8 +24,7 @@ class Entitlement:
     plan: str
     limits: dict[str, int | None]
     features: dict[str, bool]
-    # Usage the cloud had seen this period when it signed: {"period": "YYYY-MM", "campaigns",
-    # "attacks"}.
+    # usage the cloud had seen this period when it signed: period (YYYY-MM), campaigns, attacks
     usage: dict = field(default_factory=dict)
     subject: str = ""
     device: str | None = None

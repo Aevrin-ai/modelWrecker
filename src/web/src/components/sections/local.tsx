@@ -3,17 +3,13 @@ import { PaintedPanel } from "@/components/ui/scene";
 import { Reveal } from "@/components/ui/reveal";
 import { LocalMockup } from "@/components/mockups/local-mockup";
 
-/*
-  Local-first: the attacks run on your own machine, and the Aevrin cloud only
-  does sign-in, the dashboard, billing and plans. A feature stage: the heading,
-  the picture of the two places, then three ticked points.
-*/
 const POINTS = [
   "Your keys or a local model",
   "The Aevrin cloud only handles sign-in, the dashboard, billing and plans",
   "The cloud never runs an attack",
 ] as const;
 
+// local-first: the attacks run on your own machine, and the cloud only handles accounts and billing
 export function Local() {
   return (
     <Section id="local" labelledBy="local-heading">

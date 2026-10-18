@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { animate } from "motion/react";
 
-// How far through typing a line a mockup is, from 0 to 1, while `active`.
+// how far through typing a line a mockup is, from 0 to 1, while `active`
 export function useTyping(active: boolean, duration = 1.2) {
   const [progress, setProgress] = useState(0);
   useEffect(() => {

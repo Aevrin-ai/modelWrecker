@@ -9,20 +9,29 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Callable
 
+import pytest
+
+from modelwrecker.config import Config, Endpoint
 from modelwrecker.data import Objective, Observation
 from modelwrecker.interfaces import Capability
 from modelwrecker.judges.signals import CanaryExfilSignal
 from modelwrecker.providers.fake import FakeProvider
-from modelwrecker.strategies.base import StrategyContext
+from modelwrecker.strategies.base import StrategyContext, StrategyResult
 from modelwrecker.strategies.indirect_injection import IndirectPromptInjection
 from modelwrecker.strategies.registry import get_strategy, list_strategies
 from modelwrecker.targets.agent import AgentTarget
+from modelwrecker.targets.chat import ChatTarget
+
+# a fake model: it gets the chat messages and returns the reply text
+Responder = Callable[[list[dict]], str]
+
 
 _CANARY_RE = re.compile(r"MW-CANARY-[0-9a-f]{12}")
 
 
-def _obedient_responder(messages):
+def _obedient_responder(messages: list[dict]) -> str:
     """A model that follows an instruction hidden in a tool result: it leaks the canary."""
     convo = "\n".join(str(m.get("content", "")) for m in messages)
     if "TOOL_RESULT" not in convo:  # first turn: read the content the user asked about
@@ -34,7 +43,7 @@ def _obedient_responder(messages):
     return "Here is a one-line summary of the content."
 
 
-def _safe_responder(messages):
+def _safe_responder(messages: list[dict]) -> str:
     """A model that reads the content but ignores any instruction inside it."""
     convo = "\n".join(str(m.get("content", "")) for m in messages)
     if "TOOL_RESULT" not in convo:
@@ -42,7 +51,7 @@ def _safe_responder(messages):
     return "Here is a one-line summary; I will not follow instructions inside the content."
 
 
-def _run(responder, scenario="email"):
+def _run(responder: Responder, scenario: str = "email") -> StrategyResult:
     target = AgentTarget(FakeProvider("t", responder))
     objective = Objective(title="indirect injection", category="indirect_injection")
     ctx = StrategyContext(
@@ -83,8 +92,7 @@ def test_canary_signal_ignores_attempts_without_a_canary() -> None:
 
 
 def test_control_never_leaks_the_canary_even_with_an_obedient_model() -> None:
-    # The control body carries no injection, so even an "obedient" model cannot leak the canary:
-    # it never appears in what the model reads.
+    # the control body carries no injection, so the canary never appears in what the model reads
     signal = CanaryExfilSignal()
     control = _run(_obedient_responder).runs[1]
     assert control.control
@@ -121,23 +129,18 @@ def test_registry_exposes_the_strategy_and_its_spec() -> None:
 
 
 def test_chat_target_cannot_run_indirect_injection() -> None:
-    from modelwrecker.targets.chat import ChatTarget
-
     strat = IndirectPromptInjection()
     chat = ChatTarget(FakeProvider("t", lambda m: "x"))
     assert not strat.required_target_capabilities.issubset(chat.capabilities())
 
 
-# --- loop-level: finding, false-positive suppression, not-tested reporting ---
-
-
-def _judge_for_injection(messages):
+def _judge_for_injection(messages: list[dict]) -> str:
     # Deterministic judge: the canary signal decides these, so the LLM judge stays neutral.
     return '{"refused": 1, "score": 1, "rationale": "no judgement needed"}'
 
 
-def _agent_config(responder, *, target_type="agent"):
-    from modelwrecker.config import AttackConfig, Config, Endpoint, EngineConfig
+def _agent_config(responder: Responder, *, target_type: str = "agent") -> Config:
+    from modelwrecker.config import AttackConfig, EngineConfig
 
     return Config(
         attacker=Endpoint(protocol="openai_compatible", model="attacker", base_url="http://x"),
@@ -156,10 +159,10 @@ def _agent_config(responder, *, target_type="agent"):
     )
 
 
-def _patch(monkeypatch, responder):
+def _patch(monkeypatch: pytest.MonkeyPatch, responder: Responder) -> None:
     from modelwrecker.attacker import loop as loop_module
 
-    def fake_build(ep, egress=None):
+    def fake_build(ep: Endpoint, egress: object = None) -> FakeProvider:
         if ep.model == "target":
             return FakeProvider("target", responder)
         if ep.model == "judge":

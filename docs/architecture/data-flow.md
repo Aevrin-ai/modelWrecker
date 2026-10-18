@@ -110,9 +110,9 @@ flowchart LR
 | Module | Job |
 |--------|-----|
 | `credentials.py` | Load the device token from `MODELWRECKER_DEVICE_TOKEN` or the saved file; save it atomically with `0600` |
-| `client.py` | Call `device/code`, `device/token`, `device/heartbeat` (which also returns the sync settings), and `sync`; https only, no redirects, typed RFC 8628 results |
+| `client.py` | Call `device/code`, `device/token`, `device/heartbeat` (which also returns the sync settings), and `sync`; https only, no redirects, typed RFC 8628 results (helpers: `api_url.py`, `client_errors.py`, `api_responses.py`, `device_login.py`) |
 | `policy.py` | `SyncPolicy`: which detail (evidence, transcripts) the account allows |
-| `summarize.py` | Build the `POST /sync` body by picking named fields from `events.jsonl`, `finding-*.json`, and each evidence file; add redacted, capped detail only when the policy allows it |
+| `summarize.py` | Build the `POST /sync` body by picking named fields from `events.jsonl`, `finding-*.json`, and each evidence file; add redacted, capped detail only when the policy allows it (helpers: `run_files.py`, `evidence_detail.py`, `summary_values.py`) |
 | `outbox.py` | A run is pending until `.synced.json` exists (written only after a `200`), or when the policy asks for detail the marker says was not sent |
 
 With detail off, the summary never reads or copies an attack payload, a model response or reasoning, a

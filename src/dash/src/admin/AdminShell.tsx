@@ -20,7 +20,7 @@ const NAV: { to: string; label: string; icon: LucideIcon; group: string }[] = [
 
 const ICON_BTN = "flex size-9 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground";
 
-/** The admin console's frame: the dashboard's look, with its own navigation and a staff badge. */
+// the admin console's frame: the dashboard's look, with its own navigation and a staff badge
 export function AdminShell() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [open, setOpen] = useState(false);

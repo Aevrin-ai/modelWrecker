@@ -55,11 +55,12 @@ def is_synced(d: Path, policy: SyncPolicy = METADATA_ONLY) -> bool:
     return not (policy.transcripts and detail.get("transcripts") is not True)
 
 
-def pending_runs(
-    runs_dir: str | Path, policy: SyncPolicy = METADATA_ONLY, *, resync: bool = False
-) -> list[Path]:
-    """Every finished run under `runs_dir` the cloud does not have yet (in the detail `policy`
-    asks for), oldest first. `resync` returns every run."""
+def pending_runs(runs_dir: str | Path, policy: SyncPolicy = METADATA_ONLY, *,
+                 resync: bool = False) -> list[Path]:
+    """Every finished run under `runs_dir` the cloud does not have yet, oldest first.
+
+    "Have" means in the detail `policy` asks for. `resync` returns every run.
+    """
     base = Path(runs_dir)
     if not base.is_dir():
         return []
@@ -137,33 +138,35 @@ class SyncReport:
         return not self.refused
 
 
-def sync_pending(
-    client: CloudClient,
-    runs_dir: str | Path,
-    policy: SyncPolicy = METADATA_ONLY,
-    *,
-    resync: bool = False,
-) -> SyncReport:
+def sync_pending(client: CloudClient, runs_dir: str | Path, policy: SyncPolicy = METADATA_ONLY,
+                 *, resync: bool = False) -> SyncReport:
     """Push every pending run. One failed run does not stop the others."""
     report = SyncReport()
     todo = pending_runs(runs_dir, policy, resync=resync)
-    for i, d in enumerate(todo):
-        try:
-            sync_run(client, d, policy)
-        except CloudError as e:
-            bucket = report.refused if e.refused else report.deferred
-            bucket.append((d.name, f"{e.code}: {e.message}"))
-            if e.code in ("network_error", "timeout"):
-                # The cloud is unreachable: stop early, everything stays queued for next time.
-                for rest in todo[i + 1:]:
-                    report.deferred.append((rest.name, "not attempted: cloud unreachable"))
-                break
-            continue
-        except ValueError as e:  # not a readable run; leave it alone and report it
-            report.deferred.append((d.name, f"unreadable run: {type(e).__name__}"))
-            continue
-        report.synced.append(d.name)
+    for i, run_dir in enumerate(todo):
+        is_unreachable = _sync_into_report(client, run_dir, policy, report)
+        if is_unreachable:
+            # the cloud is unreachable: stop early, everything stays queued for next time
+            for rest in todo[i + 1:]:
+                report.deferred.append((rest.name, "not attempted: cloud unreachable"))
+            break
     return report
+
+
+def _sync_into_report(client: CloudClient, run_dir: Path, policy: SyncPolicy,
+                      report: SyncReport) -> bool:
+    """Sync one run and note the result. True when the cloud could not be reached at all."""
+    try:
+        sync_run(client, run_dir, policy)
+    except CloudError as e:
+        bucket = report.refused if e.refused else report.deferred
+        bucket.append((run_dir.name, f"{e.code}: {e.message}"))
+        return e.code in ("network_error", "timeout")
+    except ValueError as e:  # not a readable run; leave it alone and report it
+        report.deferred.append((run_dir.name, f"unreadable run: {type(e).__name__}"))
+        return False
+    report.synced.append(run_dir.name)
+    return False
 
 
 def _events_size(d: Path) -> int:

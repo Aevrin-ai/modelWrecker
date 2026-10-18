@@ -21,7 +21,8 @@ from modelwrecker.integrations.promptfoo import (
 )
 
 
-def _cfg(plugins, strategies, provider="openai:gpt-4o-mini", **rt):
+def _cfg(plugins: list, strategies: list, provider: str = "openai:gpt-4o-mini",
+         **rt: object) -> dict:
     return {
         "redteam": {"plugins": plugins, "strategies": strategies, **rt},
         "targets": [{"id": provider, "config": {"apiKeyEnvar": "OPENAI_API_KEY"}}],

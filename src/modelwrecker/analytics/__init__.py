@@ -16,12 +16,11 @@ from .engine import (
 )
 from .render import (
     render_analytics_csv,
-    render_analytics_html,
     render_analytics_json,
     render_leaderboard_csv,
-    render_leaderboard_html,
     render_leaderboard_json,
 )
+from .render_html import render_analytics_html, render_leaderboard_html
 
 __all__ = [
     "Analytics",

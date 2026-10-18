@@ -5,7 +5,6 @@ interface AvatarProps {
   className?: string;
 }
 
-/** Initials avatar in the brand tint. */
 export function Avatar({ initials, className }: AvatarProps) {
   return (
     <span

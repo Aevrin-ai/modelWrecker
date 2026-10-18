@@ -4,22 +4,19 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface DropdownProps {
-  /** The trigger element. Receives nothing; wrap your own button. */
+  // the trigger element; it receives nothing, so wrap your own button
   trigger: ReactNode;
   children: ReactNode | ((close: () => void) => ReactNode);
   align?: "start" | "end";
   className?: string;
-  /** Width of the panel. */
+  // width of the panel
   panelClassName?: string;
   triggerClassName?: string;
-  /** Accessible name for icon-only triggers. */
+  // accessible name for icon-only triggers
   label?: string;
 }
 
-/**
- * A lightweight popover menu with click-outside and Escape handling. No Radix.
- * Used for the header notifications, user menu, and the project switcher.
- */
+// a popover menu with click-outside and Escape handling
 export function Dropdown({
   trigger,
   children,
@@ -103,7 +100,7 @@ export function DropdownItem({ onClick, className, children }: DropdownItemProps
 const ITEM =
   "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground";
 
-/** A menu item that navigates (a real link, not a button inside a link). */
+// a menu item that navigates (a real link, not a button inside a link)
 export function DropdownLinkItem({
   to,
   onClick,

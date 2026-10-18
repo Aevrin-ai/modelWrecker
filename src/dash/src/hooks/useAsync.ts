@@ -1,29 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface AsyncState<T> {
+export interface AsyncState<T> {
   data: T | null;
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 }
 
-/**
- * Run an async loader and expose loading / error / data for the standard
- * skeleton -> content -> error flow. Re-runs when any dependency changes.
- */
-export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): AsyncState<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [nonce, setNonce] = useState(0);
+// false after unmount, so a late answer never sets state on an unmounted component
+function useMountedRef() {
   const mounted = useRef(true);
-
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
     };
   }, []);
+  return mounted;
+}
+
+// runs the loader for the skeleton -> content -> error flow, again whenever a dependency changes
+export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): AsyncState<T> {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [nonce, setNonce] = useState(0);
+  const mounted = useMountedRef();
 
   useEffect(() => {
     let active = true;

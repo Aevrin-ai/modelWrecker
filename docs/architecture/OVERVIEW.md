@@ -130,7 +130,7 @@ modelWrecker/
 │  ├─ mcp/                    # harness-integration MCP server + safe service layer
 │  ├─ cloud/                  # device login + metadata and opt-in evidence sync
 │  ├─ entitlements/           # signed plan check, verified offline
-│  └─ cli.py                  # Typer CLI
+│  └─ cli/                    # Typer CLI, one module per command group
 ├─ src/api/                   # control-plane API: Cloudflare Worker, TypeScript
 ├─ src/web/                   # landing page
 ├─ src/dash/                  # dashboard and staff admin console

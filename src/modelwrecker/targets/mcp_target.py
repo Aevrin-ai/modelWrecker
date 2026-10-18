@@ -15,16 +15,16 @@ from __future__ import annotations
 from ..data import Observation
 from ..interfaces import Capability
 from ..providers.base import BaseProvider
-from .agent import _merge_tools, run_tool_agent, run_tool_session, tools_from_options
+from .tool_catalog import merge_tools, tools_from_options
+from .tool_session import run_tool_agent, run_tool_session
 
 
 class McpTarget:
     name = "mcp"
     version = "1"
 
-    def __init__(
-        self, provider: BaseProvider, system: str | None = None, options: dict | None = None
-    ) -> None:
+    def __init__(self, provider: BaseProvider, system: str | None = None,
+                 options: dict | None = None) -> None:
         options = options or {}
         self._provider = provider
         self._system = system
@@ -51,7 +51,7 @@ class McpTarget:
             from .mcp_client import discover_tools
 
             self._discovered = await discover_tools(self._mcp_url, sensitive=self._sensitive)
-        return _merge_tools(self._inline_tools, self._discovered or [])
+        return merge_tools(self._inline_tools, self._discovered or [])
 
     async def get_metadata(self) -> dict:
         tools = await self._catalog()
@@ -71,12 +71,10 @@ class McpTarget:
     def tools(self) -> list[dict]:
         return list(self._inline_tools)
 
-    async def run_scenario(
-        self, task: str, environment: dict[str, str], tools: list[dict] | None = None,
-        **opts: object,
-    ) -> Observation:
+    async def run_scenario(self, task: str, environment: dict[str, str],
+                           tools: list[dict] | None = None, **opts: object) -> Observation:
         """One simulated tool session. `tools` adds scenario tools to the discovered/inline ones."""
-        merged = _merge_tools(await self._catalog(), tools or [])
+        merged = merge_tools(await self._catalog(), tools or [])
         return await run_tool_session(
             self._provider, self._system, merged, task, environment, self._max_steps, **opts
         )

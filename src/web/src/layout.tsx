@@ -5,13 +5,6 @@ import { sendPageView } from "../../shared/beacon";
 import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/footer";
 
-/*
-  Every page: the floating navbar, the page, the footer. Section links
-  (`/#tests`) scroll to their section, retrying briefly while lazy sections
-  below the fold are still loading. Each page view sends the first-party,
-  cookie-free beacon (docs/analytics/page-analytics.md).
-*/
-
 function useScrollToHash() {
   const { pathname, hash } = useLocation();
   useEffect(() => {
@@ -21,19 +14,21 @@ function useScrollToHash() {
     }
     let tries = 0;
     let timer: ReturnType<typeof setTimeout>;
-    const go = () => {
-      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+    // retries briefly while the lazy sections below the fold are still loading
+    const scrollToTarget = () => {
+      const target = document.getElementById(decodeURIComponent(hash.slice(1)));
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (tries++ < 40) {
-        timer = setTimeout(go, 50);
+        timer = setTimeout(scrollToTarget, 50);
       }
     };
-    go();
+    scrollToTarget();
     return () => clearTimeout(timer);
   }, [pathname, hash]);
 }
 
+// every page: the floating navbar, the page, the footer, and one first-party, cookie-free page-view beacon
 export function Layout() {
   const { pathname } = useLocation();
   useScrollToHash();

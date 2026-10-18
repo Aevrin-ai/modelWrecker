@@ -1,29 +1,15 @@
-// Cloudflare Pages advanced-mode Worker for vyra.aevrin.ai (copied to the site root by deploy-web.yml).
-//
-// Why this exists: Pages applies _redirects rules BEFORE static files, so a catch-all SPA rewrite such as
-// "/dashboard/* /dashboard/ 200" also answers the dashboard's own JS and CSS with HTML. This Worker only
-// rewrites page paths (no file extension) under /dashboard/ and /admin to the dashboard shell. Real files,
-// and every other path, go straight to the static assets. Unknown landing paths fall back to the landing
-// page through Pages' default single-page-app behavior (there is no top-level 404.html).
-// /api/* never reaches this Worker: the aevrin-api Worker route on the zone takes it first.
-//
-// /admin is the staff console (docs/security/admin.md). It is the same dashboard build; the API decides
-// who may use it. Its pages are never indexed, framed, or cached.
-//
-// Every HTML page gets a Content-Security-Policy (docs/security/SECURITY.md). Scripts run only from this
-// site, Razorpay Checkout, and Cloudflare Web Analytics, plus the landing page's own inline scripts by
-// hash. deploy-web.yml fills in __INLINE_SCRIPT_HASHES__ with those hashes (csp-hashes.mjs). The
-// per-request nonce is for the bot-check script Cloudflare injects at the edge: Cloudflare copies the
-// nonce from this header onto it.
+// the Pages advanced-mode Worker for vyra.aevrin.ai (copied by deploy-web.yml); the API Worker route takes /api/* first
 
+// deploy-web.yml runs csp-hashes.mjs, which replaces this placeholder with the landing page's inline-script hashes
 const INLINE_SCRIPT_HASHES = "__INLINE_SCRIPT_HASHES__";
 
+// every HTML page gets this CSP: scripts only from this site, Razorpay Checkout, Cloudflare Web Analytics and hashes
 function contentSecurityPolicy(nonce) {
   const hashes = INLINE_SCRIPT_HASHES.startsWith("__") ? "" : ` ${INLINE_SCRIPT_HASHES}`;
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'${hashes} https://*.razorpay.com https://static.cloudflareinsights.com`,
-    // Inline style attributes come from the prerendered page and the animation library.
+    // inline style attributes come from the prerendered page and the animation library
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://*.razorpay.com",
@@ -37,6 +23,7 @@ function contentSecurityPolicy(nonce) {
   ].join("; ");
 }
 
+// a per-request nonce for the bot-check script Cloudflare injects at the edge; it copies the nonce from this header
 function newNonce() {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return btoa(String.fromCharCode(...bytes));
@@ -52,6 +39,7 @@ function withPageHeaders(response, extra = {}) {
   return res;
 }
 
+// no _redirects file: Pages applies it before static files, so an SPA rewrite would answer the dashboard's JS with HTML
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -61,6 +49,7 @@ export default {
     if (path.startsWith("/dashboard/") && isPage) {
       return withPageHeaders(await env.ASSETS.fetch(new Request(new URL("/dashboard/", url), request)));
     }
+    // /admin is the staff console (docs/security/admin.md): the API decides who may use it; never indexed, framed or cached
     if ((path === "/admin" || path.startsWith("/admin/")) && isPage) {
       const shell = await env.ASSETS.fetch(new Request(new URL("/dashboard/", url), request));
       return withPageHeaders(shell, {

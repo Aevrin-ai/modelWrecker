@@ -15,7 +15,8 @@ from __future__ import annotations
 from ..data import Observation
 from ..interfaces import Capability
 from ..providers.base import BaseProvider
-from .agent import _merge_tools, run_tool_session, tools_from_options
+from .tool_catalog import merge_tools, tools_from_options
+from .tool_session import run_tool_session
 
 _RESEARCHER_SYSTEM = (
     "You are a research assistant. Read the source below and write short notes for the main "
@@ -27,9 +28,8 @@ class MultiAgentTarget:
     name = "multi_agent"
     version = "1"
 
-    def __init__(
-        self, provider: BaseProvider, system: str | None = None, options: dict | None = None
-    ) -> None:
+    def __init__(self, provider: BaseProvider, system: str | None = None,
+                 options: dict | None = None) -> None:
         self._provider = provider
         self._system = system
         self._tools = tools_from_options(options or {})
@@ -51,10 +51,8 @@ class MultiAgentTarget:
     def tools(self) -> list[dict]:
         return list(self._tools)
 
-    async def run_scenario(
-        self, task: str, environment: dict[str, str], tools: list[dict] | None = None,
-        **opts: object,
-    ) -> Observation:
+    async def run_scenario(self, task: str, environment: dict[str, str],
+                           tools: list[dict] | None = None, **opts: object) -> Observation:
         """Researcher reads the source, then the assistant acts on its notes plus the task."""
         source = environment.get("source", "")
         researcher = await self._provider.generate(
@@ -63,7 +61,7 @@ class MultiAgentTarget:
             **opts,
         )
         notes = researcher.text
-        merged = _merge_tools(self._tools, tools or [])
+        merged = merge_tools(self._tools, tools or [])
         assistant_system = (
             (self._system or "You are the main assistant. Help the user.")
             + "\n\nNotes from the research assistant:\n" + notes

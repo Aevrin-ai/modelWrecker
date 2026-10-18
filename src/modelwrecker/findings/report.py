@@ -50,54 +50,59 @@ def _result_label(outcome: str) -> str:
 
 
 def render_markdown(findings: list[Finding], run_id: str, attempts: list | None = None) -> str:
+    """The run report: a summary, each finding, then every attempt's prompt and reply."""
     lines = [f"# modelWrecker report - run {run_id}", ""]
-
-    # Summary.
     if findings:
         lines.append(f"**{len(findings)} finding(s).**")
     else:
         lines.append("**No findings.** The target refused or the attacks did not hold on replay.")
     lines.append("")
+    for finding in findings:
+        lines += _finding_lines(finding)
+    if attempts:
+        lines += _transcript_lines(attempts)
+    return "\n".join(lines)
 
-    # Findings, with the exact prompt and response.
-    for f in findings:
-        tax = ", ".join(f"{t.framework}:{t.id} ({t.title})" for t in f.taxonomy) or "none"
+
+def _finding_lines(finding: Finding) -> list[str]:
+    tax = ", ".join(f"{t.framework}:{t.id} ({t.title})" for t in finding.taxonomy) or "none"
+    return [
+        f"## Finding: {finding.severity.value.upper()} - {finding.title}",
+        "",
+        f"- id: `{finding.id}`",
+        f"- taxonomy: {tax}",
+        f"- status: {finding.status.value}",
+        "",
+        finding.summary,
+        "",
+    ]
+
+
+def _transcript_lines(attempts: list) -> list[str]:
+    """What we sent and what the model replied, for every attempt, grouped by objective."""
+    lines = ["## Attempt transcript", "",
+             "Every attack attempt, what the model was sent, its reply, and the result.", ""]
+    current_objective = None
+    for attempt in attempts:
+        fields = _attempt_fields(attempt)
+        if fields["objective"] != current_objective:
+            current_objective = fields["objective"]
+            lines += [f"### Objective: {current_objective}", ""]
         lines += [
-            f"## Finding: {f.severity.value.upper()} - {f.title}",
+            f"**Strategy:** `{fields['strategy']}`  -  "
+            f"**Result:** {_result_label(fields['outcome'])} (score {fields['score']}/10)",
             "",
-            f"- id: `{f.id}`",
-            f"- taxonomy: {tax}",
-            f"- status: {f.status.value}",
-            "",
-            f.summary,
+            "_Prompt sent to the model:_",
+            "```",
+            _clip(fields["prompt_sent"]),
+            "```",
+            "_Model response:_",
+            "```",
+            _clip(fields["model_response"]),
+            "```",
             "",
         ]
-
-    # Full attempt transcript: what we sent and what the model replied, for every attempt.
-    if attempts:
-        lines += ["## Attempt transcript", "",
-                  "Every attack attempt, what the model was sent, its reply, and the result.", ""]
-        current_objective = None
-        for a in attempts:
-            d = _attempt_fields(a)
-            if d["objective"] != current_objective:
-                current_objective = d["objective"]
-                lines += [f"### Objective: {current_objective}", ""]
-            lines += [
-                f"**Strategy:** `{d['strategy']}`  -  **Result:** {_result_label(d['outcome'])} "
-                f"(score {d['score']}/10)",
-                "",
-                "_Prompt sent to the model:_",
-                "```",
-                _clip(d["prompt_sent"]),
-                "```",
-                "_Model response:_",
-                "```",
-                _clip(d["model_response"]),
-                "```",
-                "",
-            ]
-    return "\n".join(lines)
+    return lines
 
 
 def render_json(findings: list[Finding], run_id: str, attempts: list | None = None) -> str:

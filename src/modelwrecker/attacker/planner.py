@@ -16,8 +16,7 @@ _AUTO_ORDER: dict[str, list[str]] = {
     "system_prompt_leak": ["prompt_extraction", "direct_jailbreak"],
     "pii_leak": ["prompt_extraction", "direct_jailbreak"],
     "sensitive_info": ["prompt_extraction", "direct_jailbreak"],
-    # Phase 9 target-specific categories. A strategy whose required capability the target lacks is
-    # skipped by the loop, so listing several here is safe across target types.
+    # the loop skips a strategy the target cannot support, so several here are safe for any target
     "tool_misuse": ["tool_misuse"],
     "excessive_agency": ["tool_misuse"],
     "agent_hijack": ["tool_misuse"],

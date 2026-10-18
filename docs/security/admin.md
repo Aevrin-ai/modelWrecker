@@ -79,7 +79,9 @@ user, the time, the address, and the details. Audit entries are kept when a user
 
 ## Where it lives
 
-- API: `src/api/src/routes/admin.ts`, `src/api/src/admin/totp.ts`, `src/api/src/routes/collect.ts`.
+- API: `src/api/src/routes/admin.ts` (the route table), its handlers in `src/api/src/controllers/admin/`, the
+  authenticator in `src/api/src/services/admin/totp.ts`, and page analytics in `src/api/src/routes/collect.ts`
+  with `src/api/src/services/pageViews.ts`.
 - UI: `src/dash/src/admin/` (a separate chunk that loads only under `/admin/`).
 - Database: `deploy/supabase/migrations/0005_admin.sql`. `admin_mfa`, `admin_sessions`, `admin_audit`, and
   `page_views` have RLS on and **no policies**, so only the API's server key can read them. The aggregate

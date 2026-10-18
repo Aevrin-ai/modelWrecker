@@ -15,15 +15,13 @@ import time
 
 from .model import FEATURES, METERS, Entitlement
 
-# Public keys only (safe to publish). The cloud lists the active key at /api/v1/entitlements/keys.
-# Rotating the signing key means adding the new public key here in a release before the cloud uses
-# it.
+# public keys only (safe to publish); a rotated key ships here in a release before the cloud uses it
 TRUSTED_KEYS: dict[str, str] = {
     "2026-10-a": "trSV1ue_ymSzW9Ga60p5rH2maEuebDE_Dk72NHicYp4",
 }
 ISSUERS = frozenset({"https://app.aevrin.net"})
 
-# Tests replace these with their own key and issuer.
+# tests replace these with their own key and issuer
 _keys_override: dict[str, str] | None = None
 _issuers_override: frozenset[str] | None = None
 
@@ -51,10 +49,21 @@ def _issuers() -> frozenset[str]:
 
 
 def verify_token(token: str, *, now: float | None = None) -> Entitlement:
-    """Return the entitlement in `token`, or raise EntitlementError."""
-    from cryptography.exceptions import InvalidSignature
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    """Return the entitlement in `token`, or raise EntitlementError.
 
+    The checks run in this order: form, JSON shape, algorithm, signing key, signature, issuer and
+    version, then the time window. Nothing in the payload is used before the signature matches.
+    """
+    parts, header, payload = _decode(token)
+    kid = _verify_signature(parts, header)
+    if payload.get("v") != 1 or payload.get("iss") not in _issuers():
+        raise EntitlementError("the entitlement is from an unexpected issuer or version")
+    iat, exp = _time_window(payload, time.time() if now is None else now)
+    return _entitlement_from(payload, kid, iat, exp)
+
+
+def _decode(token: str) -> tuple[list[str], dict, dict]:
+    """Split a token into its three parts and decode the header and payload JSON."""
     token = (token or "").strip()
     if not token or len(token) > MAX_TOKEN_BYTES:
         raise EntitlementError("no entitlement, or it is too large")
@@ -70,6 +79,14 @@ def verify_token(token: str, *, now: float | None = None) -> Entitlement:
         raise EntitlementError("the entitlement has an unexpected shape")
     if header.get("alg") != "EdDSA" or header.get("typ") != "mw-entitlement":
         raise EntitlementError("the entitlement uses an unexpected algorithm")
+    return parts, header, payload
+
+
+def _verify_signature(parts: list[str], header: dict) -> str:
+    """Check the Ed25519 signature with a trusted public key; return the key id."""
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
     kid = str(header.get("kid") or "")
     public = _keys().get(kid)
     if not public:
@@ -80,10 +97,10 @@ def verify_token(token: str, *, now: float | None = None) -> Entitlement:
             _b64(parts[2]), f"{parts[0]}.{parts[1]}".encode("ascii"))
     except (InvalidSignature, ValueError) as e:
         raise EntitlementError("the entitlement signature does not match") from e
+    return kid
 
-    if payload.get("v") != 1 or payload.get("iss") not in _issuers():
-        raise EntitlementError("the entitlement is from an unexpected issuer or version")
-    now = time.time() if now is None else now
+
+def _time_window(payload: dict, now: float) -> tuple[int, int]:
     try:
         iat, exp = int(payload["iat"]), int(payload["exp"])
     except (KeyError, TypeError, ValueError) as e:
@@ -92,16 +109,19 @@ def verify_token(token: str, *, now: float | None = None) -> Entitlement:
         raise EntitlementError("the entitlement is dated in the future; check this machine's clock")
     if exp <= now:
         raise EntitlementError("the entitlement has expired")
+    return iat, exp
 
+
+def _entitlement_from(payload: dict, kid: str, iat: int, exp: int) -> Entitlement:
     limits_raw = payload.get("limits") or {}
     features_raw = payload.get("features") or {}
     if not isinstance(limits_raw, dict) or not isinstance(features_raw, dict):
         raise EntitlementError("the entitlement has an unexpected shape")
     limits: dict[str, int | None] = {}
-    for m in METERS:
-        v = limits_raw.get(m)
-        limits[m] = None if v is None else max(0, int(v))
-    features = {f: features_raw.get(f) is True for f in FEATURES}
+    for meter in METERS:
+        value = limits_raw.get(meter)
+        limits[meter] = None if value is None else max(0, int(value))
+    features = {feature: features_raw.get(feature) is True for feature in FEATURES}
     usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
     return Entitlement(
         plan=str(payload.get("plan") or "free"),

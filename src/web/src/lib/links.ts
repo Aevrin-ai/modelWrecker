@@ -1,4 +1,4 @@
-// Every address the site links to, in one place.
+// every address the site links to, in one place
 export const APP_URL = "https://vyra.aevrin.ai/dashboard/";
 export const BILLING_URL = "https://vyra.aevrin.ai/dashboard/billing";
 export const DEMO_URL = "https://aevrin.net/contact";

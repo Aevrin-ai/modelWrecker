@@ -47,18 +47,11 @@ def resolve_taxonomy(candidates: list[TaxonomyRef]) -> list[TaxonomyRef]:
     return out
 
 
-def build_evidence(
-    *,
-    objective: Objective,
-    attempt: Attempt,
-    observation: Observation,
-    verdict: Verdict,
-    reliability: ReliabilityResult,
-    target_meta: dict,
-    config_snapshot: dict,
-    strategy: str,
-    strategy_params: dict | None = None,
-) -> Evidence:
+def build_evidence(*, objective: Objective, attempt: Attempt, observation: Observation,
+                   verdict: Verdict, reliability: ReliabilityResult, target_meta: dict,
+                   config_snapshot: dict, strategy: str,
+                   strategy_params: dict | None = None) -> Evidence:
+    """The evidence record for one verified success: what was sent, the reply, and the verdict."""
     return Evidence(
         target=target_meta,
         objective=objective,
@@ -80,16 +73,10 @@ def build_evidence(
     )
 
 
-def build_finding(
-    *,
-    objective: Objective,
-    attempt: Attempt,
-    verdict: Verdict,
-    reliability: ReliabilityResult,
-    candidate_taxonomy: list[TaxonomyRef],
-    run_id: str,
-    evidence_id: str,
-) -> Finding:
+def build_finding(*, objective: Objective, attempt: Attempt, verdict: Verdict,
+                  reliability: ReliabilityResult, candidate_taxonomy: list[TaxonomyRef],
+                  run_id: str, evidence_id: str) -> Finding:
+    """The finding for one verified success, with severity from score and replay confidence."""
     severity = _severity(verdict.score, reliability.confidence)
     taxonomy = resolve_taxonomy(candidate_taxonomy)
     return Finding(

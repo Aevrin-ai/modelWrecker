@@ -1,20 +1,4 @@
-/*
-  The ApiClient interface is the ONE swap point between the UI and the backend.
-
-  The whole dashboard talks to this interface only. Two implementations exist:
-  MockApiClient (reads src/data/mock, the default) and HttpApiClient (the real
-  control-plane API, chosen with VITE_API_MODE=http). src/api/index.ts picks one.
-  No page or component imports mock data directly, so nothing in the UI changes.
-
-  Boundary: this is a management API. There is deliberately no method to execute an
-  attack, run a target, call a model, run a shell command, or make an arbitrary network
-  request. The strongest campaign action is `markCampaignReady`, which only flags a
-  campaign so the user's local engine can pick it up.
-
-  Security note (enforced server-side, not here): every method is scoped to the
-  authenticated user's organization. The client never trusts a client-side role,
-  plan, or project id. See docs/architecture/cloud-control-plane.md.
-*/
+// the one swap point between the UI and the backend; no method runs an attack, a target, a model, or a shell
 
 import type {
   Account,
@@ -63,8 +47,7 @@ export interface NewTargetInput {
   endpoint: string;
   model: string;
   projectId: string;
-  /** The user confirms they are allowed to test this system. Required. */
-  authorized: true;
+  authorized: true; // the user confirms they are allowed to test this system
 }
 
 export interface NewCampaignInput {
@@ -78,24 +61,23 @@ export interface NewCampaignInput {
   maxAttempts: number | null;
 }
 
-/** A metadata export the dashboard can build from synced records. */
+// a metadata export the dashboard can build from synced records
 export interface ExportedFile {
   filename: string;
   mime: string;
   content: string;
 }
 
-/** Result of POST /device/approve: `{ approved: true }` or `{ denied: true }`. */
+// POST /device/approve answers `{ approved: true }` or `{ denied: true }`
 export interface DeviceApproval {
   approved?: boolean;
   denied?: boolean;
 }
 
+// every method is scoped to the signed-in user's organization on the server, never by a client-side role
 export interface ApiClient {
-  // overview
   getOverview(projectId?: string): Promise<OverviewStats>;
 
-  // projects
   listProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | null>;
   createProject(input: NewProjectInput): Promise<Project>;
@@ -107,65 +89,50 @@ export interface ApiClient {
   getTarget(id: string): Promise<Target | null>;
   createTarget(input: NewTargetInput): Promise<Target>;
 
-  // campaigns
   listCampaigns(filter?: ListFilter): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | null>;
   getCampaignTimeline(id: string): Promise<CampaignTimelineEvent[]>;
   getCampaignStats(id: string): Promise<CampaignStats | null>;
-  /** Every synced attempt per run. Runs synced without transcript sync come back with `synced: false`. */
+  // runs synced without transcript sync come back with `synced: false`
   getCampaignTranscript(id: string): Promise<CampaignTranscript | null>;
   createCampaign(input: NewCampaignInput): Promise<Campaign>;
   renameCampaign(id: string, name: string): Promise<Campaign>;
-  /** draft -> ready. The local engine picks it up; the cloud never runs it. */
+  // draft -> ready: the local engine picks it up, the cloud never runs it
   markCampaignReady(id: string): Promise<Campaign>;
-  /** ready -> draft, before an engine has picked it up. */
+  // ready -> draft, before an engine has picked it up
   unmarkCampaignReady(id: string): Promise<Campaign>;
   deleteCampaign(id: string): Promise<void>;
 
-  // findings
   listFindings(filter?: ListFilter): Promise<Finding[]>;
   getFinding(id: string): Promise<Finding | null>;
-  /** Lifecycle only. Never mutates the original local evidence. */
+  // lifecycle only, never mutates the original local evidence
   updateFindingStatus(id: string, status: FindingStatus): Promise<Finding>;
 
-  // devices
   listDevices(filter?: ListFilter): Promise<Device[]>;
   getDevice(id: string): Promise<Device | null>;
   renameDevice(id: string, name: string): Promise<Device>;
-  /** Revokes the device's scoped sync token. The device falls back to local-only mode. */
+  // revoking the scoped sync token drops the device back to local-only mode
   revokeDevice(id: string): Promise<void>;
-  /**
-   * Approve or deny a `modelwrecker login` request by its user code (XXXX-XXXX), the RFC 8628
-   * device flow. On approve the engine receives its scoped device token on its next poll; the
-   * device record is created then. The user's Google token is never involved.
-   */
+  // RFC 8628 device flow by user code (XXXX-XXXX); the engine gets a scoped token, never the Google token
   approveDevice(userCode: string, projectId: string | null, approve: boolean): Promise<DeviceApproval>;
 
-  // analytics
   getAnalytics(projectId?: string): Promise<AnalyticsSummary>;
 
-  // reports
   listReports(filter?: ListFilter): Promise<Report[]>;
-  /** Export a synced report's metadata. Refuses reports that are local-only. */
+  // refuses reports that are local-only
   exportReport(id: string, format: ReportFormat): Promise<ExportedFile>;
 
   // billing (docs/billing/razorpay.md)
   getSubscription(): Promise<Subscription>;
   listPlans(): Promise<Plan[]>;
   listInvoices(): Promise<Invoice[]>;
-  /** Create a Razorpay order for a prepaid period, or pay it fully from account credit. */
   startCheckout(planId: "pro", interval: BillingInterval): Promise<CheckoutStart>;
-  /**
-   * Hand the ids Checkout returned to the server. The server checks the signature and asks Razorpay
-   * itself before anything changes; the browser's word is never proof of payment.
-   */
+  // the server checks the signature and asks Razorpay itself; the browser's word is never proof of payment
   confirmPayment(result: CheckoutSuccess): Promise<PaymentConfirmation>;
 
-  // settings
   getSettings(): Promise<WorkspaceSettings>;
   updateSettings(patch: Partial<WorkspaceSettings>): Promise<WorkspaceSettings>;
 
-  // account + chrome
   getAccount(): Promise<Account>;
   updateAccount(patch: Pick<Account, "name">): Promise<Account>;
   listNotifications(): Promise<NotificationItem[]>;

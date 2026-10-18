@@ -1,8 +1,4 @@
-/*
-  Static UI constants: navigation, severity ordering, and the display metadata the
-  dashboard needs that is not part of the synced data model. Kept out of components so
-  there is one source of truth. No statistics here - those come from the API layer.
-*/
+// static UI constants: navigation, ordering, and display metadata that is not part of the synced data
 
 import type {
   CampaignStatus,
@@ -33,11 +29,10 @@ interface NavItem {
   label: string;
   to: string;
   icon: LucideIcon;
-  /** Grouping header for the sidebar. */
-  group: "Monitor" | "Manage" | "Account";
+  group: "Monitor" | "Manage" | "Account"; // the sidebar group header
 }
 
-/** Primary sidebar navigation. Order matters. */
+// the sidebar shows these in this order
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", to: "/", icon: LayoutDashboard, group: "Monitor" },
   { label: "Analytics", to: "/analytics", icon: BarChart3, group: "Monitor" },
@@ -57,10 +52,10 @@ export const NAV_ITEMS: NavItem[] = [
 
 export const NAV_GROUPS: NavItem["group"][] = ["Monitor", "Manage", "Account"];
 
-/** Severities from most to least severe - the canonical display order. */
+// severities from most to least severe, the canonical display order
 export const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 
-/** Short human labels for enums that are stored as snake_case or kebab-case. */
+// short human labels for enums that are stored as snake_case or kebab-case
 export const FINDING_STATUS_LABEL: Record<FindingStatus, string> = {
   open: "Open",
   triaged: "Triaged",
@@ -99,10 +94,10 @@ export const OUTCOME_LABEL: Record<Outcome, string> = {
   error: "Error",
 };
 
-/** Every target type, in display order (chat / agent / rag / mcp are the real engine types). */
+// every target type, in display order (chat / agent / rag / mcp are the real engine types)
 export const TARGET_TYPES = ["chat", "agent", "rag", "mcp"] as const satisfies readonly TargetType[];
 
-/** Target-type display names (chat / agent / rag / mcp are the real engine types). */
+// target-type display names (chat / agent / rag / mcp are the real engine types)
 export const TARGET_TYPE_LABEL: Record<TargetType, string> = {
   chat: "Chat",
   agent: "Agent",
@@ -110,7 +105,7 @@ export const TARGET_TYPE_LABEL: Record<TargetType, string> = {
   mcp: "MCP",
 };
 
-/** Human description of each target type, for tooltips and detail pages. */
+// human description of each target type, for tooltips and detail pages
 export const TARGET_TYPE_DESCRIPTION: Record<TargetType, string> = {
   chat: "A single-turn or multi-turn conversational model.",
   agent: "A tool-using agent whose tool calls can be observed.",
@@ -118,11 +113,7 @@ export const TARGET_TYPE_DESCRIPTION: Record<TargetType, string> = {
   mcp: "An agent connected to tools over the Model Context Protocol.",
 };
 
-/**
- * Strategies registered in the engine (docs/attack-engine/STRATEGIES.md, `modelwrecker
- * strategies`). `targets` lists the target types each one applies to. The dashboard only
- * records the choice in campaign config; the local engine runs them.
- */
+// engine strategies (docs/attack-engine/STRATEGIES.md) and the target types each fits; the local engine runs them
 export const STRATEGIES: { id: string; targets: TargetType[]; advanced?: boolean }[] = [
   { id: "direct_jailbreak", targets: ["chat", "agent", "rag", "mcp"] },
   { id: "prompt_extraction", targets: ["chat", "agent", "rag", "mcp"] },
@@ -140,7 +131,7 @@ export const STRATEGIES: { id: string; targets: TargetType[]; advanced?: boolean
   { id: "mcp_tool_poisoning", targets: ["mcp"] },
 ];
 
-/** Campaign stop conditions (`--stop-on complete|first_finding|budget`). */
+// campaign stop conditions (`--stop-on complete|first_finding|budget`)
 export const STOP_CONDITION_LABEL: Record<"complete" | "first_finding" | "budget", string> = {
   complete: "Run all objectives",
   first_finding: "Stop on first finding",

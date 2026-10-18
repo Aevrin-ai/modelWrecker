@@ -3,12 +3,6 @@ import { Reveal } from "@/components/ui/reveal";
 import { PaintedPanel } from "@/components/ui/scene";
 import { JudgeMockup } from "@/components/mockups/judge-mockup";
 
-/*
-  Why a "Worked" from modelWrecker means something: the judge is its own
-  model, it is tested on harmless replies before it judges anything, and it
-  weighs several signs instead of one guess.
-*/
-
 const POINTS = [
   {
     title: "Checked first",
@@ -18,6 +12,7 @@ const POINTS = [
   { title: "Never the attacker", text: "The model that attacks is never the model that judges." },
 ];
 
+// why a "Worked" means something: a separate judge, tested on harmless replies first, weighing several signs
 export function Judge() {
   return (
     <Section id="judge" labelledBy="judge-heading">

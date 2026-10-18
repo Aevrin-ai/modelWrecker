@@ -16,11 +16,7 @@ import {
 } from "@/components/ui/solar-icons";
 import { AEVRIN_MCP_URL, AEVRIN_URL, DEMO_URL, DOCS_URL } from "@/lib/links";
 
-/*
-  The navigation menus. Each item is a section of this page (`/#id`) or
-  another site (`https://...`). Kept wide and short: two or three columns side
-  by side, so the panel stays low.
-*/
+// each item is a section of this page (`/#id`) or another site; two or three columns side by side keep the panel low
 export type NavItem = { title: string; description: string; href: string; icon: IconComponent };
 export type NavColumn = { heading: string; items: NavItem[] };
 type NavMenu = { id: string; label: string; columns: NavColumn[] };

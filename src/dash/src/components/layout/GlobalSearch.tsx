@@ -1,25 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, CornerDownLeft } from "lucide-react";
+import { Search } from "lucide-react";
 import { apiClient } from "@/api";
 import type { SearchResult } from "@/types";
-import { cn } from "@/lib/utils";
+import { SearchResultsList } from "./SearchResultsList";
 
-const KIND_LABEL: Record<SearchResult["kind"], string> = {
-  project: "Project",
-  target: "Target",
-  campaign: "Campaign",
-  finding: "Finding",
-  device: "Device",
-  report: "Report",
-};
+// waits for a short typing pause before asking the API
+const SEARCH_DEBOUNCE_MS = 180;
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -29,36 +23,34 @@ export function GlobalSearch() {
       return;
     }
     let live = true;
-    const t = setTimeout(() => {
+    const debounceTimer = setTimeout(() => {
       apiClient
         .search(query)
-        .then((r) => {
+        .then((found) => {
           if (live) {
-            setResults(r);
+            setResults(found);
             setActive(0);
           }
         })
         .catch(() => {
           if (live) setResults([]);
         });
-    }, 180);
+    }, SEARCH_DEBOUNCE_MS);
     return () => {
       live = false;
-      clearTimeout(t);
+      clearTimeout(debounceTimer);
     };
   }, [query]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/") {
-        if (document.activeElement?.tagName !== "INPUT") {
-          e.preventDefault();
-          inputRef.current?.focus();
-        }
-      }
+      const isShortcut = (e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/";
+      if (!isShortcut || document.activeElement?.tagName === "INPUT") return;
+      e.preventDefault();
+      inputRef.current?.focus();
     }
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
@@ -68,8 +60,8 @@ export function GlobalSearch() {
     };
   }, []);
 
-  function go(r: SearchResult) {
-    navigate(r.href);
+  function openResult(result: SearchResult) {
+    navigate(result.href);
     setOpen(false);
     setQuery("");
     inputRef.current?.blur();
@@ -79,20 +71,20 @@ export function GlobalSearch() {
     if (!open || results.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((a) => (a + 1) % results.length);
+      setActive((index) => (index + 1) % results.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActive((a) => (a - 1 + results.length) % results.length);
+      setActive((index) => (index - 1 + results.length) % results.length);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      go(results[active]);
+      openResult(results[active]);
     } else if (e.key === "Escape") {
       setOpen(false);
     }
   }
 
   return (
-    <div ref={ref} className="relative w-full max-w-md">
+    <div ref={containerRef} className="relative w-full max-w-md">
       <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
         ref={inputRef}
@@ -112,33 +104,7 @@ export function GlobalSearch() {
       </kbd>
 
       {open && query.trim() && (
-        <div className="absolute left-0 top-10 z-50 w-[min(28rem,calc(100vw-1rem))] overflow-hidden rounded-md border bg-popover p-1 shadow-popover animate-fade-in">
-          {results.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No matches for &ldquo;{query}&rdquo;
-            </p>
-          ) : (
-            results.map((r, i) => (
-              <button
-                key={`${r.kind}-${r.id}`}
-                type="button"
-                onMouseEnter={() => setActive(i)}
-                onClick={() => go(r)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm",
-                  i === active ? "bg-accent text-accent-foreground" : "hover:bg-accent/60",
-                )}
-              >
-                <span className="min-w-14 shrink-0 text-xs font-medium text-muted-foreground">
-                  {KIND_LABEL[r.kind]}
-                </span>
-                <span className="flex-1 truncate">{r.title}</span>
-                <span className="truncate text-xs text-muted-foreground">{r.subtitle}</span>
-                {i === active && <CornerDownLeft className="size-3.5 shrink-0 text-muted-foreground" />}
-              </button>
-            ))
-          )}
-        </div>
+        <SearchResultsList query={query} results={results} activeIndex={active} onHover={setActive} onSelect={openResult} />
       )}
     </div>
   );

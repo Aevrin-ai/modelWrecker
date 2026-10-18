@@ -33,9 +33,6 @@ def test_cli_prints_the_version(args: list[str]) -> None:
     assert result.output.strip() == f"modelwrecker {__version__}"
 
 
-# --- data models ----------------------------------------------------------------------------------
-
-
 def test_data_round_trip() -> None:
     obj = Objective(title="Leak the system prompt", category="system_prompt_leak")
     v = Verdict(observation_id="x", outcome=Outcome.SUCCESS, score=9)
@@ -46,12 +43,8 @@ def test_data_round_trip() -> None:
     assert Finding.model_validate_json(f.model_dump_json()).objective_id == obj.id
 
 
-# --- config ---------------------------------------------------------------------------------------
-
-
 def test_endpoint_rejects_unknown_protocol() -> None:
-    # Pydantic re-wraps the validator's ConfigError as a ValidationError on direct construction;
-    # both subclass ValueError. The ConfigError surface is guaranteed at the load_config boundary.
+    # direct construction wraps ConfigError in a ValidationError; load_config raises ConfigError
     with pytest.raises(ValueError):
         Endpoint(protocol="smoke-signals", model="x")
 
@@ -73,9 +66,6 @@ def test_require_full_raises_when_incomplete() -> None:
     cfg = Config(target=Endpoint(protocol="any_llm", model="m"))
     with pytest.raises(ConfigError):
         cfg.require_full()
-
-
-# --- egress guard ---------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -107,11 +97,9 @@ def test_allow_private_escape_hatch() -> None:
     assert is_blocked_host("169.254.169.254", allow_private=True) is True
 
 
-# --- redaction ------------------------------------------------------------------------------------
-
-
 def test_redact_text_patterns() -> None:
-    assert "sk-" not in redact_text("key is sk-ABCDEFGHIJKLMNOP1234")
+    fake_key = "sk-" + "ABCDEFGHIJKLMNOP1234"
+    assert "sk-" not in redact_text(f"key is {fake_key}")
     assert "REDACTED" in redact_text("Authorization: Bearer abcdefghijklmnop")
 
 
@@ -120,9 +108,6 @@ def test_redact_dict_keys() -> None:
     assert out["api_key"] == "[REDACTED]"
     assert out["nested"]["password"] == "[REDACTED]"
     assert out["nested"]["ok"] == "value"
-
-
-# --- taxonomy -------------------------------------------------------------------------------------
 
 
 def test_taxonomy_valid_entry_fills_title() -> None:

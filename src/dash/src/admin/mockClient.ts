@@ -1,7 +1,4 @@
-/*
-  Admin console demo data for local preview (mock mode). No network, no real accounts. The flow is the
-  same as live: setup shows a QR code, then any 6-digit code opens a session. Changes last for the tab.
-*/
+// admin demo data for mock mode: no network, no real accounts; any 6-digit code opens a session for the tab
 
 import type {
   AdminClient,
@@ -11,11 +8,15 @@ import type {
   PaymentRow,
   Traffic,
   UserDetail,
-} from "./client";
+} from "./adminTypes";
 
-const day = 86_400_000;
-const ago = (d: number) => new Date(Date.now() - d * day).toISOString();
-const wait = <T>(v: T, ms = 200) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), ms));
+const DAY_MS = 86_400_000;
+// a widely published demo authenticator secret, never a real one
+const DEMO_TOTP_SECRET = "JBSWY3DPEHPK3PXP".repeat(2);
+const DEMO_OTPAUTH_URI = `otpauth://totp/Aevrin%20Admin:ops%40aevrin.net?secret=${DEMO_TOTP_SECRET}&issuer=Aevrin%20Admin&algorithm=SHA1&digits=6&period=30`;
+
+const ago = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString();
+const wait = <T>(value: T, ms = 200) => new Promise<T>((resolve) => setTimeout(() => resolve(structuredClone(value)), ms));
 
 let enrolled = false;
 let session: string | null = null;
@@ -38,50 +39,50 @@ const payments: PaymentRow[] = [
 ];
 
 function detail(id: string): UserDetail {
-  const u = users.find((x) => x.id === id) ?? users[0];
-  const pro = u.effective_plan !== "free";
+  const row = users.find((candidate) => candidate.id === id) ?? users[0];
+  const isPaid = row.effective_plan !== "free";
   return {
-    id: u.id,
-    email: u.email,
-    name: u.display_name ?? "",
-    createdAt: u.created_at,
-    suspendedAt: u.suspended_at,
-    suspendedReason: u.suspended_at ? "Abuse report" : null,
+    id: row.id,
+    email: row.email,
+    name: row.display_name ?? "",
+    createdAt: row.created_at,
+    suspendedAt: row.suspended_at,
+    suspendedReason: row.suspended_at ? "Abuse report" : null,
     isStaff: false,
     staffMfaEnrolled: false,
-    account: { lastSignInAt: u.last_sign_in_at, bannedUntil: u.suspended_at ? "2126-01-01T00:00:00Z" : null, providers: ["google"] },
+    account: { lastSignInAt: row.last_sign_in_at, bannedUntil: row.suspended_at ? "2126-01-01T00:00:00Z" : null, providers: ["google"] },
     subscription: {
-      effectivePlan: u.effective_plan,
-      storedPlan: u.effective_plan,
+      effectivePlan: row.effective_plan,
+      storedPlan: row.effective_plan,
       lapsed: false,
       status: "active",
-      source: u.source ?? "free",
-      interval: u.effective_plan === "pro" ? "month" : null,
-      paidUntil: u.current_period_end,
-      creditPaise: u.credit_paise,
+      source: row.source ?? "free",
+      interval: row.effective_plan === "pro" ? "month" : null,
+      paidUntil: row.current_period_end,
+      creditPaise: row.credit_paise,
       bonus: { campaigns: 0, attacks: 0, devices: 0, projects: 0, expires_at: null },
-      limits: pro ? { campaigns: 300, attacks: 100000, devices: 10, projects: 25 } : { campaigns: 20, attacks: 2000, devices: 1, projects: 2 },
-      features: { advanced_strategies: pro, mcp: pro, analytics: pro, evidence_storage: pro, enterprise: u.effective_plan === "enterprise" },
+      limits: isPaid ? { campaigns: 300, attacks: 100000, devices: 10, projects: 25 } : { campaigns: 20, attacks: 2000, devices: 1, projects: 2 },
+      features: { advanced_strategies: isPaid, mcp: isPaid, analytics: isPaid, evidence_storage: isPaid, enterprise: row.effective_plan === "enterprise" },
     },
-    usage: { campaigns: u.runs_month, attacks: u.runs_month * 31, devices: u.devices, projects: u.projects },
+    usage: { campaigns: row.runs_month, attacks: row.runs_month * 31, devices: row.devices, projects: row.projects },
     usagePeriod: new Date().toISOString().slice(0, 7),
-    payments: payments.filter((p) => p.userId === u.id),
-    creditLedger: u.credit_paise ? [{ id: "l-1", deltaPaise: u.credit_paise, balancePaise: u.credit_paise, reason: "Beta feedback", actor: "admin:ops@aevrin.net", createdAt: ago(6) }] : [],
-    devices: Array.from({ length: Math.min(u.devices, 3) }, (_, i) => ({ id: `d-${i}`, name: ["laptop", "ci-runner", "workstation"][i], os: "Linux 6.8", engineVersion: "0.0.3", lastSeenAt: ago(i), revoked: false, createdAt: ago(20 + i) })),
-    projects: { total: u.projects, active: u.projects },
-    settings: { sync: { detailedEvidence: pro, transcripts: false } },
-    audit: audit.filter((a) => a.targetUserId === u.id),
+    payments: payments.filter((payment) => payment.userId === row.id),
+    creditLedger: row.credit_paise ? [{ id: "l-1", deltaPaise: row.credit_paise, balancePaise: row.credit_paise, reason: "Beta feedback", actor: "admin:ops@aevrin.net", createdAt: ago(6) }] : [],
+    devices: Array.from({ length: Math.min(row.devices, 3) }, (_, i) => ({ id: `d-${i}`, name: ["laptop", "ci-runner", "workstation"][i], os: "Linux 6.8", engineVersion: "0.0.3", lastSeenAt: ago(i), revoked: false, createdAt: ago(20 + i) })),
+    projects: { total: row.projects, active: row.projects },
+    settings: { sync: { detailedEvidence: isPaid, transcripts: false } },
+    audit: audit.filter((entry) => entry.targetUserId === row.id),
   };
 }
 
-const series = (n: number, f: (i: number) => number) =>
-  Array.from({ length: n }, (_, i) => ({ date: new Date(Date.now() - (n - 1 - i) * day).toISOString().slice(0, 10), v: f(i) }));
+const series = (dayCount: number, valueAt: (i: number) => number) =>
+  Array.from({ length: dayCount }, (_, i) => ({ date: new Date(Date.now() - (dayCount - 1 - i) * DAY_MS).toISOString().slice(0, 10), v: valueAt(i) }));
 
 const done = () => wait(undefined);
 
 export const mockAdminClient: AdminClient = {
   mfaStatus: () => wait({ email: "ops@aevrin.net", enrolled, locked: false }),
-  enroll: () => wait({ secret: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", otpauthUri: "otpauth://totp/Aevrin%20Admin:ops%40aevrin.net?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Aevrin%20Admin&algorithm=SHA1&digits=6&period=30" }),
+  enroll: () => wait({ secret: DEMO_TOTP_SECRET, otpauthUri: DEMO_OTPAUTH_URI }),
   async activate() {
     enrolled = true;
     session = "demo";
@@ -95,11 +96,13 @@ export const mockAdminClient: AdminClient = {
     session = null;
   },
   hasSession: () => session !== null,
-  users: (q, plan) => {
-    const list = users.filter(
-      (u) => (!q || `${u.email} ${u.display_name}`.toLowerCase().includes(q.toLowerCase())) && (!plan || u.effective_plan === plan || (plan === "suspended" && u.suspended_at)),
+  users: (query, plan) => {
+    const matches = users.filter(
+      (row) =>
+        (!query || `${row.email} ${row.display_name}`.toLowerCase().includes(query.toLowerCase())) &&
+        (!plan || row.effective_plan === plan || (plan === "suspended" && row.suspended_at)),
     );
-    return wait({ total: list.length, users: list, page: 0, pageSize: 50 });
+    return wait({ total: matches.length, users: matches, page: 0, pageSize: 50 });
   },
   user: (id) => wait(detail(id)),
   setPlan: done,
@@ -115,20 +118,20 @@ export const mockAdminClient: AdminClient = {
   payments: () => wait({ page: 0, pageSize: 50, payments }),
   audit: () => wait({ page: 0, pageSize: 50, entries: audit }),
   metrics: (days) => {
-    const d = series(days, (i) => i);
-    const m: Metrics = {
+    const dates = series(days, (i) => i);
+    const metrics: Metrics = {
       totals: { users: 128, newUsers: 23, activeUsers: 41, suspended: 1, paying: 9, granted: 2, mrrPaise: 9 * 89900, revenuePaise: 11 * 89900, refundedPaise: 0, devices: 64, campaigns: 212, runs: 640, findings: 133 },
       planMix: { free: 117, pro: 10, enterprise: 1 },
-      daily: d.map((x, i) => ({ date: x.date, signups: (i * 7) % 3, runs: 10 + ((i * 13) % 17), revenuePaise: i % 9 === 0 ? 89900 : 0 })),
+      daily: dates.map((point, i) => ({ date: point.date, signups: (i * 7) % 3, runs: 10 + ((i * 13) % 17), revenuePaise: i % 9 === 0 ? 89900 : 0 })),
     };
-    return wait(m);
+    return wait(metrics);
   },
   traffic: (days) => {
-    const d = series(days, (i) => i);
-    const t: Traffic = {
+    const dates = series(days, (i) => i);
+    const traffic: Traffic = {
       views: 4210,
       visitors: 1630,
-      daily: d.map((x, i) => ({ date: x.date, views: 90 + ((i * 37) % 80), visitors: 35 + ((i * 17) % 30) })),
+      daily: dates.map((point, i) => ({ date: point.date, views: 90 + ((i * 37) % 80), visitors: 35 + ((i * 17) % 30) })),
       pages: [
         { site: "landing", path: "/", views: 2400, visitors: 1200 },
         { site: "dashboard", path: "/dashboard/", views: 610, visitors: 140 },
@@ -152,6 +155,6 @@ export const mockAdminClient: AdminClient = {
         { device: "tablet", views: 70 },
       ],
     };
-    return wait(t);
+    return wait(traffic);
   },
 };

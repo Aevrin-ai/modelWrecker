@@ -3,7 +3,7 @@ import { Dropdown, DropdownItem, DropdownLabel, DropdownSeparator } from "@/comp
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 
-/** The active-project selector in the header. "All projects" = null. */
+// null means "All projects"
 export function ProjectSwitcher({ fullWidth }: { fullWidth?: boolean }) {
   const { projects, activeProjectId, activeProject, setActiveProjectId } = useActiveProject();
   const label = activeProject ? activeProject.name : "All projects";

@@ -15,12 +15,6 @@ import { PartOfAevrin } from "./part-of-aevrin";
 import { Pricing } from "./pricing";
 import { Faq } from "./faq";
 
-/*
-  The home page under the hero, in the order Activepieces tells theirs: the
-  story, what it covers, how it works and why to trust it, the payoff, then
-  the questions people ask before they start. Loaded as its own chunk.
-*/
-
 function CtaButtons() {
   return (
     <>
@@ -35,6 +29,7 @@ function CtaButtons() {
   );
 }
 
+// the home page under the hero, loaded as its own chunk: the story, coverage, how it works, trust, payoff, questions
 export default function BelowFold() {
   return (
     <>

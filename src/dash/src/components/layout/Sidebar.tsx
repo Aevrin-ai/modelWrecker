@@ -9,17 +9,13 @@ import { useAsync } from "@/hooks/useAsync";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
-  /** Desktop icon-rail mode (3rem). Ignored in the mobile drawer. */
+  // desktop icon-rail mode (3rem), ignored in the mobile drawer
   collapsed: boolean;
-  /** Mobile drawer: shows a close button, the project switcher, and labels always. */
+  // mobile drawer: shows a close button, the project switcher, and labels always
   mobile?: boolean;
   onCloseMobile?: () => void;
 }
 
-/**
- * Sidebar measured from the reference: #fafafa surface, 1px right border, 16rem wide
- * expanded or a 3rem icon rail collapsed, 32px rounded-md items, zinc-100 active fill.
- */
 export function Sidebar({ collapsed, mobile, onCloseMobile }: SidebarProps) {
   const showLabels = mobile || !collapsed;
   const { data: account } = useAsync(() => apiClient.getAccount(), []);
@@ -59,7 +55,6 @@ export function Sidebar({ collapsed, mobile, onCloseMobile }: SidebarProps) {
         {mobile && <ProjectSwitcher fullWidth />}
       </div>
 
-      {/* Nav */}
       <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto no-scrollbar">
         {NAV_GROUPS.map((group) => (
           <div key={group} className="flex flex-col p-2 pt-0">

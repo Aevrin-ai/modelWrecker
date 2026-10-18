@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import secrets
 
-from ..data import TaxonomyRef
+from ..data import Observation, TaxonomyRef
 from ..interfaces import Capability
 from .base import BaseStrategy, StrategyContext, StrategyResult, StrategyRun
 from .spec import Maturity, StrategySpec
@@ -77,7 +77,7 @@ class MultiAgentInjection(BaseStrategy):
         canary = f"MW-CANARY-{secrets.token_hex(6)}"
         source = _BENIGN_SOURCE + (_INJECTION.format(canary=canary) if attack else "")
 
-        async def run_once():
+        async def run_once() -> Observation:
             obs = await ctx.target.run_scenario(
                 _TASK, environment={"source": source}, tools=[_SEND_TOOL]
             )

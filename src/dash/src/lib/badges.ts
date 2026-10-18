@@ -1,11 +1,4 @@
-/*
-  Catmint-style soft badge color classes. Catmint uses pill badges with a soft tint:
-  bg-{color}-100 text-{color}-800 in light, bg-{color}-900 text-{color}-200 in dark
-  (measured on the reference: e.g. bg rgb(219,234,254) / text rgb(30,64,175)).
-  We centralize the color choice per enum value so every page stays consistent.
-
-  Severity uses the dedicated severity token colors (critical/high/medium/low/info).
-*/
+// soft pill color classes per enum value, so every page stays consistent; severity uses its own token colors
 
 import type {
   CampaignStatus,
@@ -17,8 +10,7 @@ import type {
   TargetStatus,
 } from "@/types";
 
-/** A soft pill color pair (light + dark). */
-type Tone =
+export type Tone =
   | "red"
   | "orange"
   | "amber"
@@ -55,7 +47,7 @@ export const SEVERITY_TONE: Record<Severity, Tone> = {
   info: "slate",
 };
 
-/** Severity dot / bar color using the severity design tokens. */
+// severity dot and bar colors from the severity design tokens
 export const SEVERITY_DOT: Record<Severity, string> = {
   critical: "bg-severity-critical",
   high: "bg-severity-high",

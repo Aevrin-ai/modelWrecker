@@ -1,13 +1,8 @@
-/*
-  First-party page analytics (docs/analytics/page-analytics.md). One small beacon per page view to our own
-  API, only on the production host. No cookie, no storage, no third-party script. Ids in the path are
-  replaced on the server; the referrer is sent only with the first view of a visit and reduced to a host.
-  Browsers with Do Not Track or Global Privacy Control send nothing.
-*/
-
+// first-party page analytics (docs/analytics/page-analytics.md): one cookie-free beacon per view, production host only
 const PROD_HOST = "vyra.aevrin.ai";
 let first = true;
 
+// sends nothing under Do Not Track or Global Privacy Control; the referrer goes only with the first view of a visit
 export function sendPageView(site: "landing" | "dashboard", path: string) {
   try {
     if (window.location.hostname !== PROD_HOST) return;
@@ -17,6 +12,7 @@ export function sendPageView(site: "landing" | "dashboard", path: string) {
     first = false;
     nav.sendBeacon?.("/api/v1/collect", body);
   } catch {
-    /* analytics must never break the page */
+    // analytics must never break the page, so a failed beacon is dropped
+    return;
   }
 }
