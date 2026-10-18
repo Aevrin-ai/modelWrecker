@@ -49,42 +49,24 @@ import type {
   WorkspaceSettings,
 } from "@/types";
 import { authTokens } from "@/lib/auth";
+import { safeError } from "./errorMessage";
 import { sendWithSession } from "./session";
 
 const TIMEOUT_MS = 20_000;
-const MAX_MESSAGE = 300;
 
 /** An API failure with a message that is safe to show. `code` is the contract's error code. */
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
-  constructor(status: number, code: string, message: string) {
+  /** The server's reference for this request, for support. Null when it sent none. */
+  readonly requestId: string | null;
+  constructor(status: number, code: string, message: string, requestId: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.requestId = requestId;
   }
-}
-
-const FALLBACK_MESSAGE: Record<number, string> = {
-  400: "The request was not accepted.",
-  403: "You do not have access to this.",
-  404: "That record was not found.",
-  409: "That conflicts with the current state. Refresh and try again.",
-  410: "That has expired.",
-  413: "The request was too large.",
-  429: "Too many requests. Wait a moment and try again.",
-};
-
-function safeMessage(status: number, body: unknown): { code: string; message: string } {
-  let code = `http_${status}`;
-  let message = FALLBACK_MESSAGE[status] ?? (status >= 500 ? "The control plane had a problem. Try again shortly." : "The request failed.");
-  if (body && typeof body === "object") {
-    const b = body as Record<string, unknown>;
-    if (typeof b.error === "string" && /^[a-z0-9_]{1,64}$/i.test(b.error)) code = b.error;
-    if (typeof b.message === "string" && b.message.trim()) message = b.message.trim().slice(0, MAX_MESSAGE);
-  }
-  return { code, message };
 }
 
 function qs(params: Record<string, string | undefined>): string {
@@ -146,8 +128,8 @@ export class HttpApiClient implements ApiClient {
     }
 
     if (!res.ok) {
-      const { code, message } = safeMessage(res.status, parsed);
-      throw new ApiError(res.status, code, message);
+      const { code, message, requestId } = safeError(res.status, parsed, res.headers.get("x-request-id"));
+      throw new ApiError(res.status, code, message, requestId);
     }
     if (text && parsed === undefined) {
       throw new ApiError(res.status, "bad_response", "The control plane sent an unexpected response.");

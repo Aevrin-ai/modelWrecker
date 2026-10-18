@@ -69,6 +69,10 @@ Everything crossing a boundary into the engine from a target or dataset is data,
 ### Secrets & logging
 - **Redact** API keys, `Authorization`/`x-api-key` headers, tool/stego passwords, and detected PII
   **before** writing any log or evidence (SEC-9).
+- The control-plane API logs through one module (`src/api/src/log.ts`) that redacts bearer and device
+  tokens, JWTs, keys, and email addresses from every string, and accepts only flat values, so an object
+  such as a request body or a user row cannot be logged. An error response never includes the internal
+  error text; it carries a request id instead, which finds the full detail in the logs.
 - Run artifacts are written `0600`, directories `0700`, and are gitignored. They can contain harmful
   content and must stay off version control.
 - Keys come from env or a secret store; never persisted into tracked config.

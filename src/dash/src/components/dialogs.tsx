@@ -19,8 +19,9 @@ import { useToast } from "@/hooks/useToast";
 import { STOP_CONDITION_LABEL, STRATEGIES, TARGET_TYPE_DESCRIPTION, TARGET_TYPE_LABEL, TARGET_TYPES } from "@/lib/constants";
 import type { Campaign, Project, Target, TargetType } from "@/types";
 
+// an API failure is always an Error with a safe message; anything else means the request never finished
 function errorText(err: unknown): string {
-  return err instanceof Error ? err.message : "Something went wrong. Try again.";
+  return err instanceof Error ? err.message : "The change did not reach the server. Check your connection and try again.";
 }
 
 // --- confirm ---------------------------------------------------------------------------

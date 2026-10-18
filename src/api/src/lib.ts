@@ -1,15 +1,7 @@
-// Small shared helpers: tokens and hashing, safe errors, best-effort rate limiting, Wilson interval.
+// Small shared helpers: tokens and hashing, best-effort rate limiting, Wilson interval.
 
-/** An error that is safe to show the caller. Anything else becomes a generic 500. */
-export class ApiError extends Error {
-  constructor(
-    public status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 429 | 500 | 502 | 503,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+// errors live in errors.ts; re-exported so every existing `import { ApiError } from "./lib"` keeps working
+export { ApiError } from "./errors";
 
 /** Unpadded base64url. Builds the string byte by byte, so large inputs do not overflow the call stack. */
 export const b64url = (bytes: Uint8Array) => {

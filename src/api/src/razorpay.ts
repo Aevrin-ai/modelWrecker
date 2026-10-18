@@ -1,6 +1,7 @@
 // Razorpay, server side only (issue #12, docs/billing/razorpay.md). The key secret and the webhook secret
 // are Worker secrets; neither ever reaches the browser, the engine, the CLI, or a log line. Only the key
 // id (public by design, Checkout needs it) is sent to the browser.
+import { createFetch, RAZORPAY_POLICY } from "./http";
 
 /** The parts of a Razorpay payment entity this API relies on. */
 export interface RzpPayment {
@@ -50,7 +51,10 @@ export class RazorpayError extends Error {
 }
 
 const BASE = "https://api.razorpay.com/v1";
-const TIMEOUT_MS = 15_000;
+
+// a time budget on every call; a GET is tried once more after a passing failure, a POST never is, because
+// repeating one could create a second order or a second refund
+const razorpayFetch = createFetch(RAZORPAY_POLICY);
 
 export class HttpRazorpay implements RazorpayApi {
   private auth: string;
@@ -60,21 +64,16 @@ export class HttpRazorpay implements RazorpayApi {
   }
 
   private async call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     let res: Response;
     try {
-      res = await fetch(`${BASE}${path}`, {
+      res = await razorpayFetch(`${BASE}${path}`, {
         method,
         headers: { Authorization: this.auth, ...(body ? { "Content-Type": "application/json" } : {}) },
         body: body ? JSON.stringify(body) : undefined,
         redirect: "manual", // never follow; the Workers runtime rejects "error", and a 3xx fails below
-        signal: controller.signal,
       });
     } catch {
       throw new RazorpayError(0, "network_error");
-    } finally {
-      clearTimeout(timer);
     }
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {

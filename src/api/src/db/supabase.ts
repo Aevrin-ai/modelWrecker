@@ -1,7 +1,18 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AuthAccount, AuthAdmin, AuthTokens, AuthUser, Db, GrantResult, Query, Row, Table } from "../db";
+import { DbError } from "../errors";
+import { createFetch, SUPABASE_POLICY } from "../http";
 
-const NO_SESSION = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
+// every call to Supabase gets a time budget, and a read that fails for a passing reason is tried once more
+const supabaseFetch = createFetch(SUPABASE_POLICY);
+
+const NO_SESSION = {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  global: { fetch: supabaseFetch },
+};
+
+/** The Postgres or PostgREST code of a query error, so callers can tell "unavailable" from "wrong". */
+const dbError = (error: { message: string; code?: string }) => new DbError(error.message, error.code ?? "");
 
 class SupabaseTable implements Table {
   constructor(
@@ -26,7 +37,7 @@ class SupabaseTable implements Table {
     if (q.offset) req = req.range(q.offset, q.offset + (q.limit ?? 1000) - 1);
     else if (q.limit) req = req.limit(q.limit);
     const { data, error } = await req;
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return (data ?? []) as Row[];
   }
 
@@ -34,13 +45,13 @@ class SupabaseTable implements Table {
     if (q.in && q.in.values.length === 0) return 0;
     const req = this.filtered(this.client.from(this.name).select("*", { count: "exact", head: true }), q);
     const { count, error } = await req;
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return count ?? 0;
   }
 
   async insert(row: Row): Promise<Row> {
     const { data, error } = await this.client.from(this.name).insert(row).select("*").single();
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return data as Row;
   }
 
@@ -48,7 +59,7 @@ class SupabaseTable implements Table {
     let req = this.client.from(this.name).update(patch);
     for (const [k, v] of Object.entries(eq)) req = req.eq(k, v as never);
     const { data, error } = await req.select("*");
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return (data ?? []) as Row[];
   }
 
@@ -56,7 +67,7 @@ class SupabaseTable implements Table {
     let req = this.client.from(this.name).delete({ count: "exact" });
     for (const [k, v] of Object.entries(eq)) req = req.eq(k, v as never);
     const { count, error } = await req;
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return count ?? 0;
   }
 
@@ -66,7 +77,7 @@ class SupabaseTable implements Table {
       .upsert(row, { onConflict: onConflict.join(",") })
       .select("*")
       .single();
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return data as Row;
   }
 }
@@ -78,13 +89,10 @@ class SupabaseDb implements Db {
   }
   async rpc(fn: string, args: Record<string, unknown> = {}): Promise<unknown> {
     const { data, error } = await this.client.rpc(fn, args);
-    if (error) throw new DbError(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 }
-
-/** A database error. The message is logged server-side only, never returned to the caller. */
-class DbError extends Error {}
 
 export function supabaseDeps(env: {
   SUPABASE_URL: string;
@@ -98,7 +106,7 @@ export function supabaseDeps(env: {
       // The anon key plus the user's own token: Postgres row-level security applies to every query.
       const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
         ...NO_SESSION,
-        global: { headers: { Authorization: `Bearer ${accessToken}` } },
+        global: { ...NO_SESSION.global, headers: { Authorization: `Bearer ${accessToken}` } },
       });
       return new SupabaseDb(client);
     },
@@ -121,8 +129,9 @@ export function supabaseDeps(env: {
 /** Supabase Auth's token endpoints, called with the public anon key (docs/security/authentication.md). */
 export function supabaseAuthTokens(url: string, anonKey: string): AuthTokens {
   const base = `${url.replace(/\/+$/, "")}/auth/v1`;
+  // the timed fetch never retries a POST, so a single-use refresh token is never sent twice
   const post = (path: string, body: unknown, accessToken?: string) =>
-    fetch(`${base}${path}`, {
+    supabaseFetch(`${base}${path}`, {
       method: "POST",
       headers: {
         apikey: anonKey,
@@ -177,6 +186,10 @@ export function supabaseAuthTokens(url: string, anonKey: string): AuthTokens {
   };
 }
 
+/** An Auth admin failure: no answer or a 5xx is "unavailable"; a 4xx is a rejected request, kept as a 500. */
+const authAdminError = (error: { message: string; status?: number }) =>
+  new DbError(error.message, !error.status || error.status >= 500 ? "" : `auth_${error.status}`);
+
 /** Supabase Auth admin calls, with the server key. Used only behind the admin console's checks. */
 function supabaseAuthAdmin(service: SupabaseClient): AuthAdmin {
   return {
@@ -196,11 +209,11 @@ function supabaseAuthAdmin(service: SupabaseClient): AuthAdmin {
     async setBanned(id: string, banned: boolean) {
       // About 100 years, which Supabase treats as a ban until it is lifted with "none".
       const { error } = await service.auth.admin.updateUserById(id, { ban_duration: banned ? "876000h" : "none" });
-      if (error) throw new DbError(error.message);
+      if (error) throw authAdminError(error);
     },
     async deleteUser(id: string) {
       const { error } = await service.auth.admin.deleteUser(id);
-      if (error) throw new DbError(error.message);
+      if (error) throw authAdminError(error);
     },
   };
 }

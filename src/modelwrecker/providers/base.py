@@ -12,7 +12,19 @@ from pydantic import BaseModel, Field
 
 class ProviderError(Exception):
     """A clean, typed provider failure. Network/timeout errors become this, never an unhandled
-    crash."""
+    crash.
+
+    `retryable` says whether trying again could help. A timeout, a dropped connection, a 429, or a
+    5xx can pass; a rejected key, a bad request, a missing model, or a blocked address will fail the
+    same way every time. `retry_after` is the provider's own Retry-After in seconds, when it sent
+    one. The default is retryable, so a failure nobody classified keeps the old behavior.
+    """
+
+    def __init__(self, message: str = "", *, retryable: bool = True,
+                 retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+        self.retry_after = retry_after
 
 
 class Usage(BaseModel):
