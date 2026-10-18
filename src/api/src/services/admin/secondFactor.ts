@@ -6,6 +6,7 @@ import { sha256Hex } from "../../lib/tokens";
 import { str } from "../../lib/strings";
 import { writeAudit } from "./audit";
 import { totpKey, type AdminContext } from "../../controllers/admin/context";
+import { adminMfaRepository } from "../../repositories/adminMfa";
 
 const MAX_FAILURES = 5;
 const LOCK_MS = 15 * 60 * 1000;
@@ -34,7 +35,7 @@ async function recordFailure(admin: AdminContext, c: AppContext, mfa: Row, now: 
   const failures = Number(mfa.failed_count ?? 0) + 1;
   const isLocking = failures >= MAX_FAILURES;
   const patch = isLocking ? { failed_count: 0, locked_until: new Date(now.getTime() + LOCK_MS).toISOString() } : { failed_count: failures };
-  await admin.db.table("admin_mfa").update({ user_id: mfa.user_id }, patch);
+  await adminMfaRepository(admin.db).updateForUser(str(mfa.user_id), patch);
   await writeAudit(admin, c, "admin.mfa_failed", null, null, { failures });
   throw new ApiError(400, "invalid_code", "That code is not right. Check the time on your phone and try again.");
 }
@@ -53,5 +54,5 @@ export async function checkSecondFactor(
   }
   const patch = await matchSecondFactor(admin, mfa, body, isPending, now);
   if (!patch) return recordFailure(admin, c, mfa, now);
-  await admin.db.table("admin_mfa").update({ user_id: mfa.user_id }, { ...patch, failed_count: 0, locked_until: null });
+  await adminMfaRepository(admin.db).updateForUser(str(mfa.user_id), { ...patch, failed_count: 0, locked_until: null });
 }

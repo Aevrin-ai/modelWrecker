@@ -5,6 +5,7 @@ import { campaignTotals } from "../../services/dashboard/views/campaignView";
 import { findOwned, userScope } from "./context";
 import { loadWorld } from "../../services/dashboard/world";
 import { timelineEvents, strategyTotals, runTranscript } from "../../services/dashboard/views/activityView";
+import { runsRepository } from "../../repositories/runs";
 
 export async function campaignTimeline(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner } = userScope(c, deps);
@@ -23,7 +24,7 @@ export async function campaignStats(c: AppContext, deps: Deps): Promise<Response
 export async function campaignTranscript(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner } = userScope(c, deps);
   const campaign = await findOwned(db, "campaigns", routeParam(c, "id"), owner);
-  const runs = await db.table("runs").select({ eq: { owner_id: owner, campaign_id: str(campaign.id) } });
+  const runs = await runsRepository(db).listForCampaign(owner, str(campaign.id));
   runs.sort((first, second) => (str(first.started_at) < str(second.started_at) ? -1 : 1));
   const transcripts = [];
   for (const run of runs) transcripts.push(await runTranscript(db, owner, run));

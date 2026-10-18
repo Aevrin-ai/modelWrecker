@@ -5,6 +5,7 @@ import { sha256Hex } from "../lib/tokens";
 import { errorFields, log } from "../lib/log";
 import { CollectReq } from "../validators/schemas";
 import { BOT, UNKNOWN_COUNTRIES, cleanPath, referrerHost, deviceType } from "../services/pageViews";
+import { pageViewsRepository } from "../repositories/pageViews";
 
 const MAX_BYTES = 2048;
 
@@ -51,7 +52,7 @@ export async function recordPageView(c: Context, deps: Deps, limiter: RateLimite
   try {
     // no raw IP or user agent is stored: a salted daily hash cannot be reversed or linked across days
     const visitorHash = await sha256Hex(`${deps.analyticsSalt}|${day}|${visitor.address}|${visitor.userAgent}`);
-    await deps.serviceDb.table("page_views").insert({
+    await pageViewsRepository(deps.serviceDb).insert({
       day,
       ts: now.toISOString(),
       site: body.s,

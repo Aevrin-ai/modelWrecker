@@ -3,6 +3,7 @@ import { log } from "../../lib/log";
 import type { BillingConfig, RzpPayment } from "../razorpay/client";
 import { str } from "../../lib/strings";
 import { gatewayError } from "./gateway";
+import { paymentsRepository } from "../../repositories/payments";
 
 export type ConfirmResult = "paid" | "pending" | "failed" | "mismatch";
 
@@ -25,20 +26,12 @@ async function captureIfAuthorized(billing: BillingConfig, payment: RzpPayment):
 
 // fulfil_payment applies a payment exactly once, however many times it is called
 async function fulfil(deps: Deps, order: Row, payment: RzpPayment): Promise<ConfirmResult> {
-  const db = deps.serviceDb;
-  const result = (await db.rpc("fulfil_payment", {
-    p_order_id: str(order.razorpay_order_id),
-    p_payment_id: payment.id,
-    p_method: payment.method ?? "razorpay",
-    p_now: deps.now().toISOString(),
-  })) as { ok: boolean };
+  const payments = paymentsRepository(deps.serviceDb);
+  const method = payment.method ?? "razorpay";
+  const result = (await payments.fulfil(str(order.razorpay_order_id), payment.id, method, deps.now().toISOString())) as { ok: boolean };
   if (!result.ok) return "mismatch";
   if (payment.status === "refunded" || (payment.amount_refunded ?? 0) > 0) {
-    await db.rpc("refund_payment", {
-      p_payment_id: payment.id,
-      p_amount_refunded: payment.amount_refunded ?? payment.amount,
-      p_now: deps.now().toISOString(),
-    });
+    await payments.recordRefund(payment.id, payment.amount_refunded ?? payment.amount, deps.now().toISOString());
   }
   return "paid";
 }
@@ -52,7 +45,7 @@ export async function confirmPayment(deps: Deps, billing: BillingConfig, order: 
   const current = await captureIfAuthorized(billing, payment);
   if (current.status === "captured" || current.status === "refunded") return fulfil(deps, order, current);
   if (current.status === "failed") {
-    await deps.serviceDb.table("payments").update({ id: order.id, status: "created" }, { status: "failed", razorpay_payment_id: null });
+    await paymentsRepository(deps.serviceDb).markFailed(str(order.id));
     return "failed";
   }
   return "pending";

@@ -1,6 +1,8 @@
 // usage meters: runs and attempts count per calendar month (UTC); devices and projects count what exists now
 import type { Database } from "../../types/deps";
 import { meterPeriod, type MeterKey } from "../billing/plans";
+import { ownedRowsRepository } from "../../repositories/ownedRows";
+import { runsRepository } from "../../repositories/runs";
 
 interface Usage {
   period: string;
@@ -12,9 +14,9 @@ interface Usage {
 export async function usageFor(db: Database, owner: string, now: Date): Promise<Usage> {
   const { start, end, key } = meterPeriod(now);
   const [runs, devices, projects] = await Promise.all([
-    db.table("runs").select({ eq: { owner_id: owner }, gte: { created_at: start.toISOString() } }),
-    db.table("devices").select({ eq: { owner_id: owner } }),
-    db.table("projects").select({ eq: { owner_id: owner } }),
+    runsRepository(db).listSinceForOwner(owner, start.toISOString()),
+    ownedRowsRepository(db, "devices").listForOwner(owner),
+    ownedRowsRepository(db, "projects").listForOwner(owner),
   ]);
   return {
     period: key,

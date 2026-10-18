@@ -8,6 +8,7 @@ import { ApiError } from "../../lib/errors";
 import type { KeyLimit } from "../../middleware/rateLimit";
 import { verifyCheckoutSignature, type BillingConfig, type RzpPayment } from "../../services/razorpay/client";
 import { VerifyPaymentReq } from "../../validators/schemas";
+import { paymentsRepository } from "../../repositories/payments";
 
 async function fetchPayment(billing: BillingConfig, paymentId: string): Promise<RzpPayment> {
   try {
@@ -23,9 +24,7 @@ export async function verifyPayment(c: AppContext, deps: Deps, limit: KeyLimit):
   const user = c.get("user");
   limit(`verify:${user.id}`, 20, 60_000);
   const body = await parseBody(c, VerifyPaymentReq);
-  const [order] = await deps.serviceDb
-    .table("payments")
-    .select({ eq: { razorpay_order_id: body.razorpay_order_id, owner_id: user.id } });
+  const order = await paymentsRepository(deps.serviceDb).findByOrderIdForOwner(body.razorpay_order_id, user.id);
   if (!order) throw new ApiError(404, "unknown_order", "That order was not found.");
   const isSigned = await verifyCheckoutSignature(billing.keySecret, body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature);
   if (!isSigned) throw new ApiError(400, "invalid_signature", "The payment could not be verified.");

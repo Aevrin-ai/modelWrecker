@@ -5,6 +5,7 @@ import { sha256Hex } from "../lib/tokens";
 import { clientIp } from "./rateLimit";
 import { str } from "../lib/strings";
 import { STAFF_DOMAIN, isStaffEmail, totpKey, type AdminContext } from "../controllers/admin/context";
+import { adminSessionsRepository } from "../repositories/adminSessions";
 
 export const ADMIN_SESSION_HEADER = "x-admin-session";
 export const ADMIN_TOKEN_PREFIX = "mwa_";
@@ -28,7 +29,8 @@ export function adminSession(admin: AdminContext): AppMiddleware {
   return async (c, next) => {
     const token = c.req.header(ADMIN_SESSION_HEADER) ?? "";
     if (!token.startsWith(ADMIN_TOKEN_PREFIX)) throw new ApiError(401, "admin_session_required", "Enter your authenticator code.");
-    const [session] = await admin.db.table("admin_sessions").select({ eq: { token_hash: await sha256Hex(token) } });
+    const sessions = adminSessionsRepository(admin.db);
+    const session = await sessions.findByTokenHash(await sha256Hex(token));
     const now = admin.deps.now().getTime();
     const isLive =
       session &&
@@ -37,7 +39,7 @@ export function adminSession(admin: AdminContext): AppMiddleware {
       Date.parse(str(session.expires_at)) > now &&
       now - Date.parse(str(session.last_seen_at)) < SESSION_IDLE_MS;
     if (!isLive) throw new ApiError(401, "admin_session_required", "Your admin session ended. Enter your authenticator code.");
-    await admin.db.table("admin_sessions").update({ id: session.id }, { last_seen_at: admin.deps.now().toISOString() });
+    await sessions.recordSeen(str(session.id), admin.deps.now().toISOString());
     c.set("adminSession", session);
     await next();
   };

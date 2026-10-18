@@ -1,6 +1,7 @@
 // Readiness: one cheap database read with a short timeout, so a probe never adds load during an incident.
 import type { Database } from "../types/deps";
 import { errorFields, log } from "../lib/log";
+import { subscriptionsRepository } from "../repositories/subscriptions";
 
 export type CheckResult = "ok" | "unavailable";
 
@@ -9,7 +10,7 @@ const PROBE_TIMEOUT_MS = 3000;
 /** Read one row from a small table. Any failure, including a slow answer, is "unavailable". */
 export async function checkDatabase(db: Database, timeoutMs = PROBE_TIMEOUT_MS): Promise<CheckResult> {
   try {
-    await withTimeout(db.table("subscriptions").select({ limit: 1 }), timeoutMs);
+    await withTimeout(subscriptionsRepository(db).probe(), timeoutMs);
     return "ok";
   } catch (err) {
     log.warn("readiness_database_failed", errorFields(err));

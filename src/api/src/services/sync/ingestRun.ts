@@ -3,6 +3,11 @@ import { ApiError } from "../../lib/errors";
 import { readSyncPolicy } from "./syncPolicy";
 import type { SyncBody, SyncRunBody } from "../../validators/schemas";
 import { storeFindings, storeTranscript } from "./storeDetail";
+import { campaignsRepository } from "../../repositories/campaigns";
+import { devicesRepository } from "../../repositories/devices";
+import { runsRepository } from "../../repositories/runs";
+import { targetsRepository } from "../../repositories/targets";
+import { str } from "../../lib/strings";
 
 /** Where one synced run is stored: always the device's owner and project, never what the body says. */
 export interface SyncScope {
@@ -23,8 +28,8 @@ export interface IngestResult {
 
 // created on first sight; a target the user registered in the dashboard is never overwritten
 async function findOrCreateTarget(scope: SyncScope, target: SyncRunBody["target"]): Promise<Row> {
-  const targets = scope.db.table("targets");
-  const [existing] = await targets.select({ eq: { owner_id: scope.owner, project_id: scope.projectId, name: target.name } });
+  const targets = targetsRepository(scope.db);
+  const existing = await targets.findByNameForOwner(scope.owner, scope.projectId, target.name);
   if (existing) return existing;
   return targets.insert({
     owner_id: scope.owner,
@@ -41,15 +46,15 @@ async function findOrCreateTarget(scope: SyncScope, target: SyncRunBody["target"
 
 // keyed by the engine's campaign id within this project; a re-sync merges the strategies
 async function upsertCampaign(scope: SyncScope, run: SyncRunBody, targetId: unknown): Promise<Row> {
-  const campaigns = scope.db.table("campaigns");
+  const campaigns = campaignsRepository(scope.db);
   const strategies = run.by_strategy.map((entry) => entry.strategy);
   const completed = { status: "completed", target_id: targetId, device_id: scope.deviceId, completed_at: run.completed_at ?? scope.now };
-  const [existing] = await campaigns.select({
-    eq: { owner_id: scope.owner, project_id: scope.projectId, external_id: run.campaign.external_id },
-  });
+  const existing = await campaigns.findByExternalIdForOwner(scope.owner, scope.projectId, run.campaign.external_id);
   if (existing) {
     const merged = Array.from(new Set([...((existing.strategies as string[]) ?? []), ...strategies]));
-    const [updated] = await campaigns.update({ id: existing.id }, { ...completed, strategies: merged });
+    const updated = await campaigns.update(str(existing.id), { ...completed, strategies: merged });
+    // the row was just read, so only a concurrent delete leaves nothing to return
+    if (!updated) throw new ApiError(409, "conflict", "The campaign changed during the sync. Try again.");
     return updated;
   }
   return campaigns.insert({
@@ -83,7 +88,7 @@ function upsertRun(scope: SyncScope, run: SyncRunBody, campaignId: unknown): Pro
     started_at: run.started_at,
     completed_at: run.completed_at,
   };
-  return scope.db.table("runs").upsert(row, ["owner_id", "external_id"]);
+  return runsRepository(scope.db).upsertByExternalId(row);
 }
 
 /** Store one synced run. Everything is pinned to the device's owner and project, never the body's. */
@@ -104,7 +109,7 @@ export async function ingestRun(deps: Deps, device: Row, body: SyncBody): Promis
   const evidenceStored = await storeFindings(scope, run.findings, links, policy.evidence);
   const transcriptStored = await storeTranscript(scope, run.transcript, runRow.id, policy.transcripts);
 
-  await db.table("devices").update({ id: device.id }, { last_seen_at: scope.now });
+  await devicesRepository(db).recordSeen(str(device.id), { last_seen_at: scope.now });
   return {
     campaign_id: String(campaign.id),
     run_id: String(runRow.id),

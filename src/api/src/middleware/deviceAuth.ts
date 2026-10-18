@@ -4,6 +4,7 @@ import { ApiError } from "../lib/errors";
 import { DEVICE_TOKEN_PREFIX, bearer, sha256Hex } from "../lib/tokens";
 import type { IpLimit } from "./rateLimit";
 import { refuseSuspended } from "./refuseSuspended";
+import { devicesRepository } from "../repositories/devices";
 
 // attached per route, never as a catch-all, so device and user credentials are never accepted on each other's routes
 export function deviceAuth(deps: Deps, limit: IpLimit): AppMiddleware {
@@ -13,7 +14,7 @@ export function deviceAuth(deps: Deps, limit: IpLimit): AppMiddleware {
     if (!token || !token.startsWith(DEVICE_TOKEN_PREFIX)) {
       throw new ApiError(401, "invalid_token", "A device token is required.");
     }
-    const [row] = await deps.serviceDb.table("devices").select({ eq: { credential_hash: await sha256Hex(token) } });
+    const row = await devicesRepository(deps.serviceDb).findByCredentialHash(await sha256Hex(token));
     if (!row || row.revoked) throw new ApiError(401, "invalid_token", "This device token is not valid.");
     await refuseSuspended(deps, String(row.owner_id));
     c.set("device", row);

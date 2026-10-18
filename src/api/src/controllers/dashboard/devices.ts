@@ -6,6 +6,7 @@ import { NamePatch } from "../../validators/schemas";
 import { NOT_FOUND_MESSAGE, findOwned, queryParam, userScope } from "./context";
 import { mapDevice } from "../../services/dashboard/views/deviceView";
 import { loadWorld, scope } from "../../services/dashboard/world";
+import { devicesRepository } from "../../repositories/devices";
 
 export async function listDevices(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner, now } = userScope(c, deps);
@@ -26,7 +27,8 @@ export async function renameDevice(c: AppContext, deps: Deps): Promise<Response>
   const body = await parseBody(c, NamePatch);
   const id = routeParam(c, "id");
   await findOwned(db, "devices", id, owner);
-  const [device] = await db.table("devices").update({ id, owner_id: owner }, { name: body.name });
+  const device = await devicesRepository(db).renameForOwner(id, owner, body.name);
+  if (!device) throw new ApiError(404, "not_found", NOT_FOUND_MESSAGE);
   return c.json(mapDevice(device, await loadWorld(db, owner), now));
 }
 
@@ -34,7 +36,6 @@ export async function revokeDevice(c: AppContext, deps: Deps): Promise<Response>
   const { db, owner } = userScope(c, deps);
   const id = routeParam(c, "id");
   await findOwned(db, "devices", id, owner);
-  // the token hash stays, flagged revoked, so the old token can never be accepted again
-  await db.table("devices").update({ id, owner_id: owner }, { revoked: true });
+  await devicesRepository(db).revokeForOwner(id, owner);
   return c.body(null, 204);
 }

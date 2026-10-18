@@ -7,6 +7,7 @@ import { TargetCreate } from "../../validators/schemas";
 import { findOwned, queryParam, userScope } from "./context";
 import { mapTarget } from "../../services/dashboard/views/targetView";
 import { loadWorld, scope } from "../../services/dashboard/world";
+import { targetsRepository } from "../../repositories/targets";
 
 export async function listTargets(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner, now } = userScope(c, deps);
@@ -19,9 +20,10 @@ export async function createTarget(c: AppContext, deps: Deps): Promise<Response>
   const { db, owner, now } = userScope(c, deps);
   const body = await parseBody(c, TargetCreate);
   await findOwned(db, "projects", body.projectId, owner);
-  const duplicates = await db.table("targets").select({ eq: { owner_id: owner, project_id: body.projectId, name: body.name } });
-  if (duplicates.length) throw new ApiError(409, "duplicate", "A target with that name already exists in this project.");
-  const target = await db.table("targets").insert({
+  const targets = targetsRepository(db);
+  const duplicate = await targets.findByNameForOwner(owner, body.projectId, body.name);
+  if (duplicate) throw new ApiError(409, "duplicate", "A target with that name already exists in this project.");
+  const target = await targets.insert({
     owner_id: owner,
     project_id: body.projectId,
     name: body.name,

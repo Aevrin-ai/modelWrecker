@@ -3,6 +3,7 @@ import type { Database, Row } from "../../types/deps";
 import { b64url } from "../../lib/tokens";
 import { effectivePlan, type Features, type Limits, type PlanId } from "../billing/plans";
 import { usageFor } from "./usage";
+import { subscriptionsRepository } from "../../repositories/subscriptions";
 
 const ENTITLEMENT_TTL_S = 7 * 24 * 60 * 60;
 /** The shortest life a token gets, so a plan that ends very soon still yields a usable token. */
@@ -76,7 +77,7 @@ export async function issueEntitlement(
   now: Date,
 ): Promise<{ token: string; payload: EntitlementPayload }> {
   const owner = String(device.owner_id);
-  const [sub] = await db.table("subscriptions").select({ eq: { owner_id: owner } });
+  const sub = await subscriptionsRepository(db).findForOwner(owner);
   const eff = effectivePlan(sub, now);
   const usage = await usageFor(db, owner, now);
   const iat = Math.floor(now.getTime() / 1000);

@@ -42,7 +42,7 @@ function evidenceView(detail: EvidenceDetail, finding: FindingView, row: Row, ru
 }
 
 /** A finding with its synced evidence (dashboard `Evidence` type), or the metadata-only shape. */
-export function withEvidence(finding: FindingView, row: Row | undefined, runExternalId: string) {
+export function withEvidence(finding: FindingView, row: Row | null, runExternalId: string) {
   if (!row) return { ...finding, evidence: { synced: false } };
   const detail = (row.detail ?? {}) as EvidenceDetail;
   const signals = (detail.judge?.signals ?? []).map((entry) => ({

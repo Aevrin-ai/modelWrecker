@@ -2,6 +2,7 @@ import type { Deps, Row } from "../../types/deps";
 import { ApiError } from "../../lib/errors";
 import { str } from "../../lib/strings";
 import { gatewayError, requireBilling } from "./gateway";
+import { paymentsRepository } from "../../repositories/payments";
 
 /** Full refund of one paid order through Razorpay, then record it. Used by the admin console. */
 export async function refundOrder(deps: Deps, order: Row, notes: Record<string, string>): Promise<{ refunded: number }> {
@@ -14,7 +15,7 @@ export async function refundOrder(deps: Deps, order: Row, notes: Record<string, 
   try {
     const refund = await billing.api.refund(paymentId, notes);
     const total = Number(order.amount_refunded_paise ?? 0) + Number(refund.amount ?? order.amount_paise);
-    await deps.serviceDb.rpc("refund_payment", { p_payment_id: paymentId, p_amount_refunded: total, p_now: deps.now().toISOString() });
+    await paymentsRepository(deps.serviceDb).recordRefund(paymentId, total, deps.now().toISOString());
     return { refunded: total };
   } catch (err) {
     gatewayError(err);

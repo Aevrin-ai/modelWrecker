@@ -1,17 +1,19 @@
 import type { AppContext } from "../types/appEnv";
 import { MAX_SYNC_BODY_BYTES, parseBody } from "../validators/body";
-import type { Deps, Row } from "../types/deps";
+import type { Deps } from "../types/deps";
 import { ApiError } from "../lib/errors";
 import { HeartbeatReq, SyncReq } from "../validators/schemas";
 import { ingestRun } from "../services/sync/ingestRun";
 import { devicePolicy, entitlementFor } from "../services/devices";
+import { devicesRepository } from "../repositories/devices";
+import { str } from "../lib/strings";
 
 export async function heartbeat(c: AppContext, deps: Deps): Promise<Response> {
   const body = await parseBody(c, HeartbeatReq);
   const device = c.get("device");
-  const patch: Row = { last_seen_at: deps.now().toISOString() };
+  const patch: { last_seen_at: string; engine_version?: string } = { last_seen_at: deps.now().toISOString() };
   if (body.engine_version) patch.engine_version = body.engine_version;
-  await deps.serviceDb.table("devices").update({ id: device.id }, patch);
+  await devicesRepository(deps.serviceDb).recordSeen(str(device.id), patch);
   // the allowed detail lets the engine send only what will be kept, plus a fresh signed entitlement
   return c.json({ ok: true, sync: await devicePolicy(deps, device), ...(await entitlementFor(deps, device)) });
 }

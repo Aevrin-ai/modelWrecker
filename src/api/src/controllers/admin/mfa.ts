@@ -9,12 +9,14 @@ import { writeAudit } from "../../services/admin/audit";
 import { totpKey, type AdminContext } from "./context";
 import { checkSecondFactor } from "../../services/admin/secondFactor";
 import { recoveryCode, startSession } from "../../services/admin/sessions";
+import { adminMfaRepository } from "../../repositories/adminMfa";
+import { adminSessionsRepository } from "../../repositories/adminSessions";
 
 const RECOVERY_CODES = 10;
 const ALREADY_ENROLLED = "An authenticator is already set up for this account.";
 
 export async function mfaStatus(admin: AdminContext, c: AppContext): Promise<Response> {
-  const [mfa] = await admin.db.table("admin_mfa").select({ eq: { user_id: c.get("user").id } });
+  const mfa = await adminMfaRepository(admin.db).findForUser(c.get("user").id);
   const isLocked = Boolean(mfa?.locked_until && Date.parse(str(mfa.locked_until)) > admin.deps.now().getTime());
   return c.json({ email: c.get("user").email, enrolled: Boolean(mfa?.enrolled_at), locked: isLocked });
 }
@@ -22,7 +24,8 @@ export async function mfaStatus(admin: AdminContext, c: AppContext): Promise<Res
 export async function enrollMfa(admin: AdminContext, c: AppContext): Promise<Response> {
   const user = c.get("user");
   admin.limit(`admin-enroll:${user.id}`, 5, 60_000);
-  const [mfa] = await admin.db.table("admin_mfa").select({ eq: { user_id: user.id } });
+  const mfaRows = adminMfaRepository(admin.db);
+  const mfa = await mfaRows.findForUser(user.id);
   if (mfa?.enrolled_at) throw new ApiError(409, "already_enrolled", ALREADY_ENROLLED);
   const secret = newTotpSecret();
   const row = {
@@ -35,7 +38,7 @@ export async function enrollMfa(admin: AdminContext, c: AppContext): Promise<Res
     locked_until: null,
     recovery_hashes: [],
   };
-  await admin.db.table("admin_mfa").upsert(row, ["user_id"]);
+  await mfaRows.upsertForUser(row);
   // the secret is shown once, to this signed-in staff member, so their app can be set up
   return c.json({ secret, otpauthUri: otpauthUri(secret, str(user.email)) });
 }
@@ -44,14 +47,15 @@ export async function activateMfa(admin: AdminContext, c: AppContext): Promise<R
   const user = c.get("user");
   admin.limit(`admin-mfa:${user.id}`, 10, 60_000);
   const body = await parseBody(c, MfaCodeReq);
-  const [mfa] = await admin.db.table("admin_mfa").select({ eq: { user_id: user.id } });
+  const mfaRows = adminMfaRepository(admin.db);
+  const mfa = await mfaRows.findForUser(user.id);
   if (!mfa) throw new ApiError(409, "not_enrolled", "Start the authenticator setup first.");
   if (mfa.enrolled_at) throw new ApiError(409, "already_enrolled", ALREADY_ENROLLED);
   if (!body.code) throw new ApiError(400, "invalid_code", "Enter the 6-digit code from your authenticator app.");
   await checkSecondFactor(admin, c, mfa, body, true);
   const codes = Array.from({ length: RECOVERY_CODES }, recoveryCode);
   const recoveryHashes = await Promise.all(codes.map((code) => sha256Hex(code)));
-  await admin.db.table("admin_mfa").update({ user_id: user.id }, { enrolled_at: admin.deps.now().toISOString(), recovery_hashes: recoveryHashes });
+  await mfaRows.updateForUser(user.id, { enrolled_at: admin.deps.now().toISOString(), recovery_hashes: recoveryHashes });
   await writeAudit(admin, c, "admin.mfa_enrolled", null, null);
   return c.json({ ...(await startSession(admin, c)), recoveryCodes: codes });
 }
@@ -60,7 +64,7 @@ export async function verifyMfa(admin: AdminContext, c: AppContext): Promise<Res
   const user = c.get("user");
   admin.limit(`admin-mfa:${user.id}`, 10, 60_000);
   const body = await parseBody(c, MfaCodeReq);
-  const [mfa] = await admin.db.table("admin_mfa").select({ eq: { user_id: user.id } });
+  const mfa = await adminMfaRepository(admin.db).findForUser(user.id);
   if (!mfa?.enrolled_at) throw new ApiError(409, "not_enrolled", "Set up an authenticator first.");
   await checkSecondFactor(admin, c, mfa, body, false);
   await writeAudit(admin, c, body.recoveryCode ? "admin.signin_recovery_code" : "admin.signin", null, null);
@@ -68,7 +72,7 @@ export async function verifyMfa(admin: AdminContext, c: AppContext): Promise<Res
 }
 
 export async function endAdminSession(admin: AdminContext, c: AppContext): Promise<Response> {
-  await admin.db.table("admin_sessions").update({ id: c.get("adminSession").id }, { revoked_at: admin.deps.now().toISOString() });
+  await adminSessionsRepository(admin.db).revoke(str(c.get("adminSession").id), admin.deps.now().toISOString());
   return c.body(null, 204);
 }
 

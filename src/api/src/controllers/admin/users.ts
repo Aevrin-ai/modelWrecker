@@ -6,37 +6,43 @@ import { usageFor } from "../../services/entitlements/usage";
 import { str } from "../../lib/strings";
 import { auditView } from "../../services/admin/audit";
 import { PAGE_SIZE, findUser, isStaffEmail, pageParam, type AdminContext } from "./context";
-
-const NEWEST_FIRST = { column: "created_at", ascending: false };
+import { adminAuditRepository } from "../../repositories/adminAudit";
+import { adminMfaRepository } from "../../repositories/adminMfa";
+import { adminReportsRepository } from "../../repositories/adminReports";
+import { creditLedgerRepository } from "../../repositories/creditLedger";
+import { devicesRepository } from "../../repositories/devices";
+import { ownedRowsRepository } from "../../repositories/ownedRows";
+import { paymentsRepository } from "../../repositories/payments";
+import { subscriptionsRepository } from "../../repositories/subscriptions";
 
 export async function listUsers(admin: AdminContext, c: AppContext): Promise<Response> {
   const page = pageParam(c);
-  const result = await admin.db.rpc("admin_user_list", {
-    p_query: (c.req.query("q") ?? "").trim().slice(0, 120),
-    p_plan: (c.req.query("plan") ?? "").trim().slice(0, 20),
-    p_limit: PAGE_SIZE,
-    p_offset: page * PAGE_SIZE,
+  const result = await adminReportsRepository(admin.db).userList({
+    query: (c.req.query("q") ?? "").trim().slice(0, 120),
+    plan: (c.req.query("plan") ?? "").trim().slice(0, 20),
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
   });
   return c.json({ ...(result as object), page, pageSize: PAGE_SIZE });
 }
 
 async function loadUserRecords(admin: AdminContext, id: string, now: Date) {
   const { db, deps } = admin;
-  const [[subscription], account, usage, payments, ledger, devices, projects, history, mfa] = await Promise.all([
-    db.table("subscriptions").select({ eq: { owner_id: id } }),
+  const [subscription, account, usage, payments, ledger, devices, projects, history, mfa] = await Promise.all([
+    subscriptionsRepository(db).findForOwner(id),
     deps.authAdmin ? deps.authAdmin.getUser(id) : Promise.resolve(null),
     usageFor(db, id, now),
-    db.table("payments").select({ eq: { owner_id: id }, order: NEWEST_FIRST, limit: 100 }),
-    db.table("credit_ledger").select({ eq: { owner_id: id }, order: NEWEST_FIRST, limit: 50 }),
-    db.table("devices").select({ eq: { owner_id: id }, order: NEWEST_FIRST }),
-    db.table("projects").select({ eq: { owner_id: id } }),
-    db.table("admin_audit").select({ eq: { target_user_id: id }, order: NEWEST_FIRST, limit: 50 }),
-    db.table("admin_mfa").select({ eq: { user_id: id } }),
+    paymentsRepository(db).listNewestForOwner(id, 100),
+    creditLedgerRepository(db).listNewestForOwner(id, 50),
+    devicesRepository(db).listNewestForOwner(id),
+    ownedRowsRepository(db, "projects").listForOwner(id),
+    adminAuditRepository(db).listNewestForTarget(id, 50),
+    adminMfaRepository(db).findForUser(id),
   ]);
   return { subscription, account, usage, payments, ledger, devices, projects, history, mfa };
 }
 
-function subscriptionDetail(subscription: Row | undefined, now: Date) {
+function subscriptionDetail(subscription: Row | null, now: Date) {
   const effective = effectivePlan(subscription, now);
   return {
     effectivePlan: effective.planId,
@@ -98,7 +104,7 @@ export async function userDetail(admin: AdminContext, c: AppContext): Promise<Re
     suspendedAt: profile.suspended_at ? str(profile.suspended_at) : null,
     suspendedReason: profile.suspended_reason ? str(profile.suspended_reason) : null,
     isStaff: isStaffEmail(str(profile.email)),
-    staffMfaEnrolled: Boolean(records.mfa[0]?.enrolled_at),
+    staffMfaEnrolled: Boolean(records.mfa?.enrolled_at),
     account: records.account,
     subscription: subscriptionDetail(records.subscription, now),
     usage: records.usage.values,

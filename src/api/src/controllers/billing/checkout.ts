@@ -10,6 +10,8 @@ import type { KeyLimit } from "../../middleware/rateLimit";
 import { CURRENCY, INTERVAL_MONTHS, effectivePlan, isPurchasable, planById, priceFor } from "../../services/billing/plans";
 import type { BillingConfig, RzpOrder } from "../../services/razorpay/client";
 import { CheckoutReq } from "../../validators/schemas";
+import { paymentsRepository } from "../../repositories/payments";
+import { subscriptionsRepository } from "../../repositories/subscriptions";
 
 type CheckoutBody = z.infer<typeof CheckoutReq>;
 
@@ -49,8 +51,9 @@ function paymentRow(ownerId: string, body: CheckoutBody, price: { listPrice: num
 // paid entirely with account credit: no money moves, so there is nothing for Razorpay to confirm
 async function payWithCredit(c: AppContext, deps: Deps, row: Row, now: Date): Promise<Response> {
   const orderId = `credit_${randomToken(12)}`;
-  await deps.serviceDb.table("payments").insert({ ...row, razorpay_order_id: orderId, method: "credit" });
-  await deps.serviceDb.rpc("fulfil_payment", { p_order_id: orderId, p_payment_id: null, p_method: "credit", p_now: now.toISOString() });
+  const payments = paymentsRepository(deps.serviceDb);
+  await payments.insert({ ...row, razorpay_order_id: orderId, method: "credit" });
+  await payments.fulfil(orderId, null, "credit", now.toISOString());
   return c.json({ paidWithCredit: true, subscription: await subscriptionView(deps, c.get("db"), c.get("user").id) });
 }
 
@@ -62,7 +65,7 @@ export async function checkout(c: AppContext, deps: Deps, limit: KeyLimit): Prom
   const body = await parseBody(c, CheckoutReq);
   if (!isPurchasable(body.plan)) throw new ApiError(400, "not_purchasable", "That plan cannot be bought online.");
   const now = deps.now();
-  const [subscription] = await deps.serviceDb.table("subscriptions").select({ eq: { owner_id: user.id } });
+  const subscription = await subscriptionsRepository(deps.serviceDb).findForOwner(user.id);
   const effective = effectivePlan(subscription, now);
   if (effective.planId === "enterprise") {
     throw new ApiError(409, "enterprise_plan", "Your workspace is on Enterprise. Contact us to change it.");
@@ -74,7 +77,7 @@ export async function checkout(c: AppContext, deps: Deps, limit: KeyLimit): Prom
   if (amount === 0) return payWithCredit(c, deps, row, now);
 
   const order = await createRazorpayOrder(billing, amount, { owner_id: user.id, plan: body.plan, interval: body.interval });
-  await deps.serviceDb.table("payments").insert({ ...row, razorpay_order_id: order.id });
+  await paymentsRepository(deps.serviceDb).insert({ ...row, razorpay_order_id: order.id });
   return c.json({
     paidWithCredit: false,
     orderId: order.id,

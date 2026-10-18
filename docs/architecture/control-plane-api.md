@@ -108,7 +108,8 @@ A POST is never retried: repeating one could create a second order, refund twice
 single-use refresh token twice and end the session.
 
 Logs are one JSON line per event (`src/api/src/lib/log.ts`); an unexpected failure's line carries the
-request id. The id is Cloudflare's ray id, so a reference a person quotes also finds the request itself
+request id, and a failed database query adds `operation`, the repository query that broke (for example
+`devices.findByCredentialHash`). The id is Cloudflare's ray id, so a reference a person quotes also finds the request itself
 in Workers Logs. Tokens, keys, and email addresses are redacted before anything
 is written. See [`../workflows/OBSERVABILITY.md`](../workflows/OBSERVABILITY.md) and the
 [incident runbook](../workflows/INCIDENT-RUNBOOK.md).
@@ -433,7 +434,9 @@ flowchart LR
   MW --> RT[routes]
   RT --> CT[controllers]
   CT --> SV[services]
-  SV --> DB[database]
+  SV --> RP[repositories]
+  CT --> RP
+  RP --> DB[database]
 ```
 
 | Path | Holds |
@@ -446,13 +449,23 @@ flowchart LR
 | `controllers/` | Request handlers: read the validated input and the caller, call services, build the response |
 | `validators/` | `parseBody` and the strict Zod schemas for every request body |
 | `services/` | Business rules and multi-step work: billing, sync, entitlements, dashboard views and analytics, admin, page views, health; platform modules in `services/razorpay/` and `services/supabaseAuth/` |
-| `database/` | The Supabase and in-memory adapters behind the `Database` interface |
+| `repositories/` | Every database query, one module per table and one named function per query; the only code that calls `db.table` or `db.rpc` |
+| `database/` | The Supabase and in-memory adapters behind the `Database` interface, and `namedQueries`, which names a failed query in the logs |
 | `lib/` | Framework-free helpers: errors, logging, outbound HTTP, tokens, the rate limiter, Wilson intervals |
 | `types/` | The Worker's settings, the Hono context types, and the dependency contracts |
 | `config/` | The settings check |
 
-A new route is a line in its route table, a handler in `controllers/`, and any rule or query in
-`services/`. Tests live in `src/api/test/` and build the app with the in-memory database.
+A new route is a line in its route table, a handler in `controllers/`, any rule in `services/`, and any
+query as a named function in `repositories/`. A handler that only reads or writes one thing may call a
+repository directly; anything with rules or several steps goes through a service.
+
+A repository takes the `Database` it should use, so the caller still chooses the client: the user's own
+client, where row-level security applies, or the server key for device and admin work. Names say who a
+query is for: `...ForOwner` takes the verified account id and filters on it on top of row-level security.
+A missing row is `null`, and the caller decides whether that is a 404.
+
+Tests live in `src/api/test/` and build the app with the in-memory database;
+`repositories.test.ts` covers the queries that guard ownership and single use.
 
 ## Configuration
 

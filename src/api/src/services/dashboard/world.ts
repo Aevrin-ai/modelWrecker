@@ -1,5 +1,6 @@
 import type { Database, Row } from "../../types/deps";
 import { str } from "../../lib/strings";
+import { ownedRowsRepository, type OwnedTable } from "../../repositories/ownedRows";
 
 /** Every row one account owns that the dashboard views are built from. */
 export interface World {
@@ -12,7 +13,7 @@ export interface World {
 }
 
 export async function loadWorld(db: Database, owner: string): Promise<World> {
-  const ownedRows = (table: string) => db.table(table).select({ eq: { owner_id: owner } });
+  const ownedRows = (table: OwnedTable) => ownedRowsRepository(db, table).listForOwner(owner);
   const [projects, targets, campaigns, runs, findings, devices] = await Promise.all([
     ownedRows("projects"),
     ownedRows("targets"),
