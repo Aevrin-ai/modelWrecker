@@ -5,15 +5,17 @@ import { randomToken, sha256Hex, userCode } from "../../lib/tokens";
 import type { IpLimit } from "../../middleware/rateLimit";
 import { DeviceCodeReq } from "../../validators/schemas";
 import { DEVICE_CODE_TTL_S, POLL_INTERVAL_S } from "./constants";
+import { deviceAuthRequestsRepository } from "../../repositories/deviceAuthRequests";
 
 // a fresh code is drawn up to five more times while it clashes with a stored one
 const USER_CODE_RETRIES = 5;
 
 async function unusedUserCode(deps: Deps): Promise<string> {
+  const requests = deviceAuthRequestsRepository(deps.serviceDb);
   let code = userCode();
   for (let i = 0; i < USER_CODE_RETRIES; i++) {
-    const clash = await deps.serviceDb.table("device_auth_requests").select({ eq: { user_code: code } });
-    if (clash.length === 0) break;
+    const clash = await requests.findByUserCode(code);
+    if (!clash) break;
     code = userCode();
   }
   return code;
@@ -26,7 +28,7 @@ export async function issueDeviceCode(c: AppContext, deps: Deps, limit: IpLimit)
   const deviceCode = randomToken(32);
   const now = deps.now();
   const code = await unusedUserCode(deps);
-  await deps.serviceDb.table("device_auth_requests").insert({
+  await deviceAuthRequestsRepository(deps.serviceDb).insert({
     device_code_hash: await sha256Hex(deviceCode),
     user_code: code,
     name: body.name,

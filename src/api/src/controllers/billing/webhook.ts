@@ -6,6 +6,8 @@ import { log } from "../../lib/log";
 import { clientIp, type KeyLimit } from "../../middleware/rateLimit";
 import { verifyWebhookSignature, type BillingConfig, type RzpPayment } from "../../services/razorpay/client";
 import { str } from "../../lib/strings";
+import { billingEventsRepository } from "../../repositories/billingEvents";
+import { paymentsRepository } from "../../repositories/payments";
 
 const MAX_WEBHOOK_BYTES = 512 * 1024;
 const PAYMENT_EVENTS = ["payment.captured", "payment.authorized", "order.paid", "payment.failed"];
@@ -37,7 +39,7 @@ async function readSignedBody(c: AppContext, billing: BillingConfig): Promise<st
 async function applyEvent(deps: Deps, billing: BillingConfig, name: string, event: WebhookEvent): Promise<void> {
   const payment = event.payload?.payment?.entity as RzpPayment | undefined;
   if (payment && PAYMENT_EVENTS.includes(name)) {
-    const [order] = await deps.serviceDb.table("payments").select({ eq: { razorpay_order_id: str(payment.order_id) } });
+    const order = await paymentsRepository(deps.serviceDb).findByOrderId(str(payment.order_id));
     if (order) await confirmPayment(deps, billing, order, payment);
     return;
   }
@@ -46,7 +48,7 @@ async function applyEvent(deps: Deps, billing: BillingConfig, name: string, even
   const paymentId = str(payment?.id ?? refund?.payment_id);
   const refunded = Number(payment?.amount_refunded ?? refund?.amount ?? 0);
   if (paymentId && refunded > 0) {
-    await deps.serviceDb.rpc("refund_payment", { p_payment_id: paymentId, p_amount_refunded: refunded, p_now: deps.now().toISOString() });
+    await paymentsRepository(deps.serviceDb).recordRefund(paymentId, refunded, deps.now().toISOString());
   }
 }
 
@@ -57,12 +59,12 @@ export async function billingWebhook(c: AppContext, deps: Deps, limit: KeyLimit)
   limit(`webhook:${clientIp(c)}`, 300, 60_000);
   const event = parseEvent(await readSignedBody(c, billing));
   const eventId = c.req.header("x-razorpay-event-id") ?? "";
-  const events = deps.serviceDb.table("billing_events");
-  if (eventId && (await events.count({ eq: { event_id: eventId } })) > 0) return c.json({ ok: true, duplicate: true });
+  const events = billingEventsRepository(deps.serviceDb);
+  if (eventId && (await events.exists(eventId))) return c.json({ ok: true, duplicate: true });
 
   const name = str(event.event);
   await applyEvent(deps, billing, name, event);
   // recording the id only skips repeats; a failed insert must not fail an event that was already applied
-  if (eventId) await events.insert({ event_id: eventId.slice(0, 120), event: name.slice(0, 60) }).catch(() => undefined);
+  if (eventId) await events.insert(eventId.slice(0, 120), name.slice(0, 60)).catch(() => undefined);
   return c.json({ ok: true });
 }

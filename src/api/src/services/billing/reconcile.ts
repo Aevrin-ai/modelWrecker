@@ -2,6 +2,7 @@ import type { Deps } from "../../types/deps";
 import { errorFields, log } from "../../lib/log";
 import { str } from "../../lib/strings";
 import { confirmPayment } from "./confirmPayment";
+import { paymentsRepository } from "../../repositories/payments";
 
 const RECONCILE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -9,12 +10,7 @@ const RECONCILE_WINDOW_MS = 24 * 60 * 60 * 1000;
 export async function reconcileOwner(deps: Deps, owner: string, limit = 3): Promise<void> {
   if (!deps.billing) return;
   const since = new Date(deps.now().getTime() - RECONCILE_WINDOW_MS).toISOString();
-  const open = await deps.serviceDb.table("payments").select({
-    eq: { owner_id: owner, status: "created" },
-    gte: { created_at: since },
-    order: { column: "created_at", ascending: false },
-    limit,
-  });
+  const open = await paymentsRepository(deps.serviceDb).listOpenSinceForOwner(owner, since, limit);
   for (const order of open) {
     if (str(order.razorpay_order_id).startsWith("credit_")) continue;
     try {

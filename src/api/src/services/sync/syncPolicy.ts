@@ -1,5 +1,7 @@
 import type { Database } from "../../types/deps";
 import { effectivePlan } from "../billing/plans";
+import { profilesRepository } from "../../repositories/profiles";
+import { subscriptionsRepository } from "../../repositories/subscriptions";
 
 /** What an account allows to sync beyond metadata. Both default to off. */
 export interface SyncPolicy {
@@ -12,9 +14,9 @@ export interface SyncPolicy {
  * Detail is a Pro feature: on a plan without evidence storage both are off, whatever the settings say.
  */
 export async function readSyncPolicy(db: Database, ownerId: string, now: Date = new Date()): Promise<SyncPolicy> {
-  const [[profile], [sub]] = await Promise.all([
-    db.table("profiles").select({ eq: { id: ownerId } }),
-    db.table("subscriptions").select({ eq: { owner_id: ownerId } }),
+  const [profile, sub] = await Promise.all([
+    profilesRepository(db).findById(ownerId),
+    subscriptionsRepository(db).findForOwner(ownerId),
   ]);
   if (!effectivePlan(sub, now).features.evidence_storage) return { evidence: false, transcripts: false };
   const sync = ((profile?.settings as { sync?: Record<string, unknown> } | undefined)?.sync ?? {}) as Record<

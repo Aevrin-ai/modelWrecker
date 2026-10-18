@@ -5,6 +5,7 @@ import { ApiError } from "../../lib/errors";
 import { SettingsPatch } from "../../validators/schemas";
 import { planFor, userScope } from "./context";
 import { readSettings, isTurningDetailOn, deleteDetailTurnedOff } from "../../services/dashboard/settings";
+import { profilesRepository } from "../../repositories/profiles";
 
 export async function getSettings(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner } = userScope(c, deps);
@@ -22,7 +23,7 @@ export async function updateSettings(c: AppContext, deps: Deps): Promise<Respons
     sync: { ...current.sync, ...(body.sync ?? {}), metadata: true },
     notifications: { ...current.notifications, ...(body.notifications ?? {}) },
   };
-  await db.table("profiles").update({ id: owner }, { settings: next });
+  await profilesRepository(db).saveSettings(owner, next);
   await deleteDetailTurnedOff(db, owner, current, next);
   return c.json(next);
 }

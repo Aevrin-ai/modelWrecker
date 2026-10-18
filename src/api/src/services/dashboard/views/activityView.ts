@@ -3,6 +3,7 @@ import { str } from "../../../lib/strings";
 import { campaignTotals } from "./campaignView";
 import { iso, num } from "../rows";
 import { type World } from "../world";
+import { runTranscriptsRepository } from "../../../repositories/runTranscripts";
 
 interface StrategyCount {
   strategy: string;
@@ -61,7 +62,7 @@ function attemptView(attempt: Record<string, unknown>, i: number) {
 }
 
 export async function runTranscript(db: Database, owner: string, run: Row) {
-  const [transcript] = await db.table("run_transcripts").select({ eq: { run_id: str(run.id), owner_id: owner } });
+  const transcript = await runTranscriptsRepository(db).findForRun(str(run.id), owner);
   const attempts = (transcript?.attempts as Record<string, unknown>[] | undefined) ?? [];
   return {
     runId: str(run.id),

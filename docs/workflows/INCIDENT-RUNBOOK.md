@@ -17,7 +17,8 @@ A person who hits a server error sees a reference in the message:
 The id is Cloudflare's ray id for that request. In the Cloudflare dashboard, open Workers & Pages,
 Observability, and filter `$workers.event.request.headers.cf-ray` equal to the id: that finds the
 request itself (its path, status, and any log lines). Unexpected failures also write their own line with
-the field `requestId`. A new request takes about half a minute to show up. To watch live instead:
+the field `requestId`, and a database failure adds `operation`, the query that broke (for example
+`payments.fulfil`). A new request takes about half a minute to show up. To watch live instead:
 
 ```bash
 cd src/api

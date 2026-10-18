@@ -1,5 +1,8 @@
 import type { SyncEvidenceBody, SyncFindingBody, SyncRunBody } from "../../validators/schemas";
 import type { SyncScope } from "./ingestRun";
+import { findingEvidenceRepository } from "../../repositories/findingEvidence";
+import { findingsRepository } from "../../repositories/findings";
+import { runTranscriptsRepository } from "../../repositories/runTranscripts";
 
 interface FindingLinks {
   campaignId: unknown;
@@ -59,12 +62,14 @@ export async function storeFindings(
   for (const finding of findings) {
     const keepEvidence = evidenceAllowed && finding.evidence !== undefined;
     // `status` is never sent, so a lifecycle status the user set in the dashboard survives a re-sync
-    const row = await scope.db.table("findings").upsert(findingRow(scope, finding, links, keepEvidence), ["owner_id", "external_id"]);
+    const row = await findingsRepository(scope.db).upsertByExternalId(findingRow(scope, finding, links, keepEvidence));
     if (keepEvidence && finding.evidence) {
-      await scope.db.table("finding_evidence").upsert(
-        { finding_id: row.id, owner_id: scope.owner, detail: evidenceDetail(finding.evidence), updated_at: scope.now },
-        ["finding_id"],
-      );
+      await findingEvidenceRepository(scope.db).upsertForFinding({
+        finding_id: row.id,
+        owner_id: scope.owner,
+        detail: evidenceDetail(finding.evidence),
+        updated_at: scope.now,
+      });
       evidenceStored += 1;
     }
   }
@@ -79,15 +84,12 @@ export async function storeTranscript(
   transcriptsAllowed: boolean,
 ): Promise<boolean> {
   if (!transcriptsAllowed || !transcript) return false;
-  await scope.db.table("run_transcripts").upsert(
-    {
-      run_id: runId,
-      owner_id: scope.owner,
-      attempts: transcript.attempts,
-      truncated: transcript.truncated,
-      updated_at: scope.now,
-    },
-    ["run_id"],
-  );
+  await runTranscriptsRepository(scope.db).upsertForRun({
+    run_id: runId,
+    owner_id: scope.owner,
+    attempts: transcript.attempts,
+    truncated: transcript.truncated,
+    updated_at: scope.now,
+  });
   return true;
 }

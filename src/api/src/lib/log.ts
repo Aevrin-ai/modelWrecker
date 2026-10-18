@@ -1,4 +1,5 @@
 // One redacted JSON line per event; values are flat so a whole object is never logged.
+import { DbError } from "./errors";
 
 export type LogValue = string | number | boolean | null | undefined;
 export type LogFields = Record<string, LogValue>;
@@ -24,6 +25,7 @@ export function redact(text: string): string {
 
 /** The name and message of a thrown value, as log fields. Never the value itself. */
 export function errorFields(err: unknown): LogFields {
+  if (err instanceof DbError) return { errorName: err.name, errorMessage: err.message, operation: err.operation };
   if (err instanceof Error) return { errorName: err.name, errorMessage: err.message };
   return { errorMessage: String(err) };
 }

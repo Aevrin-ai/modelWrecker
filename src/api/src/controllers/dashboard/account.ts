@@ -4,6 +4,7 @@ import type { Deps } from "../../types/deps";
 import { NamePatch } from "../../validators/schemas";
 import { str } from "../../lib/strings";
 import { userScope } from "./context";
+import { profilesRepository } from "../../repositories/profiles";
 
 // "Ada Lovelace" -> "AL", "ada@example.com" -> "AE"
 function initialsOf(name: string): string {
@@ -14,8 +15,8 @@ function initialsOf(name: string): string {
 export async function readAccount(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner } = userScope(c, deps);
   const user = c.get("user");
-  let [profile] = await db.table("profiles").select({ eq: { id: owner } });
-  if (!profile) profile = await db.table("profiles").insert({ id: owner, email: user.email, display_name: user.name ?? user.email });
+  const profiles = profilesRepository(db);
+  const profile = (await profiles.findById(owner)) ?? (await profiles.insert({ id: owner, email: user.email, display_name: user.name ?? user.email }));
   const name = str(profile.display_name) || str(user.email);
   return c.json({
     id: owner,
@@ -32,6 +33,6 @@ export async function readAccount(c: AppContext, deps: Deps): Promise<Response> 
 export async function renameAccount(c: AppContext, deps: Deps): Promise<Response> {
   const { db, owner } = userScope(c, deps);
   const body = await parseBody(c, NamePatch);
-  await db.table("profiles").update({ id: owner }, { display_name: body.name });
+  await profilesRepository(db).rename(owner, body.name);
   return c.json({ ok: true, name: body.name });
 }

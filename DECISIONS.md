@@ -63,8 +63,8 @@ Confirmed by the maintainer on 2026-10-02 (issues #11, #12, #42):
   `docs/billing/pricing.md`.
 - **Errors carry a request id, database failures are classified by code, and only safe methods are
   retried** inside one time budget. A permanent provider error is never retried. (ADR-0023)
-- **The control-plane API is layered** (middleware, routes, controllers, validators, services, database,
-  lib, types, config), and the whole repository follows the owner's code style with its style checker
-  clean. (ADR-0024)
+- **The control-plane API is layered** (middleware, routes, controllers, validators, services,
+  repositories, database, lib, types, config), every query is a named repository function, and the whole
+  repository follows the owner's code style with its style checker clean. (ADR-0024, #89)
 
 No open decisions remain.

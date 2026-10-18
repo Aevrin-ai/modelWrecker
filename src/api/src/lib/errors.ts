@@ -16,6 +16,9 @@ export class ApiError extends Error {
 
 /** A database failure. `code` is the Postgres SQLSTATE or PostgREST code; the message goes to logs only. */
 export class DbError extends Error {
+  /** The repository query that failed, such as `profiles.findById`, set by `namedQueries`. */
+  operation?: string;
+
   constructor(
     message: string,
     public code = "",

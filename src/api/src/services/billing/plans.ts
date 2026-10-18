@@ -66,7 +66,7 @@ interface Effective {
   creditPaise: number;
 }
 
-export function effectivePlan(sub: Row | undefined, now: Date): Effective {
+export function effectivePlan(sub: Row | null | undefined, now: Date): Effective {
   const stored = (planById(String(sub?.plan ?? "free")).id ?? "free") as PlanId;
   const end = sub?.current_period_end ? String(sub.current_period_end) : null;
   const lapsed = stored !== "free" && end !== null && Date.parse(end) <= now.getTime();

@@ -3,6 +3,7 @@ import { randomToken, sha256Hex } from "../../lib/tokens";
 import { clientIp } from "../../middleware/rateLimit";
 import type { AdminContext } from "../../controllers/admin/context";
 import { ADMIN_TOKEN_PREFIX } from "../../middleware/adminGuards";
+import { adminSessionsRepository } from "../../repositories/adminSessions";
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 // consonants and digits that cannot be mistaken for each other when read aloud or typed
@@ -21,7 +22,7 @@ export async function startSession(admin: AdminContext, c: AppContext) {
   const token = `${ADMIN_TOKEN_PREFIX}${randomToken(32)}`;
   const now = admin.deps.now();
   const expires = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
-  await admin.db.table("admin_sessions").insert({
+  await adminSessionsRepository(admin.db).insert({
     user_id: c.get("user").id,
     token_hash: await sha256Hex(token),
     ip: clientIp(c),

@@ -3,6 +3,7 @@ import type { Row } from "../../types/deps";
 import { clientIp } from "../../middleware/rateLimit";
 import { str } from "../../lib/strings";
 import type { AdminContext } from "../../controllers/admin/context";
+import { adminAuditRepository } from "../../repositories/adminAudit";
 
 /** Write one admin action to admin_audit, with who did it, to whom, and why. */
 export async function writeAudit(
@@ -14,7 +15,7 @@ export async function writeAudit(
   detail: Record<string, unknown> = {},
 ): Promise<void> {
   const user = c.get("user");
-  await admin.db.table("admin_audit").insert({
+  await adminAuditRepository(admin.db).insert({
     admin_id: user.id,
     admin_email: str(user.email),
     action,

@@ -2,6 +2,8 @@ import type { Database, Deps, Row } from "../../types/deps";
 import { CURRENCY, effectivePlan, planById, type Interval } from "./plans";
 import { str } from "../../lib/strings";
 import { usageFor } from "../entitlements/usage";
+import { paymentsRepository } from "../../repositories/payments";
+import { subscriptionsRepository } from "../../repositories/subscriptions";
 
 const RENEWAL_NOTICE_MS = 7 * 24 * 60 * 60 * 1000;
 // an unpaid order this recent still counts as a payment in progress
@@ -9,7 +11,7 @@ const PENDING_ORDER_MS = 60 * 60 * 1000;
 
 type Effective = ReturnType<typeof effectivePlan>;
 
-function subscriptionStatus(isLapsed: boolean, subscription: Row | undefined): string {
+function subscriptionStatus(isLapsed: boolean, subscription: Row | null): string {
   if (!isLapsed) return "active";
   return subscription?.status === "canceled" ? "canceled" : "expired";
 }
@@ -26,18 +28,14 @@ function bonusView(bonus: Effective["bonus"]) {
 }
 
 async function hasRecentOpenOrder(deps: Deps, owner: string, now: Date): Promise<boolean> {
-  const [last] = await deps.serviceDb.table("payments").select({
-    eq: { owner_id: owner },
-    order: { column: "created_at", ascending: false },
-    limit: 1,
-  });
+  const last = await paymentsRepository(deps.serviceDb).findNewestForOwner(owner);
   return last?.status === "created" && now.getTime() - Date.parse(str(last.created_at)) < PENDING_ORDER_MS;
 }
 
 /** The Billing page's view of one account. */
 export async function subscriptionView(deps: Deps, db: Database, owner: string) {
   const now = deps.now();
-  const [subscription] = await deps.serviceDb.table("subscriptions").select({ eq: { owner_id: owner } });
+  const subscription = await subscriptionsRepository(deps.serviceDb).findForOwner(owner);
   const effective = effectivePlan(subscription, now);
   const plan = planById(effective.planId);
   const usage = await usageFor(db, owner, now);
