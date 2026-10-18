@@ -10,12 +10,6 @@ import { AddLine } from "@/components/ui/solar-icons";
 import { EASE } from "@/components/mockups/tokens";
 import { RunMockup } from "@/components/mockups/run-mockup";
 
-/*
-  How a run works, told as six steps beside the run itself. The list and the
-  window share one phase: the steps open one at a time as the run plays, and
-  picking a step jumps the window to it (and stops the autoplay).
-*/
-
 function Code({ children }: { children: ReactNode }) {
   return <code className="bg-muted text-foreground rounded px-1.5 py-0.5 font-mono text-[0.9em]">{children}</code>;
 }
@@ -37,10 +31,10 @@ const STEPS: { title: string; text: ReactNode }[] = [
   { title: "Write the finding.", text: "A confirmed weak spot becomes a finding with its proof attached." },
 ];
 
-// Seconds each step holds. Typing the campaign takes longest; the finding,
-// the payoff, holds before the run starts over.
+// seconds each step holds: typing the campaign takes longest, and the finding holds before the run starts over
 const DURATIONS = [4.6, 3.0, 3.0, 2.4, 3.0, 3.6];
 
+// six steps beside the run itself, sharing one phase; picking a step jumps the window to it and stops the autoplay
 export function Run() {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();

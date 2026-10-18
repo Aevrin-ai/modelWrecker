@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { supabaseAuthTokens } from "../src/db/supabase";
+import { supabaseAuthTokens } from "../src/database/supabase";
 
 const auth = supabaseAuthTokens("https://project.supabase.co/", "anon-key");
 const session = {

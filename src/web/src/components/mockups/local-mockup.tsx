@@ -1,5 +1,4 @@
 import { useRef, type ReactNode } from "react";
-import { motion, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 import { useAutoplay } from "@/hooks/use-autoplay";
@@ -20,18 +19,9 @@ import {
   type IconComponent,
 } from "@/components/ui/solar-icons";
 import { AppCard, Status, Tag, Tile } from "./kit";
-import { EASE } from "./tokens";
+import { MachineWire } from "./machine-wire";
 
-/*
-  Local-first, as a picture: two boxes. "Your machine" runs the attacker, the
-  target connection and the judge, with your keys or a local model, and the
-  attack traffic moves only inside it. A dashed line carries a results
-  summary to the Aevrin cloud, which handles sign-in, the dashboard, billing
-  and plans, and never runs an attack.
-*/
-
-// 0 ready, 1 attacker to target, 2 reply to the judge, 3 the verdict,
-// 4 the summary reaches the dashboard, held.
+// 0 ready, 1 attacker to target, 2 reply to the judge, 3 the verdict, 4 the summary reaches the dashboard, held
 const STEPS = [0.8, 1.5, 1.5, 1.2, 3.4] as const;
 const SUMMARY = 4;
 
@@ -48,31 +38,15 @@ const CLOUD: { name: string; icon: IconComponent }[] = [
   { name: "Plans", icon: Layers },
 ];
 
-// The link between two parts of the machine: grey, lime once used, with a
-// packet running down it while traffic is on the move.
-function Wire({ on, moving }: { on: boolean; moving: boolean }) {
-  const reduce = useReducedMotion();
-  return (
-    <div className="relative ml-[31px] h-6 w-0.5 bg-slate-200 dark:bg-white/15">
-      <motion.span
-        className="bg-lime absolute inset-0 origin-top"
-        initial={false}
-        animate={{ scaleY: on ? 1 : 0 }}
-        transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
-      />
-      {moving && !reduce && (
-        <motion.span
-          className="bg-lime absolute left-1/2 size-2.5 -translate-x-1/2 rounded-full ring-2 ring-white dark:ring-slate-900"
-          initial={{ top: "-20%" }}
-          animate={{ top: "90%" }}
-          transition={{ duration: 0.7, ease: "easeInOut", repeat: Infinity }}
-        />
-      )}
-    </div>
-  );
+interface BoxProps {
+  icon: IconComponent;
+  title: string;
+  right?: ReactNode;
+  className?: string;
+  children: ReactNode;
 }
 
-function Box({ icon, title, right, className, children }: { icon: IconComponent; title: string; right?: ReactNode; className?: string; children: ReactNode }) {
+function Box({ icon, title, right, className, children }: BoxProps) {
   return (
     <div className={cn("rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-900/10 sm:p-5 dark:bg-white/[0.04] dark:ring-white/10", className)}>
       <div className="mb-4 flex items-center gap-3">
@@ -85,18 +59,23 @@ function Box({ icon, title, right, className, children }: { icon: IconComponent;
   );
 }
 
-export function LocalMockup({ className }: { className?: string }) {
+export interface LocalMockupProps {
+  className?: string;
+}
+
+// local-first as a picture: every attack runs inside your machine, and only a results summary leaves it
+export function LocalMockup({ className }: LocalMockupProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { phase } = useAutoplay(ref, STEPS);
   const sent = phase >= SUMMARY;
 
-  const nodeRight = (i: number) => {
+  const getNodeStatus = (i: number) => {
     if (i === 0 && phase === 1) return <Status tone="info">Sending</Status>;
     if (i === 1 && phase === 2) return <Status tone="info">Reply in</Status>;
     if (i === 2 && phase >= 3) return <Tag tone="warn">Worked</Tag>;
     return null;
   };
-  const active = (i: number) => (i === 0 && phase === 1) || (i === 1 && phase === 2) || (i === 2 && phase === 3);
+  const isNodeActive = (i: number) => (i === 0 && phase === 1) || (i === 1 && phase === 2) || (i === 2 && phase === 3);
 
   return (
     <AppCard
@@ -104,7 +83,7 @@ export function LocalMockup({ className }: { className?: string }) {
       label="Your machine runs the attacker, the target connection and the judge with your keys or a local model, and sends only a results summary to the Aevrin cloud, which handles sign-in, the dashboard, billing and plans and never runs an attack."
     >
       <div ref={ref} className="flex flex-col p-4 sm:p-6 lg:flex-row lg:items-center">
-        {/* Your machine: where every attack runs. */}
+        {/* your machine: where every attack runs */}
         <Box
           icon={Laptop}
           title="Your machine"
@@ -113,11 +92,11 @@ export function LocalMockup({ className }: { className?: string }) {
         >
           {NODES.map((node, i) => (
             <div key={node.name}>
-              {i > 0 && <Wire on={phase >= i} moving={phase === i} />}
+              {i > 0 && <MachineWire on={phase >= i} moving={phase === i} />}
               <div
                 className={cn(
                   "flex items-center gap-3 rounded-xl bg-white px-3.5 py-2.5 ring-1 transition-[box-shadow] duration-500 dark:bg-slate-900",
-                  active(i) ? "ring-lime ring-2" : "ring-slate-900/10 dark:ring-white/10",
+                  isNodeActive(i) ? "ring-lime ring-2" : "ring-slate-900/10 dark:ring-white/10",
                 )}
               >
                 <Tile icon={node.icon} className="size-9" />
@@ -125,7 +104,7 @@ export function LocalMockup({ className }: { className?: string }) {
                   <span className="block truncate text-[15px] font-medium">{node.name}</span>
                   <span className="block truncate text-[13px] text-slate-500 dark:text-slate-400">{node.sub}</span>
                 </span>
-                {nodeRight(i)}
+                {getNodeStatus(i)}
               </div>
             </div>
           ))}
@@ -142,7 +121,7 @@ export function LocalMockup({ className }: { className?: string }) {
           </div>
         </Box>
 
-        {/* The only thing that leaves the machine by default. */}
+        {/* the only thing that leaves the machine by default */}
         <div className="relative flex h-16 items-center justify-center lg:h-auto lg:w-[136px] lg:shrink-0 lg:self-stretch">
           <span
             className={cn(
@@ -157,7 +136,7 @@ export function LocalMockup({ className }: { className?: string }) {
           </span>
         </div>
 
-        {/* The Aevrin cloud: a thin control plane. */}
+        {/* the cloud: a thin control plane */}
         <Box icon={Cloud} title="Aevrin cloud" className="lg:flex-1">
           <ul className="space-y-1">
             {CLOUD.map(({ name, icon: Icon }) => (

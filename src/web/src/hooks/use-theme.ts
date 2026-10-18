@@ -1,15 +1,23 @@
 import { useCallback, useSyncExternalStore } from "react";
 
-/*
-  Light or dark. The page follows the system until someone picks one with the
-  toggle; the choice is remembered in this browser only. index.html sets the
-  class before first paint so there is no flash.
-*/
+export type Theme = "light" | "dark";
+
+// follows the system until the toggle is used; index.html sets the class before first paint so nothing flashes
 const KEY = "mw-theme";
 const listeners = new Set<() => void>();
 
-function current(): "light" | "dark" {
+function current(): Theme {
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+function saveTheme(theme: Theme): boolean {
+  try {
+    localStorage.setItem(KEY, theme);
+    return true;
+  } catch {
+    // private windows can refuse storage; the toggle still works for this visit
+    return false;
+  }
 }
 
 export function useTheme() {
@@ -25,12 +33,8 @@ export function useTheme() {
   const toggle = useCallback(() => {
     const next = current() === "dark" ? "light" : "dark";
     document.documentElement.classList.toggle("dark", next === "dark");
-    try {
-      localStorage.setItem(KEY, next);
-    } catch {
-      // Private windows can refuse storage; the toggle still works for this visit.
-    }
-    listeners.forEach((l) => l());
+    saveTheme(next);
+    listeners.forEach((listener) => listener());
   }, []);
 
   return { theme, toggle };

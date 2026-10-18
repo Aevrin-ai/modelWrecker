@@ -1,14 +1,4 @@
-/*
-  MOCK DATA - development only.
-
-  This directory is the ONLY place mock data lives. The API layer (src/api) reads
-  from here through the MockApiClient. Swapping to a real backend means implementing
-  ApiClient against HTTP and never importing this file from UI code.
-
-  Everything here uses real ModelWrecker terminology: real strategy names
-  (docs/attack-engine/STRATEGIES.md), real target types (chat/agent/rag/mcp), real
-  severities/statuses/outcomes (data.py), and verified taxonomy IDs only.
-*/
+// development-only mock data, read only through MockApiClient, using real engine names and verified taxonomy IDs
 
 import type {
   Account,
@@ -43,7 +33,6 @@ function secondsAgo(n: number): string {
   return new Date(Date.now() - n * 1000).toISOString();
 }
 
-// --- projects -------------------------------------------------------------------------
 
 export const projects: Project[] = [
   {
@@ -91,7 +80,6 @@ export const projects: Project[] = [
   },
 ];
 
-// --- devices --------------------------------------------------------------------------
 
 export const devices: Device[] = [
   {
@@ -148,7 +136,6 @@ export const devices: Device[] = [
   },
 ];
 
-// --- targets --------------------------------------------------------------------------
 
 export const targets: Target[] = [
   {
@@ -284,7 +271,6 @@ export const targets: Target[] = [
   },
 ];
 
-// --- campaigns ------------------------------------------------------------------------
 
 export const campaigns: Campaign[] = [
   {
@@ -585,7 +571,6 @@ export const campaignStats: Record<string, CampaignStats> = {
   },
 };
 
-// --- findings -------------------------------------------------------------------------
 
 export const findings: Finding[] = [
   {
@@ -916,7 +901,6 @@ export const findings: Finding[] = [
   },
 ];
 
-// --- reports --------------------------------------------------------------------------
 
 export const reports: Report[] = [
   {
@@ -981,7 +965,6 @@ export const reports: Report[] = [
   },
 ];
 
-// --- analytics ------------------------------------------------------------------------
 
 export const analytics: AnalyticsSummary = {
   asr: 0.093,
@@ -1060,9 +1043,7 @@ export const overview: OverviewStats = {
   },
 };
 
-// --- billing / entitlements -----------------------------------------------------------
-// Plans and prices are configuration (src/shared/plans.json), not mock data. Only the demo
-// workspace's subscription, usage, and invoices are mocked here.
+// plans and prices are configuration (src/shared/plans.json); only the demo subscription and invoices are mocked
 
 export const subscription: Subscription = {
   planId: "pro",
@@ -1120,7 +1101,6 @@ export const invoices: Invoice[] = [
   },
 ];
 
-// --- account / notifications ----------------------------------------------------------
 
 export const account: Account = {
   id: "usr_1",

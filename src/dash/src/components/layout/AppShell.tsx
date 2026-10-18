@@ -6,11 +6,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const COLLAPSE_KEY = "aevrin-sidebar-collapsed";
 
-/**
- * Shell: a full-width header on top, the sidebar beneath it on the left, and the page in a
- * scrolling main column (reference padding: 16px mobile, 20px top / 32px sides desktop).
- * Below 1024px the sidebar becomes a drawer opened from the header toggle.
- */
+// header on top, sidebar on the left, and a scrolling main column; below 1024px the sidebar becomes a drawer
 export function AppShell() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [collapsed, setCollapsed] = useState(() => {
@@ -49,7 +45,8 @@ export function AppShell() {
       try {
         localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
       } catch {
-        /* ignore */
+        // storage may be blocked; the sidebar still toggles, it just is not remembered
+        return next;
       }
       return next;
     });

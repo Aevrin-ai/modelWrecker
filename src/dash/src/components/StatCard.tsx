@@ -5,27 +5,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@/lib/format";
 
-interface StatCardProps {
+export interface StatCardProps {
   label: string;
   value: string;
   icon: LucideIcon;
-  /** Signed fraction vs previous period, e.g. 0.201 => +20.1%. */
-  delta?: number;
-  /** When true, a rising value is bad (e.g. findings, attack success rate) so colors invert. */
-  invertDelta?: boolean;
+  delta?: number; // signed fraction vs the previous period: 0.201 -> +20.1%
+  invertDelta?: boolean; // a rising value is bad (findings, attack success rate), so colors invert
   hint?: string;
   className?: string;
 }
 
-/**
- * Stat card measured from the reference: p-6 header with a 14px medium title and a muted
- * 16px icon, a 24px bold value, a 12px muted sub line, then a colored trend line.
- */
 export function StatCard({ label, value, icon: Icon, delta, invertDelta, hint, className }: StatCardProps) {
   const hasDelta = typeof delta === "number" && Number.isFinite(delta);
-  const up = (delta ?? 0) >= 0;
-  const good = invertDelta ? !up : up;
-  const signed = hasDelta ? `${up ? "+" : ""}${formatPercent(delta!, 1)}` : "";
+  const isRising = (delta ?? 0) >= 0;
+  const isGood = invertDelta ? !isRising : isRising;
+  const signed = hasDelta ? `${isRising ? "+" : ""}${formatPercent(delta!, 1)}` : "";
   return (
     <Card className={cn("transition-shadow hover:shadow-card-hover", className)}>
       <div className="flex flex-row items-center justify-between p-6 pb-2">
@@ -38,8 +32,8 @@ export function StatCard({ label, value, icon: Icon, delta, invertDelta, hint, c
           {hasDelta ? `${signed} from last period` : (hint ?? " ")}
         </p>
         {hasDelta && (
-          <div className={cn("mt-2 flex items-center text-xs", good ? "text-success" : "text-destructive")}>
-            {up ? <TrendingUp className="mr-1 size-3" /> : <TrendingDown className="mr-1 size-3" />}
+          <div className={cn("mt-2 flex items-center text-xs", isGood ? "text-success" : "text-destructive")}>
+            {isRising ? <TrendingUp className="mr-1 size-3" /> : <TrendingDown className="mr-1 size-3" />}
             {signed}
           </div>
         )}

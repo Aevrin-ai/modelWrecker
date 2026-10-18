@@ -10,6 +10,7 @@ import csv
 import io
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -26,16 +27,16 @@ from modelwrecker.datasets.parsers import (
 FIXTURES = Path(__file__).parent / "fixtures" / "datasets"
 
 
-def _json(name):
+def _json(name: str) -> Any:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
-def _jsonl(name):
+def _jsonl(name: str) -> list[dict]:
     text = (FIXTURES / name).read_text(encoding="utf-8")
     return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
-def _csv(name):
+def _csv(name: str) -> list[dict]:
     return list(csv.DictReader(io.StringIO((FIXTURES / name).read_text(encoding="utf-8"))))
 
 

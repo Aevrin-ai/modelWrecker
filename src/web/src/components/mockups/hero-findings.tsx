@@ -3,13 +3,6 @@ import { Logo } from "@/components/ui/logo";
 import { ChatRoundDots, DocumentText, Laptop, ShieldCheck, Target } from "@/components/ui/solar-icons";
 import { SeverityTag, Tag, type Severity } from "./tags";
 
-/*
-  The product as the hero shows it: the findings view of a finished campaign,
-  one finding open with its proof. A still picture; the animated version of the
-  same card is in "Proof for every finding". Sample data only, and the prompt
-  is a harmless stand-in.
-*/
-
 const FINDINGS: { title: string; level: Severity; strategy: string }[] = [
   { title: "System prompt leaked", level: "High", strategy: "Prompt extraction" },
   { title: "Tool called without asking", level: "High", strategy: "Tool misuse" },
@@ -25,7 +18,12 @@ const NAV = [
   { label: "Devices", icon: Laptop },
 ];
 
-export function HeroFindings({ className }: { className?: string }) {
+export interface HeroFindingsProps {
+  className?: string;
+}
+
+// the findings view of a finished campaign as the hero shows it: a still picture of harmless sample data
+export function HeroFindings({ className }: HeroFindingsProps) {
   return (
     <div
       role="img"
@@ -33,7 +31,7 @@ export function HeroFindings({ className }: { className?: string }) {
       className={cn("flex size-full overflow-hidden bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100", className)}
     >
       <div aria-hidden="true" className="contents">
-        {/* Sidebar */}
+        {/* sidebar */}
         <div className="hidden w-[248px] shrink-0 flex-col gap-1 border-r border-slate-200 bg-slate-50 p-5 lg:flex dark:border-white/10 dark:bg-white/[0.03]">
           <Logo className="mb-6 px-2 text-[17px]" markClassName="h-6" />
           {NAV.map(({ label, icon: Icon, active }) => (
@@ -50,7 +48,7 @@ export function HeroFindings({ className }: { className?: string }) {
           ))}
         </div>
 
-        {/* Main pane */}
+        {/* main pane */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-5 py-4 sm:px-8 sm:py-6 dark:border-white/10">
             <div className="min-w-0">
@@ -64,7 +62,7 @@ export function HeroFindings({ className }: { className?: string }) {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-            {/* The list */}
+            {/* the list */}
             <ul className="shrink-0 divide-y divide-slate-100 border-slate-200 md:w-[44%] md:border-r dark:divide-white/5 dark:border-white/10">
               {FINDINGS.map((f, i) => (
                 <li
@@ -84,7 +82,7 @@ export function HeroFindings({ className }: { className?: string }) {
               ))}
             </ul>
 
-            {/* The open finding */}
+            {/* the open finding */}
             <div className="min-w-0 flex-1 space-y-4 p-5 sm:p-8">
               <div className="flex flex-wrap items-center gap-2">
                 <SeverityTag level="High" />

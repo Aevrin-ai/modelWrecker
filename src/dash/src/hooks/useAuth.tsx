@@ -1,15 +1,4 @@
-/*
-  Dashboard sign-in state (docs/security/authentication.md).
-
-  http mode: Google sign-in through Supabase Auth with the PKCE flow. Google redirects back to
-  /dashboard/?code=..., this provider exchanges the code for a session once (through the API, which
-  keeps the refresh token in an HttpOnly cookie), cleans the URL, and returns the user to the page they
-  started from. On a normal load it restores the session from that cookie. See lib/auth.ts.
-  Aevrin never sees the Google password, and the Google token never reaches a local engine.
-
-  mock mode: there is no real sign-in. `session` stays null, sign-out opens the sign-in screen as a
-  preview, and "Continue with Google" goes straight back to the demo workspace.
-*/
+// dashboard sign-in state (docs/security/authentication.md); in mock mode there is no real sign-in
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -30,21 +19,19 @@ interface AuthContextValue {
   mode: ApiMode;
   session: AuthSession | null;
   user: SessionUser | null;
-  /** True until the stored session (or an OAuth callback) has been read. Always false in mock mode. */
-  loading: boolean;
-  /** A safe, plain-language message when the last sign-in attempt failed. */
-  error: string | null;
+  loading: boolean; // true until the stored session or an OAuth callback is read; always false in mock mode
+  error: string | null; // a safe, plain-language message when the last sign-in failed
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const BASE_PATH = APP_BASE; // "/dashboard/", or "/admin/" for the admin console
+const BASE_PATH = APP_BASE; // the dashboard base, or the admin console base
 const RETURN_KEY = "aevrin-return-to";
-/** A device user code (XXXX-XXXX). Never mistake one for an OAuth code. */
+// a device user code (XXXX-XXXX), never to be mistaken for an OAuth code
 const USER_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/i;
-/** Router-relative paths we are willing to return to after sign-in. Blocks "//host" and "/\host". */
+// router-relative paths safe to return to after sign-in; blocks "//host" and "/\host"
 const SAFE_PATH_RE = /^\/(?![/\\])[A-Za-z0-9\-_/]*(\?[A-Za-z0-9\-_=&%.]*)?$/;
 
 function rememberReturnPath(path: string) {
@@ -52,7 +39,8 @@ function rememberReturnPath(path: string) {
     if (SAFE_PATH_RE.test(path) && path !== "/" && !path.startsWith("/login")) sessionStorage.setItem(RETURN_KEY, path);
     else sessionStorage.removeItem(RETURN_KEY);
   } catch {
-    /* storage may be blocked; the user lands on the overview instead */
+    // storage may be blocked; the user lands on the overview instead
+    return;
   }
 }
 
@@ -69,13 +57,13 @@ function takeReturnPath(): string | null {
 interface InitResult {
   session: AuthSession | null;
   error: string | null;
-  /** True when this page load was the OAuth callback, so the URL must be cleaned. */
-  wasCallback: boolean;
+  wasCallback: boolean; // this load was the OAuth callback, so the URL must be cleaned
 }
 
-// Runs once per page load, even under React StrictMode, because an OAuth code is single use.
+// runs once per page load, even under React StrictMode, because an OAuth code is single use
 let initPromise: Promise<InitResult> | null = null;
 
+// the code is exchanged through the API, which keeps the refresh token in an HttpOnly cookie script cannot read
 async function initAuth(): Promise<InitResult> {
   const url = new URL(window.location.href);
   const atRoot = url.pathname === BASE_PATH || `${url.pathname}/` === BASE_PATH;
@@ -121,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(result.session);
         setError(result.error);
         if (result.wasCallback) {
-          // Drop ?code= from the address bar and go back to where the user started.
+          // drop ?code= from the address bar and go back to where the user started
           navigate(result.session ? (takeReturnPath() ?? "/") : "/", { replace: true });
         }
       })
@@ -136,8 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
       unsubscribe();
     };
-    // Runs once; navigate is stable for the router's lifetime.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once; navigate is stable for the router's lifetime
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
@@ -160,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     navigate("/", { replace: true });
-    // Revokes this session on the server and clears the cookie; this tab is signed out either way.
+    // revokes this session on the server and clears the cookie; this tab is signed out either way
     await endSession();
   }, [navigate]);
 

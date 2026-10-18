@@ -1,10 +1,10 @@
-/** Small formatting helpers. Times from the engine are UTC ISO-8601 strings. */
+// formatting helpers; times from the engine are UTC ISO-8601 strings
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "-";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString(undefined, {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -13,9 +13,9 @@ export function formatDate(iso: string | null | undefined): string {
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString(undefined, {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -33,12 +33,12 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["second", 1],
 ];
 
-/** "2 hours ago", "just now", "in 3 days". */
+// e.g. 2 hours ago, just now, in 3 days
 export function relativeTime(iso: string | null | undefined): string {
   if (!iso) return "-";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
-  const diffSeconds = (d.getTime() - Date.now()) / 1000;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  const diffSeconds = (date.getTime() - Date.now()) / 1000;
   const abs = Math.abs(diffSeconds);
   if (abs < 45) return "just now";
   const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
@@ -50,15 +50,15 @@ export function relativeTime(iso: string | null | undefined): string {
   return "just now";
 }
 
-/** Humanize a snake_case or kebab-case identifier for display. */
+// "first_finding" -> "First Finding"
 export function humanize(value: string): string {
   return value
     .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function formatNumber(n: number): string {
-  return new Intl.NumberFormat().format(n);
+export function formatNumber(value: number): string {
+  return new Intl.NumberFormat().format(value);
 }
 
 export function formatPercent(fraction: number, digits = 1): string {
@@ -68,15 +68,15 @@ export function formatPercent(fraction: number, digits = 1): string {
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return "-";
   if (seconds < 60) return `${Math.round(seconds)}s`;
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  if (m < 60) return s ? `${m}m ${s}s` : `${m}m`;
-  const h = Math.floor(m / 60);
-  const rm = m % 60;
-  return rm ? `${h}h ${rm}m` : `${h}h`;
+  const minutes = Math.floor(seconds / 60);
+  const restSeconds = Math.round(seconds % 60);
+  if (minutes < 60) return restSeconds ? `${minutes}m ${restSeconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  return restMinutes ? `${hours}h ${restMinutes}m` : `${hours}h`;
 }
 
-/** Format an amount in whole currency units (rupees, not paise). INR, the billing currency, by default. */
+// whole currency units (rupees, not paise); INR, the billing currency, by default
 export function formatCurrency(amount: number, currency = "INR"): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",

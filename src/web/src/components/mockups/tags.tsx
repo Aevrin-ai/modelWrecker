@@ -2,12 +2,8 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/*
-  Labels the mockups share: a tag and a severity. Kept apart from kit.tsx, with no animation library, so the
-  hero can use them without pulling motion into the first download.
-*/
+// kept apart from the kit with no animation library, so the hero can use these without loading motion up front
 
-// A small rounded label: what kind of thing, or which family.
 const TAG = {
   plain: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300",
   bad: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
@@ -17,7 +13,14 @@ const TAG = {
   lime: "bg-lime/30 text-slate-900 dark:bg-lime/20 dark:text-lime",
 } as const;
 
-export function Tag({ tone = "plain", className, children }: { tone?: keyof typeof TAG; className?: string; children: ReactNode }) {
+export interface TagProps {
+  tone?: keyof typeof TAG;
+  className?: string;
+  children: ReactNode;
+}
+
+// a small rounded label: what kind of thing, or which family
+export function Tag({ tone = "plain", className, children }: TagProps) {
   return (
     <span
       className={cn(
@@ -31,11 +34,6 @@ export function Tag({ tone = "plain", className, children }: { tone?: keyof type
   );
 }
 
-/*
-  How serious a finding is. The same four colours everywhere on the site, and
-  always with the word: colour alone would hide it from anyone who cannot see
-  the colour.
-*/
 export type Severity = "Critical" | "High" | "Medium" | "Low";
 const SEVERITY: Record<Severity, string> = {
   Critical: "bg-critical/10 text-critical ring-critical/25",
@@ -43,7 +41,13 @@ const SEVERITY: Record<Severity, string> = {
   Medium: "bg-medium/10 text-medium ring-medium/25",
   Low: "bg-low/10 text-low ring-low/25",
 };
-export function SeverityTag({ level, className }: { level: Severity; className?: string }) {
+export interface SeverityTagProps {
+  level: Severity;
+  className?: string;
+}
+
+// always the word with the colour, since colour alone would hide the severity from anyone who cannot see it
+export function SeverityTag({ level, className }: SeverityTagProps) {
   return (
     <span
       className={cn(

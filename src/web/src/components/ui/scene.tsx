@@ -2,19 +2,26 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/*
-  The scenery behind the hero, the product panels and the close of the page:
-  skies, haze and hills painted in CSS (see .scene-* in index.css). No photos,
-  nothing to download. Scenery only, so it is hidden from assistive technology.
-*/
+// scenery painted in CSS (.scene-* in index.css): nothing to download, and hidden from assistive technology
 export type SceneName = "sky" | "meadow" | "dusk" | "mist" | "glass";
 
-export function Scene({ name, className }: { name: SceneName; className?: string }) {
+export interface SceneProps {
+  name: SceneName;
+  className?: string;
+}
+
+export function Scene({ name, className }: SceneProps) {
   return <div aria-hidden="true" className={cn("scene", `scene-${name}`, className)} />;
 }
 
-// A rounded window onto a scene, with a piece of the product standing in front of it.
-export function PaintedPanel({ scene, className, children }: { scene: SceneName; className?: string; children: ReactNode }) {
+export interface PaintedPanelProps {
+  scene: SceneName;
+  className?: string;
+  children: ReactNode;
+}
+
+// a rounded window onto a scene, with a piece of the product standing in front of it
+export function PaintedPanel({ scene, className, children }: PaintedPanelProps) {
   return (
     <div
       className={cn(

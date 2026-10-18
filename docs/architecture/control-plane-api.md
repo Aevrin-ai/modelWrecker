@@ -9,7 +9,7 @@
 The control-plane API is the only network surface of the Aevrin cloud. It stores and serves metadata. It
 never runs attacks, never calls a model, and never accepts raw prompts or model responses by default.
 
-- Code: `src/api` (a Cloudflare Worker, TypeScript).
+- Code: `src/api` (a Cloudflare Worker, TypeScript), in layers. See [Code layout](#code-layout).
 - Base URL: served at `https://vyra.aevrin.ai/api/v1` (the dashboard's own origin, so the browser needs no
   cross-origin calls) and at `https://app.aevrin.net/api/v1`, which is the default the `modelwrecker` CLI
   uses and stays live for already-installed clients.
@@ -75,7 +75,7 @@ It never says why a check failed; the log line `readiness_database_failed` does.
 
 ## Errors, timeouts, and retries
 
-One place turns a failure into a response. Routes throw a typed error (`src/api/src/errors.ts`); the
+One place turns a failure into a response. Routes throw a typed error (`src/api/src/lib/errors.ts`); the
 app's error handler classifies it and answers with the shape above. The device-polling replies in
 [`POST /device/token`](#post-devicetoken-public) keep their standard RFC 8628 shape instead.
 
@@ -93,7 +93,7 @@ serialization failure (`40001`), a PostgREST connection code (`PGRST000` to `PGR
 all becomes `503 service_unavailable`, so the CLI and the dashboard know to retry. A constraint violation
 or a bad query stays a `500`: retrying a bug only repeats it.
 
-Every outbound call has a time budget (`src/api/src/http.ts`). One budget covers every attempt and
+Every outbound call has a time budget (`src/api/src/lib/http.ts`). One budget covers every attempt and
 every wait, so a retry can never push a call past it.
 
 | Service | Budget | Retries |
@@ -107,8 +107,9 @@ backoff and jitter (a random part, so callers that failed together do not retry 
 A POST is never retried: repeating one could create a second order, refund twice, or send a
 single-use refresh token twice and end the session.
 
-Logs are one JSON line per event (`src/api/src/log.ts`), with the request id, so a reference a
-person quotes finds the exact request. Tokens, keys, and email addresses are redacted before anything
+Logs are one JSON line per event (`src/api/src/lib/log.ts`); an unexpected failure's line carries the
+request id. The id is Cloudflare's ray id, so a reference a person quotes also finds the request itself
+in Workers Logs. Tokens, keys, and email addresses are redacted before anything
 is written. See [`../workflows/OBSERVABILITY.md`](../workflows/OBSERVABILITY.md) and the
 [incident runbook](../workflows/INCIDENT-RUNBOOK.md).
 
@@ -391,7 +392,7 @@ First-party page-view beacon; always answers 204. What is kept: [`../analytics/p
 
 ## Dashboard routes (user)
 
-Responses use the dashboard's types in `src/dash/src/types/index.ts`, so the dashboard's `HttpApiClient`
+Responses use the dashboard's types in `src/dash/src/types/` (re-exported from `index.ts`), so the dashboard's `HttpApiClient`
 is a thin mapping. All list routes accept `?projectId=` (and `campaignId` / `targetId` where it makes
 sense) and only ever return the caller's rows.
 
@@ -421,6 +422,38 @@ sense) and only ever return the caller's rows.
 There is no route that runs an attack, calls a target, calls a model, runs a command, or fetches an
 arbitrary URL.
 
+## Code layout
+
+A request moves through layers, and each folder under `src/api/src` holds one of them. Only the entry
+point, the pipeline, and the composition root sit at the top.
+
+```mermaid
+flowchart LR
+  REQ[Request] --> MW[middleware]
+  MW --> RT[routes]
+  RT --> CT[controllers]
+  CT --> SV[services]
+  SV --> DB[database]
+```
+
+| Path | Holds |
+| --- | --- |
+| `index.ts` | The Worker entry point (`main` in `wrangler.toml`): answers 503 if the settings are wrong, otherwise hands the request to the app |
+| `app.ts` | The pipeline: middleware in a fixed order, then every route table |
+| `container.ts` | The composition root: checks the settings and builds the dependencies once per isolate |
+| `middleware/` | Request id and security headers, the error handler, rate limits, user and device auth, admin guards |
+| `routes/` | Route tables only: a method and path, its middleware, and the controller that answers |
+| `controllers/` | Request handlers: read the validated input and the caller, call services, build the response |
+| `validators/` | `parseBody` and the strict Zod schemas for every request body |
+| `services/` | Business rules and multi-step work: billing, sync, entitlements, dashboard views and analytics, admin, page views, health; platform modules in `services/razorpay/` and `services/supabaseAuth/` |
+| `database/` | The Supabase and in-memory adapters behind the `Database` interface |
+| `lib/` | Framework-free helpers: errors, logging, outbound HTTP, tokens, the rate limiter, Wilson intervals |
+| `types/` | The Worker's settings, the Hono context types, and the dependency contracts |
+| `config/` | The settings check |
+
+A new route is a line in its route table, a handler in `controllers/`, and any rule or query in
+`services/`. Tests live in `src/api/test/` and build the app with the in-memory database.
+
 ## Configuration
 
 Worker settings. The Supabase values are Worker secrets (set with `wrangler secret put`), so nothing
@@ -440,7 +473,7 @@ project-specific is in the public repo:
 | `ADMIN_TOTP_KEY` | secret | Encrypts admin authenticator secrets at rest (admin console) |
 | `ANALYTICS_SALT` | secret | Mixed into the daily visitor hash (page analytics) |
 
-The settings are checked before the first request is served (`src/api/src/config.ts`). A missing or
+The settings are checked before the first request is served (`src/api/src/config/checkConfig.ts`). A missing or
 invalid required setting (the first four rows, plus `SUPABASE_URL` and `APP_ORIGIN` must be https) makes
 every request answer `503 unavailable`, and the log line `config_invalid` names the setting, never its
 value. An optional group that is only half set (one Razorpay key without the other, or part of the

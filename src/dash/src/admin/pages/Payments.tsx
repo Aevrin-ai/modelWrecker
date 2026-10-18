@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataState, EmptyState, SkeletonRows } from "@/components/States";
 import { useAsync } from "@/hooks/useAsync";
-import { toneClass } from "@/lib/badges";
+import { toneClass, type Tone } from "@/lib/badges";
 import { formatCurrency, formatDateTime, humanize } from "@/lib/format";
 import { adminClient } from "../client";
+
+const PAYMENT_STATUS_TONE: Record<string, Tone> = { paid: "emerald", open: "amber", failed: "red" };
 
 export function Payments() {
   const [status, setStatus] = useState("");
@@ -79,7 +81,7 @@ export function Payments() {
                         </TableCell>
                         <TableCell>{p.method ? humanize(p.method) : "-"}</TableCell>
                         <TableCell>
-                          <Badge tone={toneClass(p.status === "paid" ? "emerald" : p.status === "open" ? "amber" : p.status === "failed" ? "red" : "slate")}>
+                          <Badge tone={toneClass(PAYMENT_STATUS_TONE[p.status] ?? "slate")}>
                             {humanize(p.status)}
                           </Badge>
                         </TableCell>

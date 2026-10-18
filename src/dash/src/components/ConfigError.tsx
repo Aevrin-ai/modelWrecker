@@ -4,11 +4,7 @@ import { LogoTile } from "@/components/Logo";
 import { AuthFrame } from "@/pages/SignIn";
 import { CONFIG_PROBLEMS } from "@/lib/config";
 
-/**
- * Shown instead of the app when this build asks for the live API (VITE_API_MODE=http) but the
- * sign-in settings are missing or invalid. It names the variables, never their values, and never
- * shows a stack trace.
- */
+// shown when an http build has missing sign-in settings; it names the variables, never their values
 export function ConfigError() {
   return (
     <AuthFrame>

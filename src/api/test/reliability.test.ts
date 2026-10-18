@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
-import type { AuthUser, Db, Deps, Table } from "../src/db";
-import { MemoryDb } from "../src/db/memory";
-import { DbError } from "../src/errors";
-import { checkDatabase } from "../src/health";
+import type { AuthUser, Database, Deps, Table } from "../src/types/deps";
+import { MemoryDb } from "../src/database/memory";
+import { DbError } from "../src/lib/errors";
+import { checkDatabase } from "../src/services/health";
 
 const USERS: Record<string, AuthUser> = { "token-a": { id: "user-a", email: "a@example.com", name: "Alice" } };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 /** A database where every call throws `err`. */
-function failingDb(err: Error): Db {
+function failingDb(err: Error): Database {
   const fail = async (): Promise<never> => {
     throw err;
   };
@@ -22,7 +22,7 @@ function failingDb(err: Error): Db {
 }
 
 /** A database whose reads never answer. */
-function hangingDb(): Db {
+function hangingDb(): Database {
   const hang = () => new Promise<never>(() => {});
   const table: Table = { select: hang, count: hang, insert: hang, update: hang, delete: hang, upsert: hang };
   return { table: () => table, rpc: hang };

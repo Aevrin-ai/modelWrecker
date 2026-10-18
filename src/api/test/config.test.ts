@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkConfig } from "../src/config";
+import { checkConfig } from "../src/config/checkConfig";
 
 const COMPLETE = {
   SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",

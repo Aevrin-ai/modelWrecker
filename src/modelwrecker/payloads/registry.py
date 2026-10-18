@@ -12,8 +12,7 @@ _REGISTRY: dict[str, Transform] = {cls.name: cls() for cls in _BUILTINS}
 
 
 def _maybe_register_pyrit() -> None:
-    # The engine must run without the optional attacks extra, so any PyRIT failure means "no PyRIT
-    # transforms", never a crashed run.
+    # the engine runs without the attacks extra, so a PyRIT failure means no PyRIT transforms
     try:
         from .pyrit_converters import pyrit_transforms
 

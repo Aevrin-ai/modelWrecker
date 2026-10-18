@@ -7,12 +7,6 @@ import { Logo } from "@/components/ui/logo";
 import { Pill } from "@/components/ui/pill";
 import { Scene } from "@/components/ui/scene";
 
-/*
-  The close of the page, the way Activepieces closes theirs: one last ask over
-  a painted meadow, then the links on a white card that dissolves into the art
-  at the bottom. The meadow is a wide-screen flourish; phones get plain white.
-*/
-
 const COLUMNS = [
   {
     heading: "Product",
@@ -60,10 +54,11 @@ function FooterLink({ href, children }: { href: string; children: string }) {
   );
 }
 
+// one last ask over a painted meadow on wide screens, then the links on a card that dissolves into the art
 export function Footer() {
   return (
     <footer className="bg-background relative isolate overflow-hidden">
-      {/* The meadow fades in from the white page above it. */}
+      {/* the meadow fades in from the white page above it */}
       <div
         aria-hidden="true"
         className="absolute inset-x-0 top-0 hidden h-full md:block"

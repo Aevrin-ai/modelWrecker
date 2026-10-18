@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-// Whether a media query matches, kept in step with the window.
+// whether a media query matches, kept in step with the window
 export function useMediaQuery(query: string) {
   return useSyncExternalStore(
     (onChange) => {

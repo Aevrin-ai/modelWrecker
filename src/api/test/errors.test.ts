@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { ApiError, DbError, INTERNAL_MESSAGE, UNAVAILABLE_MESSAGE, classifyError, isDbUnavailable } from "../src/errors";
+import { ApiError, DbError, INTERNAL_MESSAGE, UNAVAILABLE_MESSAGE, classifyError, isDbUnavailable } from "../src/lib/errors";
 
 describe("error classification", () => {
   it("passes a known error's status, code, and message through unchanged", () => {

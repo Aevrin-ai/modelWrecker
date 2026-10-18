@@ -5,38 +5,46 @@ name from the run's files; nothing is copied wholesale.
 
 By default it is metadata only: it never includes an attack payload, a model response or reasoning,
 a system prompt, tool arguments, or the attack sequence. Only when the account turned detail on in
-the dashboard (a `SyncPolicy`, issue #28) does it add, per finding, the prompt sent, the model
-reply, and the judge verdict, and per run, every attempt. Detail is redacted, capped per field,
+the dashboard (a `SyncPolicy`) does it add, per finding, the prompt sent, the model reply, and the
+judge verdict (`evidence_detail`), and per run, every attempt. Detail is redacted, capped per field,
 and capped in total so the body stays under the API's limit. An endpoint URL, an API key, and
 the run's configuration are never included in any mode.
 """
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
 from pathlib import Path
 
 from .. import __version__
-from ..analytics.engine import compute_analytics
+from ..analytics.engine import Analytics, compute_analytics
+from ..data import Finding
 from ..findings.report import load_run, load_run_meta
-from ..security.redaction import redact, redact_text
+from ..security.redaction import redact
+from .evidence_detail import EVIDENCE_KEYS as EVIDENCE_KEYS
+from .evidence_detail import EVIDENCE_TEXT_MAX as EVIDENCE_TEXT_MAX
+from .evidence_detail import TRANSCRIPT_TEXT_MAX, evidence_detail
 from .policy import METADATA_ONLY, SyncPolicy
+from .run_files import evidence_model, finding_strategy, read_events, time_bounds
+from .run_files import read_evidence as _read_evidence
+from .summary_values import (
+    MAX_TEXT,
+    body_text,
+    bounded_int,
+    iso_time,
+    json_size,
+    label,
+    parse_time,
+    rate,
+    short_text,
+)
 
 SCHEMA_VERSION = 1
 
-_MAX_TEXT = 300  # cap user-authored labels (titles, names) so one long string cannot bloat the body
-
-# Detail limits. They match src/api/src/schemas.ts; the totals keep a body under the 4 MB sync cap
-# even when every character is JSON-escaped.
-EVIDENCE_TEXT_MAX = 20_000
-TRANSCRIPT_TEXT_MAX = 4_000
+# the totals keep a body under the 4 MB sync cap even when every character is JSON-escaped
 MAX_ATTEMPTS = 2_000
 EVIDENCE_BUDGET = 1_200_000  # bytes of JSON across all findings' evidence
 TRANSCRIPT_BUDGET = 1_800_000  # bytes of JSON across one run's attempts
 
-EVIDENCE_KEYS = ("objective", "strategy", "transforms", "payload", "response", "reasoning",
-                 "tool_calls", "judge", "conversation")
 ATTEMPT_KEYS = ("at", "objective", "category", "strategy", "outcome", "score", "payload",
                 "response")
 
@@ -45,265 +53,131 @@ class NotARunError(ValueError):
     """The folder is not a finished run (it has no events.jsonl)."""
 
 
-def build_sync_body(
-    run_dir: str | Path,
-    engine_version: str = __version__,
-    policy: SyncPolicy = METADATA_ONLY,
-) -> dict:
-    d = Path(run_dir)
-    if not (d / "events.jsonl").is_file():
-        raise NotARunError(f"not a run folder: {d}")
+def build_sync_body(run_dir: str | Path, engine_version: str = __version__,
+                    policy: SyncPolicy = METADATA_ONLY) -> dict:
+    """The sync body for one run folder: metadata always, detail only as `policy` allows."""
+    run_path = Path(run_dir)
+    if not (run_path / "events.jsonl").is_file():
+        raise NotARunError(f"not a run folder: {run_path}")
 
-    findings, attempts = load_run(d)
-    meta = load_run_meta(d)
-    events = _read_events(d / "events.jsonl")
+    findings, attempts = load_run(run_path)
+    run = _run_summary(run_path, findings, attempts)
+    if policy.evidence:
+        _attach_evidence(run_path, findings, run["findings"], policy.transcripts)
+    if policy.transcripts:
+        run["transcript"] = _transcript(attempts)
+    # defense in depth: scrub anything secret-shaped that slipped into a user-authored label
+    return redact({"schema": SCHEMA_VERSION, "engine_version": engine_version, "run": run})
+
+
+def _run_summary(run_path: Path, findings: list[Finding], attempts: list[dict]) -> dict:
+    meta = load_run_meta(run_path)
+    events = read_events(run_path / "events.jsonl")
     analytics = compute_analytics(findings, attempts)
-    started, completed = _time_bounds(d / "events.jsonl", events, meta)
-    run_id = str(meta.get("run_id") or d.name)
-
-    project = _text(meta.get("project_name"))
-    campaign_name = project or run_id
-    model = _text(meta.get("target_model")) or _evidence_model(d) or "unknown"
-    asr_low, asr_high = analytics.asr_ci
-
-    run = {
+    started, completed = time_bounds(run_path / "events.jsonl", events, meta)
+    run_id = str(meta.get("run_id") or run_path.name)
+    campaign_name = short_text(meta.get("project_name")) or run_id
+    model = short_text(meta.get("target_model")) or evidence_model(run_path) or "unknown"
+    return {
         "run_id": run_id,
         "campaign": {"external_id": campaign_name, "name": campaign_name},
         "target": {
             "name": model,
-            "type": _text(meta.get("target_type")) or "chat",
+            "type": short_text(meta.get("target_type")) or "chat",
             "model": model,
-            "provider": _text(meta.get("target_provider")) or "unknown",
+            "provider": short_text(meta.get("target_provider")) or "unknown",
         },
         "started_at": started,
         "completed_at": completed,
+        **_outcome_counts(analytics),
+        "findings": [_finding(run_path, finding, finding_strategy(finding, events, attempts))
+                     for finding in findings],
+    }
+
+
+def _outcome_counts(analytics: Analytics) -> dict:
+    asr_low, asr_high = analytics.asr_ci
+    return {
         "attempts": analytics.total_attempts,
         "successes": analytics.successes,
         "partials": analytics.partials,
         "refusals": analytics.refusals,
         "errors": analytics.errors,
-        "asr": _rate(analytics.asr),
-        "asr_ci_low": _rate(asr_low),
-        "asr_ci_high": _rate(asr_high),
+        "asr": rate(analytics.asr),
+        "asr_ci_low": rate(asr_low),
+        "asr_ci_high": rate(asr_high),
         "by_strategy": [
-            {"strategy": _text(b.key), "attempts": b.attempts, "successes": b.successes,
-             "partials": b.partials}
-            for b in analytics.by_strategy
+            {"strategy": short_text(row.key), "attempts": row.attempts,
+             "successes": row.successes, "partials": row.partials}
+            for row in analytics.by_strategy
         ],
-        "findings": [_finding(d, f, _finding_strategy(f, events, attempts)) for f in findings],
     }
-    if policy.evidence:
-        budget = EVIDENCE_BUDGET
-        for f, out in zip(findings, run["findings"], strict=True):
-            detail = _evidence(d, f, out["strategy"], with_conversation=policy.transcripts)
-            if detail is None:
-                continue  # no evidence file: the finding stays metadata only
-            size = _size(detail)
-            if size > budget:
-                continue  # over the total cap: this one stays local (the rest may still fit)
-            budget -= size
-            out["evidence"] = detail
-    if policy.transcripts:
-        run["transcript"] = _transcript(attempts)
-    # Defense in depth: scrub anything secret-shaped that slipped into a user-authored label.
-    return redact({"schema": SCHEMA_VERSION, "engine_version": engine_version, "run": run})
 
 
-def _evidence(run_dir: Path, f, strategy: str, *, with_conversation: bool) -> dict | None:
-    """One finding's evidence, picked field by field. Never the configuration or connection info."""
-    ev = _read_evidence(run_dir, f.evidence_id)
-    if not ev:
-        return None
-    objective = ev.get("objective") if isinstance(ev.get("objective"), dict) else {}
-    judge = ev.get("judge_result") if isinstance(ev.get("judge_result"), dict) else {}
-    signals = [s for s in judge.get("signals") or [] if isinstance(s, dict)][:20]
-    tool_calls = [t for t in ev.get("tool_calls") or [] if isinstance(t, dict)][:50]
-    turns = [t for t in ev.get("attack_sequence") or [] if isinstance(t, dict)][:100]
-    return {
-        "objective": {
-            "title": _label(objective.get("title"), _MAX_TEXT),
-            "category": _label(objective.get("category"), 80),
-            "success_criteria": _body(objective.get("success_criteria"), 2_000),
-        },
-        "strategy": _label(strategy, 80),
-        "transforms": [_label(t.get("name"), 80) for t in ev.get("transform_chain") or []
-                       if isinstance(t, dict) and t.get("name")][:30],
-        "payload": _body(ev.get("payload"), EVIDENCE_TEXT_MAX),
-        "response": _body(ev.get("target_response"), EVIDENCE_TEXT_MAX),
-        "reasoning": _body(ev.get("target_reasoning"), EVIDENCE_TEXT_MAX),
-        "tool_calls": [{"name": _label(t.get("name"), 120),
-                        "args": _body(json.dumps(t.get("args") or {}, default=str), 4_000)}
-                       for t in tool_calls],
-        "judge": {
-            "outcome": _label(judge.get("outcome"), 40),
-            "score": _int(judge.get("score"), 0, 10),
-            "rationale": _body(judge.get("rationale"), 4_000),
-            "signals": [{"signal": _label(s.get("signal"), 60), "hit": bool(s.get("hit")),
-                         "score": _rate(s.get("score")), "detail": _body(s.get("detail"), 1_000)}
-                        for s in signals],
-        },
-        # Multi-turn conversations count as transcripts, so they follow that setting.
-        "conversation": [{"role": _label(t.get("role"), 20),
-                          "text": _body(t.get("content", t.get("text")), TRANSCRIPT_TEXT_MAX)}
-                         for t in turns] if with_conversation else [],
-    }
+def _attach_evidence(run_path: Path, findings: list[Finding], summaries: list[dict],
+                     with_conversation: bool) -> None:
+    """Add evidence to each finding summary while the total stays under EVIDENCE_BUDGET."""
+    budget = EVIDENCE_BUDGET
+    for finding, summary in zip(findings, summaries, strict=True):
+        detail = evidence_detail(run_path, finding, summary["strategy"],
+                                 with_conversation=with_conversation)
+        if detail is None:
+            # no evidence file: the finding stays metadata only
+            continue
+        size = json_size(detail)
+        if size > budget:
+            # over the total cap: this one stays local (the rest may still fit)
+            continue
+        budget -= size
+        summary["evidence"] = detail
 
 
 def _transcript(attempts: list[dict]) -> dict:
     """Every attempt in run order, up to the count and size caps. `truncated` marks a cut list."""
-    out: list[dict] = []
+    items: list[dict] = []
     used = 0
     truncated = False
-    for a in attempts:
-        ts = _parse(a.get("ts"))
-        item = {
-            "at": _iso(ts) if ts else None,
-            "objective": _label(a.get("objective"), _MAX_TEXT),
-            "category": _label(a.get("category"), 80),
-            "strategy": _label(a.get("strategy"), 80),
-            "outcome": _label(a.get("outcome"), 40),
-            "score": _int(a.get("score"), 0, 10),
-            "payload": _body(a.get("payload"), TRANSCRIPT_TEXT_MAX),
-            "response": _body(a.get("response"), TRANSCRIPT_TEXT_MAX),
-        }
-        size = _size(item)
-        if len(out) >= MAX_ATTEMPTS or used + size > TRANSCRIPT_BUDGET:
+    for attempt in attempts:
+        item = _transcript_item(attempt)
+        size = json_size(item)
+        if len(items) >= MAX_ATTEMPTS or used + size > TRANSCRIPT_BUDGET:
             truncated = True
             break
-        out.append(item)
+        items.append(item)
         used += size
-    return {"attempts": out, "truncated": truncated}
+    return {"attempts": items, "truncated": truncated}
 
 
-def _size(obj: object) -> int:
-    """Worst-case JSON size in bytes (every non-ASCII character escaped)."""
-    return len(json.dumps(obj, ensure_ascii=True))
-
-
-def _label(value: object, limit: int) -> str:
-    return "" if value is None else redact_text(str(value)).strip()[:limit]
-
-
-def _body(value: object, limit: int) -> str:
-    """Free text: redact first, then cap, so a redaction can never push it over the limit."""
-    return "" if value is None else redact_text(str(value))[:limit]
-
-
-def _finding(run_dir: Path, f, strategy: str) -> dict:
-    ev = _read_evidence(run_dir, f.evidence_id)
-    rel = ev.get("reliability") or {}
-    judge = ev.get("judge_result") or {}
+def _transcript_item(attempt: dict) -> dict:
+    moment = parse_time(attempt.get("ts"))
     return {
-        "id": f.id,
-        "title": _text(f.title),
-        "severity": f.severity.value,
-        "score": _int(judge.get("score"), 0, 10),
-        "strategy": _text(strategy) or "unknown",
-        "taxonomy": [{"framework": t.framework, "id": t.id} for t in f.taxonomy],
-        "replays": _int(rel.get("attempts_run"), 0),
-        "successes": _int(rel.get("successes"), 0),
-        "success_rate": _rate(rel.get("success_rate")),
-        "ci_low": _rate(rel.get("ci_low")),
-        "ci_high": _rate(rel.get("ci_high")),
-        "confidence": _text(rel.get("confidence")) or "does_not_hold",
-        "discovered_at": _iso(f.created_at),
+        "at": iso_time(moment) if moment else None,
+        "objective": label(attempt.get("objective"), MAX_TEXT),
+        "category": label(attempt.get("category"), 80),
+        "strategy": label(attempt.get("strategy"), 80),
+        "outcome": label(attempt.get("outcome"), 40),
+        "score": bounded_int(attempt.get("score"), 0, 10),
+        "payload": body_text(attempt.get("payload"), TRANSCRIPT_TEXT_MAX),
+        "response": body_text(attempt.get("response"), TRANSCRIPT_TEXT_MAX),
     }
 
 
-def _finding_strategy(f, events: list[dict], attempts: list[dict]) -> str:
-    """The strategy name that produced a finding.
-
-    The `finding` event records it. Runs written before that field existed fall back to the last
-    successful attempt for the same objective. (Evidence `strategy` holds the plan id, not a name.)
-    """
-    for e in events:
-        if e.get("kind") == "finding" and e.get("id") == f.id and e.get("strategy"):
-            return str(e["strategy"])
-    for a in reversed(attempts):
-        if a.get("objective") == f.title and a.get("outcome") == "success" and a.get("strategy"):
-            return str(a["strategy"])
-    return ""
-
-
-def _read_events(path: Path) -> list[dict]:
-    out: list[dict] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        try:
-            e = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(e, dict):
-            out.append(e)
-    return out
-
-
-def _read_evidence(run_dir: Path, evidence_id: str) -> dict:
-    """Load one evidence file. Callers pick named fields only; the dict never leaves this module."""
-    if not evidence_id or "/" in evidence_id or "\\" in evidence_id or ".." in evidence_id:
-        return {}
-    p = run_dir / f"evidence-{evidence_id}.json"
-    try:
-        data = json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _evidence_model(run_dir: Path) -> str:
-    """Fallback for runs written before run_meta existed: the target model name from evidence."""
-    for p in sorted(run_dir.glob("evidence-*.json")):
-        try:
-            model = (json.loads(p.read_text(encoding="utf-8")).get("model") or {}).get("model")
-        except (OSError, ValueError, AttributeError):
-            continue
-        if model:
-            return _text(model)
-    return ""
-
-
-def _time_bounds(events_path: Path, events: list[dict], meta: dict) -> tuple[str, str]:
-    stamps = [p for p in (_parse(e.get("ts")) for e in events) if p is not None]
-    started = _parse(meta.get("ts")) or (min(stamps) if stamps else None)
-    if started is None:
-        started = datetime.fromtimestamp(events_path.stat().st_mtime, tz=UTC)
-    completed = max(stamps) if stamps else started
-    return _iso(started), _iso(completed)
-
-
-def _parse(value: object) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
-
-
-def _iso(dt: datetime) -> str:
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _rate(value: object) -> float:
-    try:
-        v = float(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return 0.0
-    return round(min(1.0, max(0.0, v)), 4)
-
-
-def _int(value: object, low: int, high: int | None = None) -> int:
-    try:
-        v = int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return low
-    v = max(low, v)
-    return min(high, v) if high is not None else v
-
-
-def _text(value: object) -> str:
-    if value is None:
-        return ""
-    return str(value)[:_MAX_TEXT]
+def _finding(run_dir: Path, finding: Finding, strategy: str) -> dict:
+    evidence = _read_evidence(run_dir, finding.evidence_id)
+    reliability = evidence.get("reliability") or {}
+    judge = evidence.get("judge_result") or {}
+    return {
+        "id": finding.id,
+        "title": short_text(finding.title),
+        "severity": finding.severity.value,
+        "score": bounded_int(judge.get("score"), 0, 10),
+        "strategy": short_text(strategy) or "unknown",
+        "taxonomy": [{"framework": ref.framework, "id": ref.id} for ref in finding.taxonomy],
+        "replays": bounded_int(reliability.get("attempts_run"), 0),
+        "successes": bounded_int(reliability.get("successes"), 0),
+        "success_rate": rate(reliability.get("success_rate")),
+        "ci_low": rate(reliability.get("ci_low")),
+        "ci_high": rate(reliability.get("ci_high")),
+        "confidence": short_text(reliability.get("confidence")) or "does_not_hold",
+        "discovered_at": iso_time(finding.created_at),
+    }

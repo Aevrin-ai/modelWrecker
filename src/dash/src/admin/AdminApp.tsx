@@ -9,11 +9,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { AdminGate } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
 
-// Staff console at vyra.aevrin.ai/admin (docs/security/admin.md). Same build as the dashboard; this chunk
-// loads only under /admin/. Access is decided by the API on every request, not by this component.
+// staff console (docs/security/admin.md): loads only under /admin/; the API decides access on every request
 
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
-  lazy(() => load().then((m) => ({ default: m[name] })));
+  lazy(() => load().then((pageModule) => ({ default: pageModule[name] })));
 
 const Users = page(() => import("./pages/Users"), "Users");
 const UserDetail = page(() => import("./pages/UserDetail"), "UserDetail");

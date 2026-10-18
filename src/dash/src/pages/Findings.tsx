@@ -1,24 +1,18 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { ShieldAlert, Search, Lock } from "lucide-react";
+import { Search, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  ConfidenceBadge,
-  FindingStatusBadge,
-  SeverityBadge,
-  TargetTypeBadge,
-} from "@/components/StatusBadges";
 import { DataState, EmptyState, SkeletonRows } from "@/components/States";
 import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { useActiveProject } from "@/hooks/useActiveProject";
-import { humanize, relativeTime, formatPercent } from "@/lib/format";
+import { humanize } from "@/lib/format";
 import { SEVERITY_ORDER } from "@/lib/constants";
-import type { Finding, FindingStatus, Severity } from "@/types";
+import type { FindingStatus, Severity } from "@/types";
+import { FindingCardList } from "./findings/FindingCardList";
+import { FindingsTable } from "./findings/FindingsTable";
 
 const STATUSES: FindingStatus[] = ["open", "triaged", "fixed", "accepted-risk"];
 
@@ -35,15 +29,15 @@ export function Findings() {
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    const q = query.trim().toLowerCase();
+    const search = query.trim().toLowerCase();
     return data.filter(
-      (f) =>
-        (severity === "all" || f.severity === severity) &&
-        (status === "all" || f.status === status) &&
-        (!q ||
-          f.title.toLowerCase().includes(q) ||
-          f.targetName.toLowerCase().includes(q) ||
-          f.strategy.toLowerCase().includes(q)),
+      (finding) =>
+        (severity === "all" || finding.severity === severity) &&
+        (status === "all" || finding.status === status) &&
+        (!search ||
+          finding.title.toLowerCase().includes(search) ||
+          finding.targetName.toLowerCase().includes(search) ||
+          finding.strategy.toLowerCase().includes(search)),
     );
   }, [data, query, severity, status]);
 
@@ -67,17 +61,17 @@ export function Findings() {
           </div>
           <Select value={severity} onChange={(e) => setSeverity(e.target.value as Severity | "all")}>
             <option value="all">All severities</option>
-            {SEVERITY_ORDER.map((s) => (
-              <option key={s} value={s} className="capitalize">
-                {humanize(s)}
+            {SEVERITY_ORDER.map((option) => (
+              <option key={option} value={option} className="capitalize">
+                {humanize(option)}
               </option>
             ))}
           </Select>
           <Select value={status} onChange={(e) => setStatus(e.target.value as FindingStatus | "all")}>
             <option value="all">All statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {humanize(s)}
+            {STATUSES.map((option) => (
+              <option key={option} value={option}>
+                {humanize(option)}
               </option>
             ))}
           </Select>
@@ -107,100 +101,13 @@ export function Findings() {
             />
           ) : (
             <>
-              {/* Desktop table */}
-              <Card className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Finding</TableHead>
-                      <TableHead>Severity</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead>Strategy</TableHead>
-                      <TableHead>Reliability</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Found</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((f) => (
-                      <FindingRow key={f.id} f={f} />
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
+              <FindingsTable findings={filtered} />
 
-              {/* Mobile cards */}
-              <div className="space-y-3 md:hidden">
-                {filtered.map((f) => (
-                  <Link key={f.id} to={`/findings/${f.id}`}>
-                    <Card className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium">{f.title}</p>
-                        <SeverityBadge severity={f.severity} />
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {f.targetName} - {humanize(f.strategy)}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <FindingStatusBadge status={f.status} />
-                        <ConfidenceBadge level={f.reliability.confidence} />
-                        {!f.evidence.synced && (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <Lock className="size-3" /> Evidence local
-                          </span>
-                        )}
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+              <FindingCardList findings={filtered} />
             </>
           )
         }
       </DataState>
     </div>
-  );
-}
-
-function FindingRow({ f }: { f: Finding }) {
-  return (
-    <TableRow className="cursor-pointer">
-      <TableCell className="max-w-xs">
-        <Link to={`/findings/${f.id}`} className="block">
-          <span className="line-clamp-1 font-medium">{f.title}</span>
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            {f.evidence.synced ? "Evidence synced" : (
-              <>
-                <Lock className="size-3" /> Evidence stays local
-              </>
-            )}
-          </span>
-        </Link>
-      </TableCell>
-      <TableCell>
-        <SeverityBadge severity={f.severity} />
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <TargetTypeBadge type={f.targetType} />
-          <span className="truncate text-sm">{f.targetName}</span>
-        </div>
-      </TableCell>
-      <TableCell className="font-mono text-xs">{f.strategy}</TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <ConfidenceBadge level={f.reliability.confidence} />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {formatPercent(f.reliability.successRate, 0)}
-          </span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <FindingStatusBadge status={f.status} />
-      </TableCell>
-      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-        {relativeTime(f.discoveredAt)}
-      </TableCell>
-    </TableRow>
   );
 }

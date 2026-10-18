@@ -1,26 +1,17 @@
 import { useMemo, useState } from "react";
-import { Download, FileText, HardDrive, Search } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataState, EmptyState, SkeletonRows } from "@/components/States";
 import { CommandBlock } from "@/components/CommandBlock";
 import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useToast } from "@/hooks/useToast";
-import { formatDate, humanize } from "@/lib/format";
 import type { Report, ReportFormat } from "@/types";
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
-}
+import { ReportsTable } from "./reports/ReportsTable";
 
 export function Reports() {
   const { activeProjectId } = useActiveProject();
@@ -30,22 +21,22 @@ export function Reports() {
   const [kind, setKind] = useState<Report["kind"] | "all">("all");
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const search = query.trim().toLowerCase();
     return (reports.data ?? []).filter(
-      (r) =>
-        (kind === "all" || r.kind === kind) &&
-        (!q || r.name.toLowerCase().includes(q) || (r.campaignName ?? "").toLowerCase().includes(q)),
+      (report) =>
+        (kind === "all" || report.kind === kind) &&
+        (!search || report.name.toLowerCase().includes(search) || (report.campaignName ?? "").toLowerCase().includes(search)),
     );
   }, [reports.data, query, kind]);
 
-  async function download(r: Report, format: ReportFormat) {
+  async function download(report: Report, format: ReportFormat) {
     try {
-      const file = await apiClient.exportReport(r.id, format);
+      const file = await apiClient.exportReport(report.id, format);
       const url = URL.createObjectURL(new Blob([file.content], { type: file.mime }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.filename;
-      a.click();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.filename;
+      link.click();
       URL.revokeObjectURL(url);
     } catch {
       toast({ title: "This report is only on the device", description: "Open it from the local runs folder.", tone: "error" });
@@ -94,53 +85,7 @@ export function Reports() {
           filtered.length === 0 ? (
             <EmptyState icon={Search} title="No reports match your filters" />
           ) : (
-            <Card className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Report</TableHead>
-                    <TableHead>Kind</TableHead>
-                    <TableHead>Run</TableHead>
-                    <TableHead className="text-right">Findings</TableHead>
-                    <TableHead>Generated</TableHead>
-                    <TableHead className="text-right">Download</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        <span className="block font-medium">{r.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {r.projectName} - {formatBytes(r.sizeBytes)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge>{humanize(r.kind)}</Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{r.runId}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.findingCount}</TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(r.generatedAt)}</TableCell>
-                      <TableCell className="text-right">
-                        {r.availability === "cloud" ? (
-                          <div className="flex justify-end gap-1.5">
-                            {r.formats.map((f) => (
-                              <Button key={f} variant="outline" size="sm" onClick={() => download(r, f)}>
-                                <Download /> {f.toUpperCase()}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <HardDrive className="size-3.5" /> On device only
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+            <ReportsTable reports={filtered} onDownload={download} />
           )
         }
       </DataState>

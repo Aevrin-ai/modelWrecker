@@ -7,6 +7,7 @@ lives in attacker/loop.py behind the `run_one` callback it is given.
 
 from __future__ import annotations
 
-from .engine import Budget, build_budget, execute_campaign
+from .budget import Budget, build_budget
+from .engine import execute_campaign
 
 __all__ = ["Budget", "build_budget", "execute_campaign"]

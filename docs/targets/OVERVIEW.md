@@ -53,7 +53,8 @@ changes. What each adds:
   `{name, description, sensitive}`. The agent decides tool calls; modelWrecker only *observes and records*
   them (it never executes a tool), and marks any sensitive call for the judge. Attack: `tool_misuse`
   (excessive agency / goal hijack; OWASP LLM03, ASI01). The agent and MCP targets also run a **simulated
-  tool environment** (`run_scenario`): a bounded loop where the harness supplies tool results (fixtures),
+  tool environment** (`run_scenario`, sharing `run_tool_session` in `targets/tool_session.py`): a bounded
+  loop where the harness supplies tool results (fixtures),
   so an instruction hidden in tool output can be tested. This powers `indirect_prompt_injection`, which
   plants a canary in the fixture and checks whether the agent leaks it or calls a sensitive tool
   (OWASP LLM01/LLM02). Nothing is ever executed and the loop stops after a fixed number of steps.

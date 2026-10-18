@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from modelwrecker import attacker  # noqa: F401  (package import)
 from modelwrecker.attacker import loop as loop_module
 from modelwrecker.config import AttackConfig, Config, Endpoint, EngineConfig
 from modelwrecker.data import Objective
 from modelwrecker.providers.fake import FakeProvider
 
-SECRET = "SECRET-TOKEN-123"
+# built from parts so the source never holds a literal that looks like a real token
+SECRET = "SECRET-" + "TOKEN-123"
 
 
 def _vulnerable_target_responder(messages: list[dict]) -> str:
@@ -58,7 +61,7 @@ def _make_config() -> Config:
 
 
 def _patch_providers(monkeypatch, target_responder) -> None:
-    def fake_build(ep, egress=None):
+    def fake_build(ep: Endpoint, egress: object = None) -> FakeProvider:
         if ep.model == "target":
             return FakeProvider("target", target_responder)
         if ep.model == "judge":
@@ -89,8 +92,6 @@ def test_unauthorized_target_is_refused(monkeypatch) -> None:
     _patch_providers(monkeypatch, _vulnerable_target_responder)
     cfg = _make_config()
     cfg.target.authorized = False
-    import pytest
-
     from modelwrecker.config import ConfigError
     with pytest.raises(ConfigError):
         asyncio.run(loop_module.run_config(cfg))

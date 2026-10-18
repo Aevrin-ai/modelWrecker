@@ -17,7 +17,7 @@ interface TabsProps {
   children: ReactNode;
 }
 
-/** Minimal controlled/uncontrolled tabs, no Radix. */
+// minimal controlled/uncontrolled tabs, no Radix
 export function Tabs({ defaultValue, value, onValueChange, className, children }: TabsProps) {
   const [internal, setInternal] = useState(defaultValue);
   const current = value ?? internal;

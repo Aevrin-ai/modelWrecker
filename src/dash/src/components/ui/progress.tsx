@@ -1,13 +1,12 @@
 import { cn } from "@/lib/utils";
 
 interface ProgressProps {
-  /** 0..1 fraction. */
+  // 0..1 fraction
   value: number;
   className?: string;
   indicatorClassName?: string;
 }
 
-/** A thin Catmint-style progress track. */
 export function Progress({ value, className, indicatorClassName }: ProgressProps) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
   return (

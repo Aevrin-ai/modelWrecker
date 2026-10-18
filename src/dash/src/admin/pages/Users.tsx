@@ -13,22 +13,32 @@ import { useAsync } from "@/hooks/useAsync";
 import { formatDate, formatNumber, relativeTime } from "@/lib/format";
 import { formatPaise } from "@/lib/plans";
 import { adminClient } from "../client";
+import type { AdminUserRow } from "../client";
 import { PlanBadge } from "./shared";
+
+function paidUntilText(row: AdminUserRow): string {
+  if (row.effective_plan === "free") return "-";
+  if (row.current_period_end) return formatDate(row.current_period_end);
+  return "No end";
+}
 
 export function Users() {
   const [params, setParams] = useSearchParams();
-  const q = params.get("q") ?? "";
+  const query = params.get("q") ?? "";
   const plan = params.get("plan") ?? "";
   const page = Number(params.get("page") ?? 0) || 0;
-  const [draft, setDraft] = useState(q);
-  const users = useAsync(() => adminClient.users(q, plan, page), [q, plan, page]);
+  const [draft, setDraft] = useState(query);
+  const users = useAsync(() => adminClient.users(query, plan, page), [query, plan, page]);
 
-  useEffect(() => setDraft(q), [q]);
+  useEffect(() => setDraft(query), [query]);
 
-  const set = (next: Record<string, string>) => {
-    const p = new URLSearchParams(params);
-    for (const [k, v] of Object.entries(next)) v ? p.set(k, v) : p.delete(k);
-    setParams(p, { replace: true });
+  const updateParams = (next: Record<string, string>) => {
+    const nextParams = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(next)) {
+      if (value) nextParams.set(key, value);
+      else nextParams.delete(key);
+    }
+    setParams(nextParams, { replace: true });
   };
 
   return (
@@ -39,13 +49,13 @@ export function Users() {
           className="relative min-w-[16rem] flex-1 sm:max-w-sm"
           onSubmit={(e) => {
             e.preventDefault();
-            set({ q: draft.trim(), page: "" });
+            updateParams({ q: draft.trim(), page: "" });
           }}
         >
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Search email, name, or user id" className="pl-8" aria-label="Search users" />
         </form>
-        <Select value={plan} onChange={(e) => set({ plan: e.target.value, page: "" })} aria-label="Filter by plan">
+        <Select value={plan} onChange={(e) => updateParams({ plan: e.target.value, page: "" })} aria-label="Filter by plan">
           <option value="">All plans</option>
           <option value="free">Free</option>
           <option value="pro">Pro</option>
@@ -94,7 +104,7 @@ export function Users() {
                             {u.suspended_at && <Badge tone="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200">Suspended</Badge>}
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{u.effective_plan === "free" ? "-" : u.current_period_end ? formatDate(u.current_period_end) : "No end"}</TableCell>
+                        <TableCell className="text-muted-foreground">{paidUntilText(u)}</TableCell>
                         <TableCell className="text-right tabular-nums">{u.credit_paise ? formatPaise(u.credit_paise) : "-"}</TableCell>
                         <TableCell className="text-right tabular-nums">{formatNumber(u.devices)}</TableCell>
                         <TableCell className="text-right tabular-nums">{formatNumber(u.runs_month)}</TableCell>
@@ -115,10 +125,10 @@ export function Users() {
             {formatNumber(users.data.total)} user{users.data.total === 1 ? "" : "s"}
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => set({ page: String(page - 1) })}>
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => updateParams({ page: String(page - 1) })}>
               Previous
             </Button>
-            <Button variant="outline" size="sm" disabled={(page + 1) * users.data.pageSize >= users.data.total} onClick={() => set({ page: String(page + 1) })}>
+            <Button variant="outline" size="sm" disabled={(page + 1) * users.data.pageSize >= users.data.total} onClick={() => updateParams({ page: String(page + 1) })}>
               Next
             </Button>
           </div>

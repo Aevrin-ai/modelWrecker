@@ -20,7 +20,7 @@ class DatasetInfo:
     license: str  # the data licence, exactly as the source states it
     attribution: str  # the line we keep when we use the data
     coverage: str
-    fmt: str  # "json", "jsonl", or "csv"
+    fmt: str  # one of: json, jsonl, csv
     # label -> raw file URL with {ref}. One entry for most; two for a dataset with a benign file.
     files: dict[str, str] = field(default_factory=dict)
     default_category: str = ""  # objective category for chat-behaviour datasets (HarmBench, JBB)
@@ -46,8 +46,7 @@ _AIB = "https://raw.githubusercontent.com/ppradyoth/AgentInjectionBench/{ref}/da
 _HB = "https://raw.githubusercontent.com/centerforaisafety/HarmBench/{ref}/data/behavior_datasets/harmbench_behaviors_text_all.csv"
 _JBB = "https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors/resolve/{ref}/data/{split}-behaviors.csv"
 
-# Pinned, licence-clean datasets. MCPTox and Tensor Trust are reference only (no licence), so they
-# are not listed; HarmBench and JailbreakBench are chat behaviours, not agent scenarios.
+# pinned, licence-clean datasets only: MCPTox and Tensor Trust have no licence, so they are left out
 DATASETS: dict[str, DatasetInfo] = {
     "injecagent": DatasetInfo(
         name="injecagent",

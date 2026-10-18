@@ -103,9 +103,9 @@ def read_usage(now: float | None = None) -> dict[str, int]:
             "attacks": int(row.get("attacks", 0) or 0)}
 
 
-def record_usage(
-    *, campaigns: int = 0, attacks: int = 0, now: float | None = None
-) -> dict[str, int]:
+def record_usage(*, campaigns: int = 0, attacks: int = 0,
+                 now: float | None = None) -> dict[str, int]:
+    """Add to this period's local usage counts and return the new counts."""
     key = period_key(now)
     try:
         data = json.loads(usage_path().read_text(encoding="utf-8"))
@@ -116,13 +116,14 @@ def record_usage(
     row = data.get(key, {}) if isinstance(data.get(key), dict) else {}
     row = {"campaigns": int(row.get("campaigns", 0) or 0) + campaigns,
            "attacks": int(row.get("attacks", 0) or 0) + attacks}
-    # Keep the last 12 periods only.
+    # keep the last 12 periods only
     data = {k: v for k, v in sorted(data.items())[-11:] if k != key}
     data[key] = row
     try:
         atomic_write(usage_path(), json.dumps(data, indent=2, sort_keys=True))
     except OSError:
-        pass  # counting is best effort; it never fails a finished run
+        # counting is best effort; it never fails a finished run
+        return row
     return row
 
 

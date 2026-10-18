@@ -1,11 +1,7 @@
 import { BentoCard, Section, SectionIntro } from "@/components/ui/blocks";
 import { ReplaysMockup, RolesMockup } from "@/components/mockups/replays-mockup";
 
-/*
-  Why a result can be trusted: a win is replayed until its success rate is
-  known, and the models that attack, get tested and judge are kept apart.
-  Two cards side by side on a wide screen, stacked on a phone.
-*/
+// why a result can be trusted: wins are replayed until their rate is known, and the three model roles stay apart
 export function ReplaysAndRoles() {
   return (
     <Section id="replays" labelledBy="replays-heading">

@@ -9,7 +9,9 @@ bridge to them on a worker thread with its own event loop.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 from .transforms import Transform
 
@@ -22,10 +24,10 @@ _PYRIT_MAP = {
 }
 
 
-def _run_sync(coro):
+def _run_sync(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run an async coroutine to completion even when called from within a running event loop."""
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        return ex.submit(lambda: asyncio.run(coro)).result()
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(lambda: asyncio.run(coro)).result()
 
 
 class _PyRITConverterTransform(Transform):

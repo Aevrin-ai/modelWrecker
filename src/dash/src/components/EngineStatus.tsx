@@ -10,17 +10,24 @@ import { formatDateTime, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
 
-/** Pick the device to headline: the most recently seen online one, else the most recent. */
+// the most recently seen online device, else the most recent one
 function headline(devices: Device[]): Device | null {
   const sorted = [...devices].sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
-  return sorted.find((d) => d.status !== "offline") ?? sorted[0] ?? null;
+  return sorted.find((device) => device.status !== "offline") ?? sorted[0] ?? null;
 }
 
-/**
- * "ModelWrecker Engine - Connected / Offline". Shows only what the device reported
- * through authenticated sync. It never implies the cloud is running anything.
- */
-export function EngineStatusCard({ projectId, className }: { projectId?: string; className?: string }) {
+function statusLabel(device: Device, isOnline: boolean): string {
+  if (!isOnline) return "Offline";
+  return device.status === "syncing" ? "Connected - syncing" : "Connected";
+}
+
+export interface EngineStatusCardProps {
+  projectId?: string;
+  className?: string;
+}
+
+// shows only what the device reported through authenticated sync; it never implies the cloud runs anything
+export function EngineStatusCard({ projectId, className }: EngineStatusCardProps) {
   const { data, loading, error, refetch } = useAsync(() => apiClient.listDevices({ projectId }), [projectId]);
 
   return (
@@ -61,9 +68,9 @@ export function EngineStatusCard({ projectId, className }: { projectId?: string;
           }
         >
           {(devices) => {
-            const d = headline(devices)!;
-            const online = d.status !== "offline";
-            const others = devices.filter((x) => x.status !== "offline").length;
+            const device = headline(devices)!;
+            const online = device.status !== "offline";
+            const others = devices.filter((candidate) => candidate.status !== "offline").length;
             return (
               <div className="space-y-3">
                 <p className="flex items-center gap-2 text-lg font-semibold">
@@ -73,15 +80,15 @@ export function EngineStatusCard({ projectId, className }: { projectId?: string;
                       online ? "bg-success" : "border-2 border-muted-foreground bg-transparent",
                     )}
                   />
-                  {online ? (d.status === "syncing" ? "Connected - syncing" : "Connected") : "Offline"}
+                  {statusLabel(device, online)}
                 </p>
                 <dl className="space-y-1.5 text-sm">
-                  <Row label="Device">{d.name}</Row>
-                  <Row label="Version">ModelWrecker {d.engineVersion}</Row>
+                  <Row label="Device">{device.name}</Row>
+                  <Row label="Version">ModelWrecker {device.engineVersion}</Row>
                   {online ? (
-                    <Row label="Last sync">{relativeTime(d.lastSyncAt)}</Row>
+                    <Row label="Last sync">{relativeTime(device.lastSyncAt)}</Row>
                   ) : (
-                    <Row label="Last seen">{formatDateTime(d.lastSeenAt)}</Row>
+                    <Row label="Last seen">{formatDateTime(device.lastSeenAt)}</Row>
                   )}
                 </dl>
                 {!online && (

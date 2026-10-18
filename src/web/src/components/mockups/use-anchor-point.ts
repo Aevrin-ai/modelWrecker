@@ -1,10 +1,6 @@
 import { useEffect, useState, type RefObject } from "react";
 
-/*
-  Where a target element sits inside a container, as percentages, so the
-  mockup cursor lands on a real control at any width instead of on a guessed
-  coordinate that drifts as the layout reflows.
-*/
+// where a target sits in a container, in percent, so the mockup cursor lands on a real control at any width
 export function useAnchorPoint(
   containerRef: RefObject<HTMLElement | null>,
   targetRef: RefObject<HTMLElement | null>,
@@ -17,12 +13,12 @@ export function useAnchorPoint(
       const container = containerRef.current;
       const target = targetRef.current;
       if (!container || !target) return;
-      const c = container.getBoundingClientRect();
-      const t = target.getBoundingClientRect();
-      if (c.width === 0 || c.height === 0) return;
+      const containerBox = container.getBoundingClientRect();
+      const targetBox = target.getBoundingClientRect();
+      if (containerBox.width === 0 || containerBox.height === 0) return;
       setPoint({
-        x: ((t.left + t.width * 0.55 - c.left) / c.width) * 100,
-        y: ((t.top + t.height * 0.6 - c.top) / c.height) * 100,
+        x: ((targetBox.left + targetBox.width * 0.55 - containerBox.left) / containerBox.width) * 100,
+        y: ((targetBox.top + targetBox.height * 0.6 - containerBox.top) / containerBox.height) * 100,
       });
     };
     measure();

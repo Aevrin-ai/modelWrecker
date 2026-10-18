@@ -1,70 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
-import { MemoryDb } from "../src/db/memory";
-import type { AuthTokens, GrantResult } from "../src/db";
+import { MemoryDb } from "../src/database/memory";
+import { FakeSupabaseAuth, VERIFIER, cleared, refreshCookie } from "./authHelpers";
+import { readJson, type ErrorBody, type TestApp } from "./harness";
 
 const ORIGIN = "https://app.aevrin.net";
-const VERIFIER = "v".repeat(43);
 
-/** Stands in for Supabase Auth: one-time codes, rotating refresh tokens, and reuse revoking the session. */
-class FakeSupabaseAuth implements AuthTokens {
-  codes = new Map([["good-code", "user-a"]]);
-  /** refresh token -> session; `used` once rotated. */
-  refreshTokens = new Map<string, { session: string; used: boolean }>();
-  accessTokens = new Map<string, { session: string; expired: boolean }>();
-  revoked = new Set<string>();
-  down = false;
-  private n = 0;
-
-  private issue(session: string): GrantResult {
-    const n = ++this.n;
-    this.refreshTokens.set(`rt-${n}-abcdefgh`, { session, used: false });
-    this.accessTokens.set(`at-${n}`, { session, expired: false });
-    return {
-      ok: true,
-      grant: {
-        accessToken: `at-${n}`,
-        refreshToken: `rt-${n}-abcdefgh`,
-        expiresAt: 1_900_000_000,
-        user: { id: "user-a", email: "a@example.com", name: "Alice", avatarUrl: null },
-      },
-    };
-  }
-
-  async exchangeCode(code: string, verifier: string): Promise<GrantResult> {
-    if (this.down) return { ok: false, reason: "unavailable" };
-    if (!this.codes.has(code) || verifier !== VERIFIER) return { ok: false, reason: "invalid" };
-    this.codes.delete(code);
-    return this.issue(`session-${++this.n}`);
-  }
-
-  async refresh(token: string): Promise<GrantResult> {
-    if (this.down) return { ok: false, reason: "unavailable" };
-    const rt = this.refreshTokens.get(token);
-    if (!rt || this.revoked.has(rt.session)) return { ok: false, reason: "invalid" };
-    if (rt.used) {
-      this.revoked.add(rt.session); // reuse: the whole session is revoked
-      return { ok: false, reason: "invalid" };
-    }
-    rt.used = true;
-    return this.issue(rt.session);
-  }
-
-  async signOut(accessToken: string): Promise<boolean> {
-    const at = this.accessTokens.get(accessToken);
-    if (!at || at.expired || this.revoked.has(at.session)) return false;
-    this.revoked.add(at.session);
-    return true;
-  }
-
-  userFor(accessToken: string) {
-    const at = this.accessTokens.get(accessToken);
-    return at && !at.expired && !this.revoked.has(at.session) ? { id: "user-a", email: "a@example.com", name: "Alice" } : null;
-  }
+interface SignInBody {
+  accessToken: string;
+  user: unknown;
 }
 
 let auth: FakeSupabaseAuth;
-let app: ReturnType<typeof createApp>;
+let app: TestApp;
 
 beforeEach(() => {
   auth = new FakeSupabaseAuth();
@@ -72,7 +20,7 @@ beforeEach(() => {
   app = createApp({
     serviceDb: db,
     userDb: () => db,
-    verifyUser: async (t) => auth.userFor(t),
+    verifyUser: async (token) => auth.userFor(token),
     appOrigin: ORIGIN,
     now: () => new Date("2026-10-11T10:00:00Z"),
     authTokens: auth,
@@ -95,23 +43,10 @@ function post(path: string, opts: { body?: unknown; cookie?: string; token?: str
   });
 }
 
-/** The refresh cookie a response sets, as a `cookie` request header, or null when it is cleared or absent. */
-function refreshCookie(res: Response): string | null {
-  const line = res.headers.getSetCookie().find((c) => c.startsWith("__Secure-mw_rt="));
-  if (!line) return null;
-  const value = line.split(";")[0];
-  return value === "__Secure-mw_rt=" ? null : value;
-}
-
-const cleared = (res: Response) => {
-  const lines = res.headers.getSetCookie();
-  return ["__Secure-mw_rt=", "mw_signed_in="].every((name) => lines.some((l) => l.startsWith(name) && /Max-Age=0/i.test(l)));
-};
-
 async function signIn() {
   const res = await post("/auth/session", { body: { code: "good-code", code_verifier: VERIFIER } });
   expect(res.status).toBe(200);
-  return { res, body: (await res.json()) as Record<string, any>, cookie: refreshCookie(res)! };
+  return { res, body: await readJson<SignInBody>(res), cookie: refreshCookie(res)! };
 }
 
 describe("sign-in", () => {
@@ -121,12 +56,12 @@ describe("sign-in", () => {
     expect(body.user).toEqual({ id: "user-a", email: "a@example.com", name: "Alice", avatarUrl: null });
     expect(JSON.stringify(body)).not.toContain("rt-");
     expect(cookie).toBe("__Secure-mw_rt=rt-2-abcdefgh");
-    const rt = res.headers.getSetCookie().find((c) => c.startsWith("__Secure-mw_rt="))!;
-    expect(rt).toMatch(/HttpOnly/);
-    expect(rt).toMatch(/Secure/);
-    expect(rt).toMatch(/SameSite=Strict/);
-    expect(rt).toMatch(/Path=\/api\/v1\/auth/);
-    const hint = res.headers.getSetCookie().find((c) => c.startsWith("mw_signed_in="))!;
+    const refresh = res.headers.getSetCookie().find((line) => line.startsWith("__Secure-mw_rt="))!;
+    expect(refresh).toMatch(/HttpOnly/);
+    expect(refresh).toMatch(/Secure/);
+    expect(refresh).toMatch(/SameSite=Strict/);
+    expect(refresh).toMatch(/Path=\/api\/v1\/auth/);
+    const hint = res.headers.getSetCookie().find((line) => line.startsWith("mw_signed_in="))!;
     expect(hint).toMatch(/^mw_signed_in=1;/);
     expect(hint).not.toMatch(/HttpOnly/);
   });
@@ -135,7 +70,7 @@ describe("sign-in", () => {
     await signIn();
     const reused = await post("/auth/session", { body: { code: "good-code", code_verifier: VERIFIER } });
     expect(reused.status).toBe(400);
-    expect(((await reused.json()) as any).error).toBe("sign_in_failed");
+    expect((await readJson<ErrorBody>(reused)).error).toBe("sign_in_failed");
     const wrongVerifier = await post("/auth/session", { body: { code: "other", code_verifier: "w".repeat(43) } });
     expect(wrongVerifier.status).toBe(400);
     expect(refreshCookie(wrongVerifier)).toBeNull();
@@ -160,7 +95,7 @@ describe("refresh", () => {
     const { cookie } = await signIn();
     const res = await post("/auth/refresh", { cookie });
     expect(res.status).toBe(200);
-    expect(((await res.json()) as any).accessToken).toBe("at-3");
+    expect((await readJson<SignInBody>(res)).accessToken).toBe("at-3");
     expect(refreshCookie(res)).toBe("__Secure-mw_rt=rt-3-abcdefgh");
   });
 
@@ -169,9 +104,9 @@ describe("refresh", () => {
     const second = refreshCookie(await post("/auth/refresh", { cookie: first }))!;
     const replay = await post("/auth/refresh", { cookie: first });
     expect(replay.status).toBe(401);
-    expect(((await replay.json()) as any).error).toBe("session_ended");
+    expect((await readJson<ErrorBody>(replay)).error).toBe("session_ended");
     expect(cleared(replay)).toBe(true);
-    // The legitimate holder's newer token is revoked too.
+    // the legitimate holder's newer token is revoked too
     expect((await post("/auth/refresh", { cookie: second })).status).toBe(401);
   });
 
@@ -181,7 +116,8 @@ describe("refresh", () => {
     expect(cleared(none)).toBe(true);
     expect((await post("/auth/refresh", { cookie: "__Secure-mw_rt=rt-404-abcdefgh" })).status).toBe(401);
     const { cookie } = await signIn();
-    auth.revoked.add([...auth.refreshTokens.values()][0].session); // for example, an admin ban
+    // for example, an admin ban
+    auth.revoked.add([...auth.refreshTokens.values()][0].session);
     expect((await post("/auth/refresh", { cookie })).status).toBe(401);
   });
 

@@ -32,9 +32,8 @@ def _ip_is_blocked(ip: ipaddress._BaseAddress) -> bool:
     )
 
 
-def is_blocked_host(
-    host: str, *, allow_private: bool = False, allow_hosts: Iterable[str] = ()
-) -> bool:
+def is_blocked_host(host: str, *, allow_private: bool = False,
+                    allow_hosts: Iterable[str] = ()) -> bool:
     """True if the host resolves to (or is) an address we refuse to reach.
 
     `allow_private` is the escape hatch for deliberately testing a target on a private
@@ -48,16 +47,26 @@ def is_blocked_host(
         return True
     if allow_private or host in {h.strip().strip("[]").lower() for h in allow_hosts}:
         return False
-    # Direct IP literal.
+    literal = _ip_literal(host)
+    if literal is not None:
+        return _ip_is_blocked(literal)
+    return _resolves_to_blocked(host)
+
+
+def _ip_literal(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
     try:
-        return _ip_is_blocked(ipaddress.ip_address(host))
+        return ipaddress.ip_address(host)
     except ValueError:
-        pass
-    # Hostname: resolve every address it maps to and block if any is private.
+        # not an IP literal, so the caller treats it as a hostname
+        return None
+
+
+def _resolves_to_blocked(host: str) -> bool:
+    """Resolve every address a hostname maps to; blocked if any of them is."""
     try:
         infos = socket.getaddrinfo(host, None)
     except socket.gaierror:
-        # Cannot resolve -> treat as blocked (fail safe, not open).
+        # cannot resolve -> treat as blocked (fail safe, not open)
         return True
     for info in infos:
         addr = info[4][0]
@@ -69,13 +78,8 @@ def is_blocked_host(
     return False
 
 
-def check_url(
-    url: str,
-    *,
-    allowed_schemes: Iterable[str] = ("https",),
-    allow_private: bool = False,
-    allow_hosts: Iterable[str] = (),
-) -> None:
+def check_url(url: str, *, allowed_schemes: Iterable[str] = ("https",),
+              allow_private: bool = False, allow_hosts: Iterable[str] = ()) -> None:
     """Raise EgressBlocked if this URL may not be fetched. Call again for each redirect target."""
     schemes = tuple(s.lower() for s in allowed_schemes)
     parsed = urlparse(url)
@@ -90,13 +94,8 @@ def check_url(
         )
 
 
-def static_check_url(
-    url: str,
-    *,
-    allowed_schemes: Iterable[str] = ("https",),
-    allow_private: bool = False,
-    allow_hosts: Iterable[str] = (),
-) -> None:
+def static_check_url(url: str, *, allowed_schemes: Iterable[str] = ("https",),
+                     allow_private: bool = False, allow_hosts: Iterable[str] = ()) -> None:
     """Like `check_url`, but never resolves DNS, so it works offline (used by `validate`).
 
     It catches the clear cases: a disallowed scheme, a metadata host, `localhost`, and private or
@@ -117,10 +116,9 @@ def static_check_url(
     if host == "localhost" or host.endswith(".localhost"):
         blocked = True
     else:
-        try:
-            blocked = _ip_is_blocked(ipaddress.ip_address(host))
-        except ValueError:
-            blocked = False  # a hostname; resolved and checked on every request instead
+        literal = _ip_literal(host)
+        # a hostname is resolved and checked on every request instead
+        blocked = literal is not None and _ip_is_blocked(literal)
     if blocked:
         raise EgressBlocked(
             f"host {host!r} is private or loopback. To test a local model on purpose, list it "

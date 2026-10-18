@@ -2,21 +2,24 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * A copyable command. The dashboard only DISPLAYS commands for the user to run on
- * their own machine; it never executes anything. Only documented commands are shown
- * (docs/deployment/docker.md, docs/reference/CLI.md).
- */
-export function CommandBlock({ command, label, className }: { command: string; label?: string; className?: string }) {
+export interface CommandBlockProps {
+  command: string;
+  label?: string;
+  className?: string;
+}
+
+// display only: the dashboard never runs a command, and shows only documented ones (docs/reference/CLI.md)
+export function CommandBlock({ command, label, className }: CommandBlockProps) {
   const [copied, setCopied] = useState(false);
 
-  async function copy() {
+  async function handleCopy() {
     try {
       await navigator.clipboard.writeText(command);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* clipboard may be blocked; the text is still selectable */
+      // clipboard may be blocked; the text is still selectable, so nothing else is needed
+      return;
     }
   }
 
@@ -29,7 +32,7 @@ export function CommandBlock({ command, label, className }: { command: string; l
         </pre>
         <button
           type="button"
-          onClick={copy}
+          onClick={handleCopy}
           className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors hover:text-foreground"
           aria-label={copied ? "Copied" : "Copy command"}
         >

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backoffDelay, createFetch, retryAfterMs, retryWait } from "../src/http";
+import { backoffDelay, createFetch, retryAfterMs, retryWait } from "../src/lib/http";
 
 const URL_UNDER_TEST = "https://example.test/rows";
 

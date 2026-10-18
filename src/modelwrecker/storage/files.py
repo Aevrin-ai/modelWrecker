@@ -17,7 +17,8 @@ def chmod_quiet(path: Path, mode: int) -> None:
     try:
         os.chmod(path, mode)
     except OSError:
-        pass
+        # best effort: a filesystem that refuses mode bits still leaves the file usable
+        return
 
 
 def atomic_write(path: Path, text: str, *, prefix: str = ".mw-") -> None:

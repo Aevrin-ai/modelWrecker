@@ -24,8 +24,7 @@ def test_meter_counts_requests_tokens_and_cost_by_role() -> None:
     assert summary["requests"] == 2
     assert summary["by_role"]["target"]["requests"] == 1
     assert summary["by_role"]["judge"]["requests"] == 1
-    # FakeProvider reports prompt_tokens=10, completion_tokens=len(text)//4; target cost is nonzero,
-    # judge cost is zero (no prices set).
+    # FakeProvider reports tokens, so the priced target costs something and the unpriced judge none
     assert summary["cost_usd"] > 0
     assert summary["by_role"]["judge"]["cost_usd"] == 0.0
 

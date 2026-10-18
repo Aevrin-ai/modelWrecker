@@ -32,11 +32,10 @@ export function App() {
   const { mode, session, loading } = useAuth();
   const { pathname } = useLocation();
 
-  // One page view per route (docs/analytics/page-analytics.md). Ids are stripped on the server.
+  // one page view per route (docs/analytics/page-analytics.md); ids are stripped on the server
   useEffect(() => sendPageView("dashboard", `/dashboard${pathname}`), [pathname]);
 
-  // Live API: nothing but the sign-in screen until there is a session. Data providers mount only
-  // after sign-in, so no API call is made without a token.
+  // live API: only the sign-in screen until there is a session, so no API call is made without a token
   if (mode === "http") {
     if (loading) return <AuthLoading />;
     if (!session) return <SignIn />;

@@ -30,7 +30,7 @@ const sizes: Record<Size, string> = {
 const BASE =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";
 
-/** Share the button look with non-button elements (e.g. a react-router Link). */
+// share the button look with non-button elements (e.g. a react-router Link)
 export function buttonClasses(variant: Variant = "default", size: Size = "default", className?: string) {
   return cn(BASE, variants[variant], sizes[size], className);
 }

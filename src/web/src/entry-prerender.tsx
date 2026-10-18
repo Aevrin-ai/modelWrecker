@@ -4,11 +4,7 @@ import { StaticRouter } from "react-router";
 
 import { AppRoutes } from "./routes";
 
-/*
-  Build-time only: renders the home page to HTML so the hero is in the file the
-  server sends. Everything below the hero is lazy, so it renders as its
-  placeholder here and loads in the browser. See scripts/prerender.mjs.
-*/
+// build time only: renders the home page to HTML; everything below the hero renders as its lazy placeholder here
 export function render(url: string) {
   return renderToString(
     <StrictMode>

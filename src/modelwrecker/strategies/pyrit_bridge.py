@@ -30,9 +30,8 @@ async def ensure_pyrit() -> None:
         _PYRIT_READY = True
 
 
-def make_target(
-    provider: BaseProvider, system: str | None = None, *, multi_turn: bool = False
-) -> Any:
+def make_target(provider: BaseProvider, system: str | None = None, *,
+                multi_turn: bool = False) -> Any:
     """Return a PyRIT PromptTarget that sends through a modelWrecker provider.
 
     `multi_turn=True` declares the multi-turn / editable-history / system-prompt capabilities that

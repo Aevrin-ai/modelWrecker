@@ -10,13 +10,12 @@ from __future__ import annotations
 from .base import DatasetCase
 
 
-# InjecAgent wraps every attacker instruction and tool response in literal quotes with escaped inner
-# quotes (issue #7); strip a single enclosing pair so a detector cannot key on the wrapper.
+# InjecAgent wraps text in literal quotes; strip one pair so a detector cannot key on the wrapper
 def _unwrap(text: str) -> str:
-    t = (text or "").strip()
-    if len(t) >= 2 and t[0] == '"' and t[-1] == '"':
-        t = t[1:-1].replace('\\"', '"')
-    return t
+    stripped = (text or "").strip()
+    if len(stripped) >= 2 and stripped[0] == '"' and stripped[-1] == '"':
+        stripped = stripped[1:-1].replace('\\"', '"')
+    return stripped
 
 
 def parse_injecagent(files: dict) -> list[DatasetCase]:

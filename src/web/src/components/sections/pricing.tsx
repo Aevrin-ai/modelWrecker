@@ -7,6 +7,7 @@ import {
   yearlySavingPercent,
   type FeatureKey,
   type Interval,
+  type PlanConfig,
 } from "../../../../shared/plans";
 import { cn } from "@/lib/utils";
 import { APP_URL, BILLING_URL, DEMO_URL } from "@/lib/links";
@@ -14,14 +15,19 @@ import { CheckItem, Section, SectionIntro } from "@/components/ui/blocks";
 import { Pill } from "@/components/ui/pill";
 import { Reveal } from "@/components/ui/reveal";
 
-/*
-  Prices come from src/shared/plans.json, the same file the API charges from
-  and the dashboard shows, so the page can never advertise a price the
-  checkout does not use (docs/billing/pricing.md). Nothing here is typed by
-  hand: amounts, the yearly saving and the tax note are all read from it.
-*/
+const formatLimit = (limit: number | null) => (limit === null ? "Unlimited" : new Intl.NumberFormat("en-IN").format(limit));
 
-const count = (v: number | null) => (v === null ? "Unlimited" : new Intl.NumberFormat("en-IN").format(v));
+function getPriceLabel(plan: PlanConfig, price: number | undefined) {
+  if (plan.id === "free") return formatPaise(0);
+  if (price) return formatPaise(price);
+  return "Custom";
+}
+
+function getPriceNote(plan: PlanConfig, price: number | undefined, interval: Interval) {
+  if (price && interval === "year") return `${formatPaise(price / 12)} a month, billed yearly`;
+  if (plan.prices) return TAX_NOTE;
+  return "";
+}
 
 const LIMITS = [
   ["campaigns", "Campaign runs a month"],
@@ -30,8 +36,7 @@ const LIMITS = [
   ["projects", "Projects"],
 ] as const;
 
-// Sales wording on purpose. The dashboard's Billing page names the same
-// features plainly (FEATURE_LABEL in src/dash/src/lib/plans.ts).
+// sales wording on purpose; the dashboard's Billing page names the same features plainly (src/dash/src/lib/plans.ts)
 const FEATURES: [FeatureKey, string][] = [
   ["advanced_strategies", "PyRIT-based strategies and garak probes"],
   ["mcp", "MCP targets"],
@@ -40,6 +45,7 @@ const FEATURES: [FeatureKey, string][] = [
   ["enterprise", "SSO, policies, audit logs"],
 ];
 
+// prices come from src/shared/plans.json, the file the checkout charges from, so the page never advertises another price
 export function Pricing() {
   const [interval, setBillingInterval] = useState<Interval>("month");
   const saving = yearlySavingPercent(PLANS.find((p) => p.prices)?.prices ?? null);
@@ -101,18 +107,18 @@ export function Pricing() {
               <p className="text-muted-foreground mt-2 text-[15px] leading-relaxed text-pretty lg:min-h-[4.5rem]">{p.blurb}</p>
 
               <p className="font-heading text-foreground mt-6 text-5xl leading-none font-bold">
-                {p.id === "free" ? formatPaise(0) : price ? formatPaise(price) : "Custom"}
+                {getPriceLabel(p, price)}
                 {price && <span className="text-muted-foreground font-sans text-base font-normal"> / {interval}</span>}
               </p>
               <p className="text-muted-foreground mt-2 min-h-5 text-[13px]">
-                {price && interval === "year" ? `${formatPaise(price / 12)} a month, billed yearly` : p.prices ? TAX_NOTE : ""}
+                {getPriceNote(p, price, interval)}
               </p>
 
               <dl className="border-border mt-6 space-y-2.5 border-t pt-6 text-[15px]">
                 {LIMITS.map(([key, label]) => (
                   <div key={key} className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="text-foreground font-medium tabular-nums">{count(p.limits[key])}</dd>
+                    <dd className="text-foreground font-medium tabular-nums">{formatLimit(p.limits[key])}</dd>
                   </div>
                 ))}
               </dl>

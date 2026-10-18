@@ -6,7 +6,7 @@
 -- (pg_cron) calls the function instead, every day at 03:17 UTC, the same time as before.
 --
 -- Confirming unpaid Razorpay orders is no longer scheduled: the webhook applies payments, and opening
--- the Billing page reconciles that account's recent orders (src/api/src/routes/billing.ts).
+-- the Billing page reconciles that account's recent orders (src/api/src/services/billing/reconcile.ts).
 --
 -- Safe to re-run: the extension is created only if missing, and cron.schedule overwrites a job that
 -- has the same name.

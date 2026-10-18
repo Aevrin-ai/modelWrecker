@@ -8,7 +8,7 @@ interface ActiveProjectContextValue {
   activeProjectId: string | null; // null = "All projects"
   activeProject: Project | null;
   setActiveProjectId: (id: string | null) => void;
-  /** Re-read the project list after a create/rename/archive/delete. */
+  // re-read the project list after a create/rename/archive/delete
   refreshProjects: () => void;
   loading: boolean;
 }
@@ -38,7 +38,7 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
         if (active) setProjects(p);
       })
       .catch(() => {
-        // The switcher falls back to "All projects"; pages show their own error states.
+        // the switcher falls back to "All projects"; pages show their own error states
         if (active) setProjects([]);
       })
       .finally(() => {
@@ -55,12 +55,13 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
       if (id) localStorage.setItem(STORAGE_KEY, id);
       else localStorage.removeItem(STORAGE_KEY);
     } catch {
-      /* ignore */
+      // storage may be blocked; the choice then lasts for this page only
+      return;
     }
   }, []);
 
   const activeProject = useMemo(
-    () => projects.find((p) => p.id === activeProjectId) ?? null,
+    () => projects.find((project) => project.id === activeProjectId) ?? null,
     [projects, activeProjectId],
   );
 

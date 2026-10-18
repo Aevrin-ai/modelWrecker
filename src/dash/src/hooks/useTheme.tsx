@@ -11,13 +11,20 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 const STORAGE_KEY = "aevrin-theme";
 
-function initialTheme(): Theme {
+function readStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark") return stored;
+    return null;
   } catch {
-    /* storage may be blocked */
+    // storage may be blocked, so fall back to the system preference
+    return null;
   }
+}
+
+function initialTheme(): Theme {
+  const stored = readStoredTheme();
+  if (stored) return stored;
   if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
     return "dark";
   }
@@ -33,7 +40,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
-      /* ignore */
+      // storage may be blocked; the theme still applies, it just is not remembered
+      return;
     }
   }, [theme]);
 

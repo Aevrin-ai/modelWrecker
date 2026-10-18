@@ -1,12 +1,4 @@
-/*
-  Razorpay Checkout in the browser (docs/billing/razorpay.md).
-
-  The script is Razorpay's hosted payment form. It is loaded only when the user clicks Buy, never on
-  page load. Card and UPI details are typed into Razorpay's frame and never reach Aevrin.
-
-  What Checkout returns on success is only a hint. The page sends it to POST /billing/verify, where the
-  server checks the signature with its secret key and asks Razorpay itself before the plan changes.
-*/
+// Razorpay Checkout, loaded only on Buy; its result is a hint the server verifies (docs/billing/razorpay.md)
 
 import type { CheckoutSuccess } from "@/types";
 
@@ -42,16 +34,16 @@ function loadScript(): Promise<void> {
   if (window.Razorpay) return Promise.resolve();
   if (!loading) {
     loading = new Promise<void>((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = SCRIPT_URL;
-      s.async = true;
-      s.onload = () => resolve();
-      s.onerror = () => {
+      const script = document.createElement("script");
+      script.src = SCRIPT_URL;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
         loading = null;
-        s.remove();
+        script.remove();
         reject(new Error("The payment form could not be loaded. Check your connection or ad blocker and try again."));
       };
-      document.head.appendChild(s);
+      document.head.appendChild(script);
     });
   }
   return loading;
@@ -62,7 +54,7 @@ type CheckoutOutcome =
   | { kind: "dismissed" }
   | { kind: "failed"; message: string };
 
-/** Open Razorpay Checkout for one order and resolve when the user finishes, fails, or closes it. */
+// card and UPI details stay in Razorpay's frame; resolves when the user finishes, fails, or closes it
 export async function openCheckout(order: {
   keyId: string;
   orderId: string;
@@ -75,7 +67,7 @@ export async function openCheckout(order: {
   const Razorpay = window.Razorpay;
   if (!Razorpay) throw new Error("The payment form could not be loaded. Try again.");
   return new Promise<CheckoutOutcome>((resolve) => {
-    // A failed attempt keeps Checkout open so the user can retry; it is reported only if they then close.
+    // a failed attempt keeps Checkout open for a retry; it is reported only if the user then closes it
     let lastFailure = "";
     const rzp = new Razorpay({
       key: order.keyId,

@@ -3,15 +3,14 @@ import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   title: string;
-  /** Small line above the title, e.g. a back link or breadcrumb. */
+  // small line above the title, e.g. a back link or breadcrumb
   eyebrow?: ReactNode;
   description?: string;
-  /** Right-aligned actions (buttons, filters). */
+  // right-aligned actions (buttons, filters)
   actions?: ReactNode;
   className?: string;
 }
 
-/** Page title row measured from the reference: 24px bold title, actions right-aligned. */
 export function PageHeader({ title, eyebrow, description, actions, className }: PageHeaderProps) {
   return (
     <div

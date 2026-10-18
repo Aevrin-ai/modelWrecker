@@ -4,11 +4,7 @@ import { AEVRIN_URL } from "@/lib/links";
 import { Section } from "@/components/ui/blocks";
 import { Reveal } from "@/components/ui/reveal";
 
-/*
-  Where modelWrecker belongs, set the way Activepieces sets a customer quote:
-  one centred serif line, the key phrase dark and the rest muted, with no
-  quote and no numbers. Users meet the product as Aevrin, so the line says so.
-*/
+// one centred serif line, the key phrase dark and the rest muted; users meet the product under the platform name
 export function PartOfAevrin() {
   return (
     <Section id="aevrin" labelledBy="aevrin-heading">

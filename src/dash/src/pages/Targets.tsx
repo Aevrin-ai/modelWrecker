@@ -1,21 +1,19 @@
 import { useMemo, useState } from "react";
-import { Crosshair, Plus, Search, ShieldCheck, ShieldX } from "lucide-react";
+import { Crosshair, Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SeverityBadge, TargetStatusBadge, TargetTypeBadge } from "@/components/StatusBadges";
 import { DataState, EmptyState, SkeletonRows } from "@/components/States";
 import { TargetDialog } from "@/components/dialogs";
 import { apiClient } from "@/api";
 import { useAsync } from "@/hooks/useAsync";
 import { useActiveProject } from "@/hooks/useActiveProject";
-import { relativeTime } from "@/lib/format";
-import { TARGET_TYPE_LABEL, TARGET_TYPES } from "@/lib/constants";
+import { TARGET_TYPES, TARGET_TYPE_LABEL } from "@/lib/constants";
 import type { TargetType } from "@/types";
+import { TargetCardList } from "./targets/TargetCardList";
+import { TargetsTable } from "./targets/TargetsTable";
 
 export function Targets() {
   const { activeProjectId } = useActiveProject();
@@ -30,14 +28,14 @@ export function Targets() {
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    const q = query.trim().toLowerCase();
+    const search = query.trim().toLowerCase();
     return data.filter(
-      (t) =>
-        (type === "all" || t.type === type) &&
-        (!q ||
-          t.name.toLowerCase().includes(q) ||
-          t.provider.toLowerCase().includes(q) ||
-          t.model.toLowerCase().includes(q)),
+      (target) =>
+        (type === "all" || target.type === type) &&
+        (!search ||
+          target.name.toLowerCase().includes(search) ||
+          target.provider.toLowerCase().includes(search) ||
+          target.model.toLowerCase().includes(search)),
     );
   }, [data, query, type]);
 
@@ -67,9 +65,9 @@ export function Targets() {
           </div>
           <Select value={type} onChange={(e) => setType(e.target.value as TargetType | "all")}>
             <option value="all">All types</option>
-            {TARGET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {TARGET_TYPE_LABEL[t]}
+            {TARGET_TYPES.map((targetType) => (
+              <option key={targetType} value={targetType}>
+                {TARGET_TYPE_LABEL[targetType]}
               </option>
             ))}
           </Select>
@@ -101,85 +99,9 @@ export function Targets() {
             <EmptyState icon={Search} title="No targets match your filters" />
           ) : (
             <>
-              <Card className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Target</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Authorized</TableHead>
-                      <TableHead>Campaigns</TableHead>
-                      <TableHead>Top severity</TableHead>
-                      <TableHead>Last tested</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>
-                          <p className="font-medium">{t.name}</p>
-                          <p className="font-mono text-xs text-muted-foreground">{t.endpoint}</p>
-                        </TableCell>
-                        <TableCell>
-                          <TargetTypeBadge type={t.type} />
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">{t.model}</p>
-                          <p className="text-xs text-muted-foreground">{t.provider}</p>
-                        </TableCell>
-                        <TableCell>
-                          <TargetStatusBadge status={t.status} />
-                        </TableCell>
-                        <TableCell>
-                          {t.authorized ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                              <ShieldCheck className="size-3.5" /> Yes
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                              <ShieldX className="size-3.5" /> No
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="tabular-nums">{t.campaignCount}</TableCell>
-                        <TableCell>
-                          {t.topSeverity ? <SeverityBadge severity={t.topSeverity} /> : <span className="text-xs text-muted-foreground">-</span>}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {relativeTime(t.lastTestedAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
+              <TargetsTable targets={filtered} />
 
-              <div className="space-y-3 md:hidden">
-                {filtered.map((t) => (
-                  <Card key={t.id} className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{t.name}</p>
-                        <p className="font-mono text-xs text-muted-foreground">{t.model}</p>
-                      </div>
-                      <TargetTypeBadge type={t.type} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <TargetStatusBadge status={t.status} />
-                      {t.authorized ? (
-                        <Badge tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                          Authorized
-                        </Badge>
-                      ) : (
-                        <Badge tone="bg-secondary text-secondary-foreground">Not authorized</Badge>
-                      )}
-                      {t.topSeverity && <SeverityBadge severity={t.topSeverity} />}
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <TargetCardList targets={filtered} />
             </>
           )
         }

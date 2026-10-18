@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from modelwrecker.attacker import loop as loop_module
-from modelwrecker.config import Config, ConfigError, EgressConfig
+from modelwrecker.config import Config, ConfigError, EgressConfig, Endpoint
 from modelwrecker.providers.base import ProviderError
 from modelwrecker.providers.fake import FakeProvider
 from modelwrecker.providers.openai_compatible import OpenAICompatibleProvider
@@ -101,12 +101,20 @@ async def test_provider_allows_opted_in_local_model() -> None:
 async def test_attack_loop_passes_the_configured_policy(monkeypatch) -> None:
     seen: list[EgressPolicy | None] = []
 
-    def fake_build(ep, egress=None):
+    def fake_build(ep: Endpoint, egress: object = None) -> FakeProvider:
         seen.append(egress)
         return FakeProvider(ep.model, lambda messages: "I can't help with that.")
 
     monkeypatch.setattr(loop_module, "build_provider", fake_build)
-    cfg = Config.model_validate(
+    await loop_module.run_config(_local_model_config())
+    assert len(seen) == 3
+    expected = EgressPolicy(allowed_schemes=("http",), allow_hosts=("localhost",))
+    assert all(p == expected for p in seen)
+
+
+def _local_model_config() -> Config:
+    """Every role on a local model, with egress opted in for http://localhost only."""
+    return Config.model_validate(
         {
             "project": {"name": "egress-wiring"},
             "attacker": {
@@ -136,10 +144,6 @@ async def test_attack_loop_passes_the_configured_policy(monkeypatch) -> None:
             "security": {"egress": {"allowed_schemes": ["http"], "allow_hosts": ["localhost"]}},
         }
     )
-    await loop_module.run_config(cfg)
-    assert len(seen) == 3
-    expected = EgressPolicy(allowed_schemes=("http",), allow_hosts=("localhost",))
-    assert all(p == expected for p in seen)
 
 
 def _local_cfg(security: dict | None = None) -> Config:

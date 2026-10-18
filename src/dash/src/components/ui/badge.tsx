@@ -2,14 +2,11 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  /** Pass a soft tone class pair from lib/badges, or leave for the neutral default. */
+  // pass a soft tone class pair from lib/badges, or leave for the neutral default
   tone?: string;
 }
 
-/**
- * Catmint pill badge (measured): px-2 py-1, rounded-full, 12px regular text, soft -100/-800 tint.
- * The color is supplied as a `tone` class pair so callers stay consistent.
- */
+// a soft pill badge; callers pass the color as a `tone` class pair so it stays consistent
 export function Badge({ className, tone, ...props }: BadgeProps) {
   return (
     <span

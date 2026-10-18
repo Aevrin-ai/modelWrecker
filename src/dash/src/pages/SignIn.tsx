@@ -1,99 +1,26 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
-import { AlertTriangle, Loader2, Moon, Sun } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LOGO_SRC } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/hooks/useTheme";
+import { AuthFrame } from "./signIn/AuthFrame";
+import { BrandLockup } from "./signIn/BrandLockup";
+import { GoogleMark } from "./signIn/GoogleMark";
 
-/** Google "G" mark, the standard multi-color glyph used on Google sign-in buttons. */
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
-      <path
-        fill="#4285F4"
-        d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.96-1.07 7.94-2.9l-3.88-3.01c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.11A12 12 0 0 0 12 24Z"
-      />
-      <path fill="#FBBC05" d="M5.29 14.29a7.2 7.2 0 0 1 0-4.58V6.6H1.28a12 12 0 0 0 0 10.8l4.01-3.11Z" />
-      <path
-        fill="#EA4335"
-        d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.44-3.44A11.53 11.53 0 0 0 12 0 12 12 0 0 0 1.28 6.6l4.01 3.11C6.23 6.88 8.88 4.77 12 4.77Z"
-      />
-    </svg>
-  );
-}
+export { AuthFrame } from "./signIn/AuthFrame";
+export { AuthLoading } from "./signIn/AuthLoading";
 
-/**
- * Full-height centered frame shared by the sign-in, loading, admin, and configuration screens.
- * A soft, theme-aware backdrop (a radial wash and a faint dot grid that fades at the edges) sits
- * behind a single elevated card, so every auth screen reads as one calm, focused surface.
- */
-export function AuthFrame({ children }: { children: ReactNode }) {
-  const { theme, toggle } = useTheme();
-  return (
-    <div className="relative flex min-h-full w-full items-center justify-center overflow-y-auto bg-background px-4 py-10">
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-[-12%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-muted/70 blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.4] [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]" />
-      </div>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label="Toggle theme"
-        className="absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-      >
-        {theme === "dark" ? <Sun className="size-[1.15rem]" /> : <Moon className="size-[1.15rem]" />}
-      </button>
-      <div className="relative z-10 w-full max-w-md animate-fade-in">{children}</div>
-    </div>
-  );
-}
-
-/** Logo square and wordmark, locked up horizontally like a product mark. */
-function BrandLockup() {
-  return (
-    <div className="flex items-center justify-center gap-2.5">
-      <span className="flex size-9 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-800">
-        <img src={LOGO_SRC} alt="" className="size-6 object-contain" draggable={false} />
-      </span>
-      <span className="text-lg font-semibold tracking-tight">Aevrin</span>
-    </div>
-  );
-}
-
-/** Shown in http mode while the stored session or the Google callback is read. */
-export function AuthLoading() {
-  return (
-    <AuthFrame>
-      <div className="flex flex-col items-center gap-6">
-        <BrandLockup />
-        <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-          <Loader2 className="size-4 animate-spin" /> Checking your session...
-        </p>
-      </div>
-    </AuthFrame>
-  );
-}
-
-/**
- * The sign-in screen. In http mode it starts Google sign-in through Supabase Auth. In mock mode it is
- * a preview: "Continue" opens the demo workspace and no real sign-in happens.
- */
+// in http mode it starts Google sign-in; in mock mode it is a preview that opens the demo workspace
 export function SignIn() {
   const { mode, error, signInWithGoogle } = useAuth();
   const [starting, setStarting] = useState(false);
 
-  async function start() {
+  async function handleStart() {
     setStarting(true);
     try {
       await signInWithGoogle();
     } finally {
-      // On success the browser leaves for Google; this only matters if starting failed.
+      // on success the browser leaves for Google; this only matters if starting failed
       setStarting(false);
     }
   }
@@ -119,7 +46,7 @@ export function SignIn() {
               variant="outline"
               size="lg"
               className="h-11 w-full text-sm font-medium"
-              onClick={start}
+              onClick={handleStart}
               disabled={starting}
             >
               {starting ? <Loader2 className="animate-spin" /> : <GoogleMark />}

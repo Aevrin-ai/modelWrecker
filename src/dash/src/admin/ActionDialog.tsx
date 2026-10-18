@@ -5,10 +5,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 
-/**
- * Every admin change goes through this dialog: extra fields from the caller, plus a required reason that
- * the server writes to the audit log with the admin's email and the time.
- */
+// every admin change goes through here: the required reason is written to the audit log with the admin's email
 export function ActionDialog({
   open,
   onClose,
@@ -41,7 +38,7 @@ export function ActionDialog({
     }
   }, [open]);
 
-  async function go() {
+  async function submitAction() {
     setBusy(true);
     setError(null);
     try {
@@ -65,7 +62,7 @@ export function ActionDialog({
           <Button variant="outline" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button variant={destructive ? "destructive" : "default"} onClick={() => void go()} disabled={busy || !canSubmit || reason.trim().length < 3}>
+          <Button variant={destructive ? "destructive" : "default"} onClick={() => void submitAction()} disabled={busy || !canSubmit || reason.trim().length < 3}>
             {busy && <Loader2 className="animate-spin" />}
             {confirmLabel}
           </Button>

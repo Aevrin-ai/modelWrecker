@@ -1,9 +1,6 @@
-// Checks, and with --apply sets, the Supabase Auth settings the dashboard's token lifecycle relies on
-// (docs/security/authentication.md). Uses the Supabase Management API with your own personal access token.
-//
-//   SUPABASE_ACCESS_TOKEN=... SUPABASE_PROJECT_REF=... node deploy/supabase/auth-settings.mjs [--apply]
-//
-// Prints setting names and values only, never the token. Without --apply it changes nothing.
+// checks, and with --apply sets, the Supabase Auth settings the tokens rely on (docs/security/authentication.md)
+
+// usage: SUPABASE_ACCESS_TOKEN=<token> SUPABASE_PROJECT_REF=<ref> node deploy/supabase/auth-settings.mjs [--apply]
 
 const token = process.env.SUPABASE_ACCESS_TOKEN;
 const ref = process.env.SUPABASE_PROJECT_REF;
@@ -12,13 +9,12 @@ if (!token || !/^[a-z0-9]{20}$/.test(ref ?? "")) {
   process.exit(2);
 }
 
-/** name -> [is the current value fine, the value --apply sets, why] */
+// name -> [is the current value fine, the value --apply sets, why]
 const WANTED = {
   jwt_exp: [(v) => v > 0 && v <= 3600, 3600, "access token lifetime in seconds: short-lived"],
   refresh_token_rotation_enabled: [(v) => v === true, true, "each refresh token works once"],
   security_refresh_token_reuse_interval: [(v) => v === 10, 10, "seconds a just-rotated token still works, for tabs refreshing together; reuse after it revokes the session"],
-  // Every refresh reaches Supabase Auth from the API Worker, so this per-address limit is shared by all
-  // users. The API keeps its own per-visitor limit (src/api/src/routes/auth.ts).
+  // every refresh comes from the API Worker, so all users share this per-address limit; the API limits each visitor
   rate_limit_token_refresh: [(v) => v >= 1800, 1800, "refreshes per 5 minutes per address; all users share the Worker's"],
 };
 
@@ -32,6 +28,7 @@ if (!res.ok) {
 }
 const config = await res.json();
 
+// prints setting names and values only, never the token; without --apply it changes nothing
 const changes = {};
 for (const [name, [ok, wanted, why]] of Object.entries(WANTED)) {
   const value = config[name];

@@ -8,13 +8,6 @@ import { Scale, ShieldCheck, type IconComponent } from "@/components/ui/solar-ic
 import { AppCard, Appear, Done, Spinner, Status, Tag, Tile, View } from "./kit";
 import { EASE } from "./tokens";
 
-/*
-  The judge earns trust in two moves. First it is checked on harmless
-  replies, and it must find nothing in any of them. Only then does it judge a
-  real attempt, weighing several signs that add up to one verdict. Sample
-  data only; the prompt and reply are harmless stand-ins.
-*/
-
 const EXAMPLES = ["A polite refusal", "Opening hours, answered", "A pancake recipe", "Public help text, quoted"];
 
 const SIGNALS = [
@@ -23,17 +16,21 @@ const SIGNALS = [
   { label: "Matches the goal", result: "Yes", level: 0.88 },
 ];
 
-// 0 the harmless examples are checked, 1 the check passes, 2 a real attempt
-// comes in, 3 the signals are weighed, 4 the verdict, held.
+// 0 harmless examples checked, 1 the check passes, 2 a real attempt comes in, 3 signals weighed, 4 the verdict, held
 const DURATIONS = [2.6, 1.8, 1.8, 2.8, 3.4];
 const SUMMARY = 1;
 const ATTEMPT = 2;
 const SIGNS = 3;
 const VERDICT = 4;
 
-// One of the two views. They share a grid cell, so the card keeps the height
-// of the taller one and does not jump when they swap.
-function Header({ icon, title, sub, right }: { icon: IconComponent; title: string; sub: string; right?: ReactNode }) {
+interface HeaderProps {
+  icon: IconComponent;
+  title: string;
+  sub: string;
+  right?: ReactNode;
+}
+
+function Header({ icon, title, sub, right }: HeaderProps) {
   return (
     <div className="flex items-center gap-3">
       <Tile icon={icon} className="bg-lime/30 dark:bg-lime/20" iconClassName="text-slate-900 dark:text-lime" />
@@ -46,13 +43,18 @@ function Header({ icon, title, sub, right }: { icon: IconComponent; title: strin
   );
 }
 
-export function JudgeMockup({ className }: { className?: string }) {
+export interface JudgeMockupProps {
+  className?: string;
+}
+
+// the judge is first checked on harmless replies, then weighs several signs on a real attempt (harmless sample data)
+export function JudgeMockup({ className }: JudgeMockupProps) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
   const { phase, playing } = useAutoplay(ref, DURATIONS);
-  const t = useTyping(phase === 0 && playing, 2.0);
-  // How far the harmless check has got: each example is done in turn.
-  const checked = phase > 0 || reduce ? 1 : t;
+  const typedProgress = useTyping(phase === 0 && playing, 2.0);
+  // how far the harmless check has got: each example is done in turn
+  const checked = phase > 0 || reduce ? 1 : typedProgress;
 
   return (
     <AppCard
@@ -105,7 +107,7 @@ export function JudgeMockup({ className }: { className?: string }) {
             }
           />
 
-          {/* The attempt: what was sent, what came back. */}
+          {/* the attempt: what was sent, what came back */}
           <div className="mt-5 space-y-2.5">
             <div className="flex justify-end">
               <p className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-950 px-4 py-2.5 text-[14px] text-white sm:text-[15px] dark:bg-white/15">
@@ -117,13 +119,13 @@ export function JudgeMockup({ className }: { className?: string }) {
             </p>
           </div>
 
-          {/* The signs it weighs, one at a time. */}
+          {/* the signs it weighs, one at a time */}
           <ul className="mt-5 space-y-3">
             {SIGNALS.map((signal, i) => {
-              const on = phase >= SIGNS;
+              const isWeighing = phase >= SIGNS;
               return (
                 <li key={signal.label}>
-                  <Appear show={on} delay={i * 0.55} y={6}>
+                  <Appear show={isWeighing} delay={i * 0.55} y={6}>
                     <div className="flex items-baseline gap-3">
                       <span className="min-w-0 flex-1 truncate text-[14px] sm:text-[15px]">{signal.label}</span>
                       <span className="shrink-0 text-[13px] font-semibold text-red-700 sm:text-[14px] dark:text-red-300">{signal.result}</span>
@@ -132,8 +134,8 @@ export function JudgeMockup({ className }: { className?: string }) {
                       <motion.div
                         className="h-full origin-left rounded-full bg-red-500"
                         initial={false}
-                        animate={{ scaleX: on ? signal.level : 0 }}
-                        transition={{ duration: reduce ? 0 : 0.7, delay: on && !reduce ? i * 0.55 + 0.15 : 0, ease: EASE }}
+                        animate={{ scaleX: isWeighing ? signal.level : 0 }}
+                        transition={{ duration: reduce ? 0 : 0.7, delay: isWeighing && !reduce ? i * 0.55 + 0.15 : 0, ease: EASE }}
                       />
                     </div>
                   </Appear>
@@ -142,7 +144,7 @@ export function JudgeMockup({ className }: { className?: string }) {
             })}
           </ul>
 
-          {/* The signs add up to one verdict. */}
+          {/* the signs add up to one verdict */}
           <Appear
             show={phase >= VERDICT}
             className="mt-5 flex items-center gap-3 rounded-xl border border-red-300/60 bg-red-50 px-4 py-3 dark:border-red-400/30 dark:bg-red-500/10"
