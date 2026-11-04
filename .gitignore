@@ -38,7 +38,7 @@ venv/
 dist/
 build/
 
-# Web apps (landing in src/web, dashboard in src/dash) and any Node tooling
+# Web apps (landing in apps/web, dashboard in apps/dashboard) and any Node tooling
 node_modules/
 **/node_modules/
 **/dist/

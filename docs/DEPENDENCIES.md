@@ -70,7 +70,7 @@ URL; no gateway package is installed.
 
 ## Web apps and cloud control plane (TypeScript, Phase 10)
 
-These live in `src/web` (landing), `src/dash` (dashboard), and `src/api` (control-plane Worker). None of
+These live in `apps/web` (landing), `apps/dashboard` (dashboard), and `apps/api` (control-plane Worker). None of
 them is in the engine's path: the local engine runs fully without the cloud, so the "free and
 self-hostable" rule holds for red teaming itself. Versions are pinned by each app's `package-lock.json`.
 
@@ -95,7 +95,7 @@ self-hostable" rule holds for red teaming itself. Versions are pinned by each ap
 
 The landing page also self-hosts the Sentient heading font (Indian Type Foundry, ITF Free Font License,
 free for commercial use) and uses Solar icons by 480 Design (CC BY 4.0, credited here and in the generated icon file), generated
-into one file by `src/web/scripts/solar-icons.mjs`. Its art is CSS only; there are no photos or videos.
+into one file by `apps/web/scripts/solar-icons.mjs`. Its art is CSS only; there are no photos or videos.
 
 Razorpay Checkout (`checkout.razorpay.com/v1/checkout.js`) is loaded by the dashboard's Billing page only
 when the user clicks Buy. It is Razorpay's hosted payment form, not a package; card and UPI details are

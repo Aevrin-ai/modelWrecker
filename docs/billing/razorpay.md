@@ -117,7 +117,7 @@ confirmation immediate when the tab is closed and records refunds made in the Ra
 
 ## Security considerations
 
-- The client sends only a plan and an interval. The amount comes from `src/shared/plans.json`.
+- The client sends only a plan and an interval. The amount comes from `packages/shared/plans.json`.
 - `fulfil_payment`, `refund_payment`, and `adjust_credit` are revoked from every client role; only the
   API's server key can call them. Users cannot write their subscription (read-only RLS policy).
 - A user can only confirm their own order.

@@ -32,11 +32,11 @@ Both apps live in this repo and ship as one Cloudflare Pages project (`modelwrec
 
 | App | Source | Served at |
 |-----|--------|-----------|
-| Landing page | `src/web` | `https://vyra.aevrin.ai/` |
-| Dashboard | `src/dash` | `https://vyra.aevrin.ai/dashboard/` |
+| Landing page | `apps/web` | `https://vyra.aevrin.ai/` |
+| Dashboard | `apps/dashboard` | `https://vyra.aevrin.ai/dashboard/` |
 
-The workflow `.github/workflows/deploy-web.yml` runs on every push to `main` that changes `src/web/**` or
-`src/dash/**`. It builds both apps, puts the dashboard under `/dashboard/`, writes the SPA fallback rules,
+The workflow `.github/workflows/deploy-web.yml` runs on every push to `main` that changes `apps/web/**` or
+`apps/dashboard/**`. It builds both apps, puts the dashboard under `/dashboard/`, writes the SPA fallback rules,
 and deploys with Wrangler. It needs two GitHub secrets, `CLOUDFLARE_API_TOKEN` (Pages edit only) and
 `CLOUDFLARE_ACCOUNT_ID`. The one-time setup steps, including the `vyra.aevrin.ai` custom domain and DNS,
 and the `app.aevrin.net` -> `vyra.aevrin.ai` redirect that keeps `app.aevrin.net/api/*` on the Worker, are

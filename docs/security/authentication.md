@@ -37,7 +37,7 @@ Rules:
 
 ### How the dashboard does it
 
-The dashboard (`src/dash`) has two build modes, set by `VITE_API_MODE`:
+The dashboard (`apps/dashboard`) has two build modes, set by `VITE_API_MODE`:
 
 - **mock** (the default): sample data, no sign-in. Used for local development and the demo.
 - **http**: real Google sign-in through Supabase Auth, then the real control-plane API
@@ -97,7 +97,7 @@ sequenceDiagram
   outage answers `503` and keeps the cookie; anything else that fails ends the session and clears it.
 - **Refresh in the browser.** The dashboard refreshes a minute before expiry, and on a page load. If the
   API still answers `401 unauthenticated`, the request refreshes once and retries once
-  (`src/dash/src/api/session.ts`). Requests rejected together share one refresh, and tabs take turns (a
+  (`apps/dashboard/src/api/session.ts`). Requests rejected together share one refresh, and tabs take turns (a
   browser lock), because every tab shares the one cookie. A second rejection, or a failed refresh, signs
   the browser out. Nothing can loop.
 - **Sign-out.** Revokes this session at Supabase Auth (other devices stay signed in), then clears both

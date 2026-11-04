@@ -53,7 +53,7 @@ evidence storage
 
 ## Plan tiers
 
-Tiers, limits, and prices are configuration in `src/shared/plans.json` (prices: [`../billing/pricing.md`](../billing/pricing.md)).
+Tiers, limits, and prices are configuration in `packages/shared/plans.json` (prices: [`../billing/pricing.md`](../billing/pricing.md)).
 The free tier must be genuinely useful with free, self-hostable parts (local models count as a full
 configuration, per [`../../CLAUDE.md`](../../CLAUDE.md)).
 

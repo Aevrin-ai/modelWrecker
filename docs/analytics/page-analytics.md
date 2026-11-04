@@ -10,7 +10,7 @@ from, with our own beacon and without collecting personal data.
 
 ## What is sent
 
-One small beacon per page view, from `src/web` (each load) and `src/dash` (each route), to our own API at
+One small beacon per page view, from `apps/web` (each load) and `apps/dashboard` (each route), to our own API at
 `POST /api/v1/collect`, only on `vyra.aevrin.ai`. The admin console sends nothing.
 
 ```json

@@ -7,6 +7,7 @@ and update everything in the right column.
 | Change | Documentation to update |
 |--------|-------------------------|
 | New CLI command or flag | `docs/reference/CLI.md` |
+| A top-level engine file or folder is added, moved, or removed | the path list in `deploy/github/engine-mirror.sh` and `deploy/github/README.md` (ADR-0026) |
 | API error shape, status codes, timeouts, retry policy, log events, or health checks | `docs/architecture/control-plane-api.md` (Errors, timeouts, and retries); `docs/workflows/INCIDENT-RUNBOOK.md` if an operator would act on it; ADR-0023 if the policy itself changes |
 | Engine retry policy or provider error classification | `docs/campaigns/OVERVIEW.md` (Retry policy) |
 | A new API folder, or a file moved between API layers | `docs/architecture/control-plane-api.md` (Code layout); any doc that names the moved path |
@@ -30,7 +31,7 @@ and update everything in the right column.
 | Entitlement or plan change | `docs/security/entitlements.md` (plans are config, not engine code) |
 | MCP server tool or guardrail change | `docs/mcp/overview.md`; `docs/mcp/tools.md`; `docs/security/mcp.md` |
 | Billing change | `docs/billing/razorpay.md` |
-| Price, plan limit, or cost-model change | `src/shared/plans.json`, `docs/billing/pricing.md` (the margin test must pass) |
+| Price, plan limit, or cost-model change | `packages/shared/plans.json`, `docs/billing/pricing.md` (the margin test must pass) |
 | Dashboard analytics change | `docs/analytics/overview.md` |
 | Admin console access or action change | `docs/security/admin.md`; `docs/security/THREAT-MODEL.md` |
 | Page analytics change (what is collected or kept) | `docs/analytics/page-analytics.md` |

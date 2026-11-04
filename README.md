@@ -54,10 +54,16 @@ the core engine.
 
 ## Where to start reading
 
-- [`CLAUDE.md`](https://github.com/Aevrin-ai/modelWrecker/blob/main/CLAUDE.md) - the project rules and reading order.
 - [`docs/index.md`](https://github.com/Aevrin-ai/modelWrecker/blob/main/docs/index.md) - the full documentation map.
 - [`docs/architecture/OVERVIEW.md`](https://github.com/Aevrin-ai/modelWrecker/blob/main/docs/architecture/OVERVIEW.md) - how the whole thing fits together.
 - [`docs/security/SECURITY.md`](https://github.com/Aevrin-ai/modelWrecker/blob/main/docs/security/SECURITY.md) - the security model.
+
+## Development
+
+modelWrecker is developed in [Aevrin-ai/Vyra](https://github.com/Aevrin-ai/Vyra), alongside the Vyra web
+app. [Aevrin-ai/modelWrecker](https://github.com/Aevrin-ai/modelWrecker) carries only the engine and is
+updated from it automatically. Please open issues and pull requests in
+[Vyra](https://github.com/Aevrin-ai/Vyra/issues).
 
 ## License
 

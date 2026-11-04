@@ -47,7 +47,7 @@ Confirmed by the maintainer on 2026-10-02:
   Workers only for thin API glue (not all-Cloudflare D1). (ADR-0015)
 - **Live cloud setup is staged, not automated:** DNS, schema apply, OAuth client, and the first PyPI publish
   are run by the maintainer from `deploy/`. (ROADMAP Phase 10)
-- **Web app locations:** landing page in `src/web`, dashboard in `src/dash`, one Cloudflare Pages project
+- **Web app locations:** landing page in `apps/web`, dashboard in `apps/dashboard`, one Cloudflare Pages project
   (landing at `/`, dashboard at `/dashboard/`), redeployed by CI on changes to either folder.
 
 Recorded on 2026-10-02 (engineering decision, ADR-0013 update): MCP targets come only from config (there
@@ -66,5 +66,13 @@ Confirmed by the maintainer on 2026-10-02 (issues #11, #12, #42):
 - **The control-plane API is layered** (middleware, routes, controllers, validators, services,
   repositories, database, lib, types, config), every query is a named repository function, and the whole
   repository follows the owner's code style with its style checker clean. (ADR-0024, #89)
+
+- **Apps live in `apps/`, shared code in `packages/`, and `src/` holds only the engine:** `apps/api`,
+  `apps/web`, `apps/dashboard`, `packages/shared`. The Python package, its tests, and its build did not move.
+  (ADR-0025)
+
+- **The engine is also published on its own as Aevrin-ai/modelWrecker**, rebuilt from this repository on
+  every push to `main` with its full history; issues stay here. The product is named Vyra and the engine
+  keeps the name modelWrecker. (ADR-0026)
 
 No open decisions remain.

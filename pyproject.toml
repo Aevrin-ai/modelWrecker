@@ -31,7 +31,7 @@ dependencies = [
 Homepage = "https://app.aevrin.net"
 Repository = "https://github.com/Aevrin-ai/modelWrecker"
 Documentation = "https://github.com/Aevrin-ai/modelWrecker/tree/main/docs"
-Issues = "https://github.com/Aevrin-ai/modelWrecker/issues"
+Issues = "https://github.com/Aevrin-ai/Vyra/issues"
 
 [project.optional-dependencies]
 # Provider adapters beyond the OpenAI-compatible baseline.
@@ -62,7 +62,7 @@ build-backend = "hatchling.build"
 packages = ["src/modelwrecker"]
 
 # The source archive carries only the Python engine, its tests, and the docs it points to. The web apps
-# (src/web, src/dash, src/api) and deploy files are not part of the Python package.
+# (apps/web, apps/dashboard, apps/api) and deploy files are not part of the Python package.
 [tool.hatch.build.targets.sdist]
 include = ["/src/modelwrecker", "/tests", "/examples", "/README.md", "/CHANGELOG.md", "/pyproject.toml"]
 

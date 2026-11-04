@@ -8,7 +8,7 @@ create the venv with `uv venv` + `uv pip install -e ".[dev,mcp,attacks]"`). That
 skipped** (the symlink case in `tests/test_mcp_path_scope.py`, skipped on Windows without symlink rights). The garak
 tests skip without the `scan` extra and the PyRIT tests skip without the `attacks` extra. Lint:
 `.venv\Scripts\python -m ruff check src tests` is clean and CI runs it. The control-plane API has **150
-tests** (vitest): `npm test` in `src/api`.
+tests** (vitest): `npm test` in `apps/api`.
 
 Rows are grouped by area and were added as each phase landed. Older dated snapshots from Phase 4 live in
 [`../../reports/`](../../reports/final-test-report.md); this page supersedes them.
@@ -55,7 +55,7 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Strategy | multi_agent_injection (new `multi_agent` target) | PASS | `tests/test_planned_strategies.py`; live on Groq the attack succeeded once and the benign control stayed clean, but it did not hold on replay, so correctly no finding (reliability working) |
 | Strategy | multimodal_injection (requires a vision target) | PASS offline | `tests/test_planned_strategies.py`; NOT TESTED live - no vision model on the test key |
 | Target | models with native function-calling (Groq gpt-oss) run the tool environment without a 400 | PASS | live on Groq gpt-oss-20b after #71; indirect_prompt_injection produced a finding via a native send_message call |
-| API | sync accepts the new target types `memory` and `multi_agent` | PASS | `src/api/src/validators/schemas/fields.ts` TARGET_TYPES; `src/api/test` (84 tests at the time) |
+| API | sync accepts the new target types `memory` and `multi_agent` | PASS | `apps/api/src/validators/schemas/fields.ts` TARGET_TYPES; `apps/api/test` (84 tests at the time) |
 | Strategy | pyrit_xpia (PyRIT XPIA workflow) | PASS | `tests/test_pyrit.py` (runs through the bridge); live on Groq gpt-oss-20b it scored 10/10 once but did not hold on replay, so correctly no finding; registers with the `attacks` extra |
 | Datasets | InjecAgent, AgentInjectionBench, HarmBench text, and JailbreakBench parse, normalize, keep benign controls, read JSON/JSONL/CSV, convert to objectives; offline guard | PASS | `tests/test_datasets.py` on pinned fixtures; all four also loaded live from their pinned commits (500/182/400/200 cases) |
 | Target | live MCP-server tool discovery (streamable HTTP); poisoned tool feeds the catalog; discovery only, never calls a tool; cached | PASS | `tests/test_mcp_live_connection.py` (stubbed client); verified against a real local MCP server exposing a poisoned tool; a live mcp_tool_poisoning run on Groq discovered the tools and ran end to end |
@@ -148,29 +148,29 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Security 10.3 | attack loop passes the configured policy to all three providers | PASS | |
 | Security 10.3 | `validate` refuses a blocked endpoint offline (no DNS) | PASS | all four `examples/` configs still validate |
 | Security 10.3 | DNS rebinding between check and connect | NOT TESTED | known limit; address pinning is open (#16) |
-| Landing `src/web` | `npm run build` (tsc + vite) | PASS | 0 TypeScript errors, 2026-10-02 |
-| Landing `src/web` (rebuilt, #55) | every section renders at 1440x900 and 390x844, light and dark; no horizontal scroll; no console errors | PASS | checked in Chrome DevTools against the activepieces.com study |
+| Landing `apps/web` | `npm run build` (tsc + vite) | PASS | 0 TypeScript errors, 2026-10-02 |
+| Landing `apps/web` (rebuilt, #55) | every section renders at 1440x900 and 390x844, light and dark; no horizontal scroll; no console errors | PASS | checked in Chrome DevTools against the activepieces.com study |
 | Landing scroll story | readable text at each progress point; 8 wires and 16 end dots, every wire end on a dot; still final frame below 1024px | PASS | measured in Chrome |
 | Landing reduced motion | every mockup opens on its final step; the story becomes plain sections; no cursor | PASS | `matchMedia` override |
 | Landing navbar | menus open on hover, click, Enter and Down arrow; panel height eases between menus; Escape closes; phone menu folds into rows | PASS | checked in Chrome |
 | Landing links | 10 section anchors exist; 8 external links answer 200 | PASS | |
 | Landing Lighthouse (phone) | accessibility, best practices, SEO | PASS | 100 / 100 / 100; LCP 2.4 s and CLS 0 on Slow 4G with 4x CPU slowdown (the home page is prerendered) |
-| Landing `src/web` | no horizontal overflow at 390px (mobile emulation) | PASS | page scroll width equals viewport |
-| Landing `src/web` | deployed to app.aevrin.net | PASS | see the `Live` row for landing, dashboard, and deep links |
-| Dashboard `src/dash` | `npm run build` (tsc + vite), routes code-split | PASS | 0 TypeScript errors, no chunk-size warning |
-| Dashboard `src/dash` | all 16 routes render under `/dashboard/`, incl. 3 detail pages and 404 | PASS | client-side route sweep, 0 console errors |
-| Dashboard `src/dash` | light and dark themes match the Catmint reference | PASS | visual comparison in Chrome |
-| Dashboard `src/dash` | no horizontal overflow at 390px on every route | PASS | fixed grid min-width blowout and tab bar overflow during the check |
-| Dashboard `src/dash` | real control-plane API, auth, multi-tenant isolation | PASS | live mode against the real API and Supabase; isolation checked in the `API src/api` rows; real data checks of analytics are open (#13) |
+| Landing `apps/web` | no horizontal overflow at 390px (mobile emulation) | PASS | page scroll width equals viewport |
+| Landing `apps/web` | deployed to app.aevrin.net | PASS | see the `Live` row for landing, dashboard, and deep links |
+| Dashboard `apps/dashboard` | `npm run build` (tsc + vite), routes code-split | PASS | 0 TypeScript errors, no chunk-size warning |
+| Dashboard `apps/dashboard` | all 16 routes render under `/dashboard/`, incl. 3 detail pages and 404 | PASS | client-side route sweep, 0 console errors |
+| Dashboard `apps/dashboard` | light and dark themes match the Catmint reference | PASS | visual comparison in Chrome |
+| Dashboard `apps/dashboard` | no horizontal overflow at 390px on every route | PASS | fixed grid min-width blowout and tab bar overflow during the check |
+| Dashboard `apps/dashboard` | real control-plane API, auth, multi-tenant isolation | PASS | live mode against the real API and Supabase; isolation checked in the `API apps/api` rows; real data checks of analytics are open (#13) |
 | CI `deploy-web.yml` / `publish-pypi.yml` | workflow runs on GitHub | PASS | see the `Live` row for CI, site deploy, API deploy, and release workflows |
-| API `src/api` | typecheck and Worker bundle (Wrangler 4 dry run) | PASS | 196 KB gzipped; the live deploy is the `API Worker` row |
-| API `src/api` | device sign-in: pending, slow_down, approve, token shown once, denial, expiry | PASS | `test/api.test.ts` (in-memory database) |
-| API `src/api` | no plaintext device token or device code stored anywhere | PASS | full database scan in the test |
-| API `src/api` | device and user credentials rejected on each other's routes | PASS | |
-| API `src/api` | sync is idempotent and keeps the user's finding status | PASS | |
-| API `src/api` | sync refuses any field outside the contract (payload, response, system prompt, owner, project) | PASS | deliberately loosening the schema makes this test fail |
-| API `src/api` | one account cannot read or change another's rows | PASS | deliberately removing the owner filter makes this test fail; Postgres RLS is a second layer not exercised offline |
-| API `src/api` | revoked device refused | PASS | |
+| API `apps/api` | typecheck and Worker bundle (Wrangler 4 dry run) | PASS | 196 KB gzipped; the live deploy is the `API Worker` row |
+| API `apps/api` | device sign-in: pending, slow_down, approve, token shown once, denial, expiry | PASS | `test/api.test.ts` (in-memory database) |
+| API `apps/api` | no plaintext device token or device code stored anywhere | PASS | full database scan in the test |
+| API `apps/api` | device and user credentials rejected on each other's routes | PASS | |
+| API `apps/api` | sync is idempotent and keeps the user's finding status | PASS | |
+| API `apps/api` | sync refuses any field outside the contract (payload, response, system prompt, owner, project) | PASS | deliberately loosening the schema makes this test fail |
+| API `apps/api` | one account cannot read or change another's rows | PASS | deliberately removing the owner filter makes this test fail; Postgres RLS is a second layer not exercised offline |
+| API `apps/api` | revoked device refused | PASS | |
 | Engine 10.4/10.8/10.9 | login, credential storage, client, summarizer, outbox | PASS | the seven `tests/test_cloud_*.py` files (MockTransport) |
 | Engine 10.9 | secret planted in payload, response, reasoning, system prompt, URLs, tool args never in the sync body | PASS | with a calibration test that fails a leaky summarizer |
 | End to end | real `modelwrecker login` + `sync` against the real API code over local HTTP | PASS | in-memory database; the run's planted secret appeared in 3 local files and 0 cloud responses |
@@ -186,7 +186,7 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Engine | `sync` lists pending runs before sending; `sync --dry-run` sends nothing and needs no sign-in | PASS | 3 tests in `tests/test_cloud_sync_cli.py`; live `--dry-run` listed exactly the two OpenRouter runs |
 | Live | the two OpenRouter runs synced and shown in the dashboard | PASS (maintainer) | synced by the maintainer; 2 campaigns, 8 attempts, 0 findings in the account |
 | Engine | opt-in evidence and transcripts: allowed fields only, never config or endpoint URLs; redacted then capped; size budget; back-fill of runs synced without detail; `--resync`; `--metadata-only`; metadata fallback when settings cannot be read | PASS | 11 tests in `tests/test_cloud_sync_detail.py`, `tests/test_cloud_sync_cli_detail.py` (#28) |
-| API | detail kept only when the setting is on; shown on finding and campaign routes; metadata-only re-sync keeps it; turning off deletes it; other accounts get 404; strict schema; 4 MB sync cap | PASS | 5 tests in `src/api/test/sync.test.ts` (#28) |
+| API | detail kept only when the setting is on; shown on finding and campaign routes; metadata-only re-sync keeps it; turning off deletes it; other accounts get 404; strict schema; 4 MB sync cap | PASS | 5 tests in `apps/api/test/sync.test.ts` (#28) |
 | End to end | real `modelwrecker sync` of the 8 real local runs to the real API code (in-memory database) with both settings on | PASS | all 8 back-filled; 4 findings with evidence, 18 attempts in transcripts; second sync sent nothing; turning evidence off removed it; no API key in cloud data |
 | Dashboard | transcript card (on and off states), finding evidence view, settings copy | PASS | Chrome, mock mode |
 | Live | maintainer's re-sync with detail on | PASS (maintainer) | all 8 runs have transcripts in the account (4 attempts each for the two OpenRouter runs); 4 findings have evidence |
@@ -196,36 +196,36 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Live | `modelwrecker 0.0.2` from PyPI | PASS | clean Python 3.12 venv: installs, `--version` prints 0.0.2, `sync --help` lists `--dry-run`, `--resync`, `--metadata-only` |
 | Live | GitHub history without AI co-author lines; repository Contributors sidebar | PASS | 0 `Co-authored-by` lines on main; contributors API and the page widget list only the maintainer (#4, #34) |
 | Live | migration `0003` applied; `finding_evidence` and `run_transcripts` have RLS with owner read and delete policies only | PASS | checked with SQL after applying, 2026-10-02 |
-| Dashboard `src/dash` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
-| Dashboard `src/dash` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
+| Dashboard `apps/dashboard` | http mode: config error screen, sign-in gate, PKCE start, Bearer token, 401 signs out | PASS | Chrome, placeholder Supabase URL, no real endpoint called |
+| Dashboard `apps/dashboard` | Connect device approval (prefill, approve, deny, reused code) | PASS | mock mode in Chrome |
 | Engine | evidence stores the strategy name, not the plan id | PASS | regression test `test_evidence_records_the_strategy_name_not_a_plan_id` |
-| API | every paid price keeps a 30-40% margin under the cost model; plans and prices are public | PASS | `src/api/test/billing.test.ts` (#42) |
-| API | checkout uses the server price, never the client's; verify needs a valid signature AND Razorpay's captured record; amount mismatch, another account's order, and forged signatures refused; a payment applies once across verify, retries, and webhook; renewals add to the end date; a lapsed plan falls back to Free | PASS | `src/api/test/billing.test.ts` with a fake Razorpay (#12) |
-| API | account credit at checkout and full-credit purchases; reconciliation of a paid order nobody reported; webhook signature, duplicate event ids, full refund takes back the time; 503 when billing or the webhook secret is not configured | PASS | `src/api/test/billing.test.ts` (#12) |
-| API | device and project limits, Pro-only detail sync and leaderboard | PASS | `src/api/test/entitlements.test.ts`; the leaderboard in `sync.test.ts` |
-| API | signed entitlement on heartbeat verifies with the public key; an edited payload fails; Pro after payment expires at the paid-until date and includes a bonus; none without a signing key | PASS | `src/api/test/entitlements.test.ts` (#11) |
+| API | every paid price keeps a 30-40% margin under the cost model; plans and prices are public | PASS | `apps/api/test/billing.test.ts` (#42) |
+| API | checkout uses the server price, never the client's; verify needs a valid signature AND Razorpay's captured record; amount mismatch, another account's order, and forged signatures refused; a payment applies once across verify, retries, and webhook; renewals add to the end date; a lapsed plan falls back to Free | PASS | `apps/api/test/billing.test.ts` with a fake Razorpay (#12) |
+| API | account credit at checkout and full-credit purchases; reconciliation of a paid order nobody reported; webhook signature, duplicate event ids, full refund takes back the time; 503 when billing or the webhook secret is not configured | PASS | `apps/api/test/billing.test.ts` (#12) |
+| API | device and project limits, Pro-only detail sync and leaderboard | PASS | `apps/api/test/entitlements.test.ts`; the leaderboard in `sync.test.ts` |
+| API | signed entitlement on heartbeat verifies with the public key; an edited payload fails; Pro after payment expires at the paid-until date and includes a bonus; none without a signing key | PASS | `apps/api/test/entitlements.test.ts` (#11) |
 | Engine | entitlement verification: valid, edited payload, signature, or header, expired, unknown key, wrong issuer, future-dated; the production key is 32 bytes and not the test key | PASS | `tests/test_entitlement_tokens.py` (#11) |
 | Engine | free baseline without a token or with a tampered file; MCP targets and explicit PyRIT strategies refused; auto-selected ones skipped; monthly caps from local and signed usage; attempt budget capped and the run counted; `plan` output; `run` refuses before creating a run folder; heartbeat stores only a valid token | PASS | `tests/test_entitlements.py` and `tests/test_entitlement_tokens.py` (#11); merged on `main`, not in a PyPI release yet |
 | Live | migration `0004` applied; `payments` and `credit_ledger` owner read only, `billing_events` server only; `fulfil_payment`, `refund_payment`, `adjust_credit` executable by the server key only | PASS | checked with SQL after applying, 2026-10-02 |
 | Live | `fulfil_payment` (credit applied, invoice numbered, second call a no-op, 31 days of Pro), `refund_payment` (credit returned) on the real database | PASS | inside a block that always raised, so nothing was kept; invoice counter reset afterwards |
 | Live | Razorpay live key accepted (read-only orders listing) | PASS | 2026-10-02 |
-| API | staff access: only a verified email exactly on aevrin.net (look-alike domains refused); every admin route needs an admin session; 503 when not configured | PASS | `src/api/test/admin.test.ts` (#43) |
-| API | TOTP matches the RFC 6238 test vector; codes cannot be reused; 5 wrong codes lock for 15 minutes; recovery codes work once; secrets stored encrypted with a fresh IV; sessions bound to the staff member, ended after 30 idle minutes, 8 hours, or on request | PASS | `src/api/test/admin.test.ts` (#43) |
-| API | plan, bonus, credit, refund, device revoke, sync settings (deletes cloud copies), suspend and restore (user and device routes refused), delete with typed email (payments kept, audit kept, staff refused), reset another admin's authenticator; every change audited with its reason | PASS | `src/api/test/admin-users.test.ts` (#44) |
-| API | page beacon stores a cleaned path, referrer host, country, device, and a daily hash, never the IP or query; Do Not Track, Global Privacy Control, bots, bad bodies, and a missing salt are not counted | PASS | `src/api/test/collect.test.ts` (#45) |
+| API | staff access: only a verified email exactly on aevrin.net (look-alike domains refused); every admin route needs an admin session; 503 when not configured | PASS | `apps/api/test/admin.test.ts` (#43) |
+| API | TOTP matches the RFC 6238 test vector; codes cannot be reused; 5 wrong codes lock for 15 minutes; recovery codes work once; secrets stored encrypted with a fresh IV; sessions bound to the staff member, ended after 30 idle minutes, 8 hours, or on request | PASS | `apps/api/test/admin.test.ts` (#43) |
+| API | plan, bonus, credit, refund, device revoke, sync settings (deletes cloud copies), suspend and restore (user and device routes refused), delete with typed email (payments kept, audit kept, staff refused), reset another admin's authenticator; every change audited with its reason | PASS | `apps/api/test/admin-users.test.ts` (#44) |
+| API | page beacon stores a cleaned path, referrer host, country, device, and a daily hash, never the IP or query; Do Not Track, Global Privacy Control, bots, bad bodies, and a missing salt are not counted | PASS | `apps/api/test/collect.test.ts` (#45) |
 | Dashboard | admin console in mock mode: authenticator setup with a locally drawn QR code, recovery codes, Users, user detail and dialogs, Platform analytics, Page analytics | PASS | Chrome, local stand-in for the Pages worker |
 | Live | migration `0005` applied: admin tables and `page_views` have RLS on and no policies; admin functions executable by the server key only; payments keep their rows on user deletion (`ON DELETE SET NULL`); `admin_user_list`, `admin_metrics`, `admin_traffic` return live numbers | PASS | checked with SQL, 2026-10-02 |
 | Live | a staff member enrolling an authenticator and using the console | NOT TESTED | needs an @aevrin.net Google account (maintainer) |
-| API | dashboard sign-in tokens: code exchange, refresh rotation, reuse revokes the session, expired and revoked refresh tokens, outage keeps the cookie, legacy session moved once, logout with a live or expired access token, cross-site and header checks, rate limit, cookie flags (HttpOnly, Secure, SameSite=Strict, path) | PASS | `src/api/test/auth.test.ts` (#59) |
-| API | missing, malformed, expired, or revoked user token answers `401 unauthenticated` | PASS | `src/api/test/api.test.ts` (#58) |
-| API | a request id on every response and in every error body; Cloudflare's ray id used only when well formed | PASS | `src/api/test/reliability.test.ts` (#85) |
-| API | database failures classified by code: availability problems answer `503 service_unavailable`, anything else a `500`; neither leaks the internal text | PASS | `src/api/test/errors.test.ts`, `reliability.test.ts` (#85) |
-| API | outbound calls: one time budget, GET and HEAD retried once with backoff and jitter, `Retry-After` honored or passed on, a POST never retried | PASS | `src/api/test/http.test.ts` (#85) |
-| API | logs are one JSON line per event and redact tokens, keys, and email addresses | PASS | `src/api/test/log.test.ts` (#85) |
-| API | readiness answers 200 when the database answers and 503 with no internals when it fails or is slow; rate limited; liveness touches no database | PASS | `src/api/test/reliability.test.ts` (#85) |
-| API | config check names a missing or invalid setting without its value, and warns about a half-set optional feature | PASS | `src/api/test/config.test.ts` (#85) |
-| Dashboard + CLI | a server error shows the request id; an id with the wrong shape is dropped | PASS | `src/dash/src/api/errorMessage.test.ts`, `tests/test_fault_tolerance.py` (#85) |
-| Dashboard | refresh once and retry once on `401 unauthenticated`; one shared refresh for concurrent failures; no loop; other 401s and errors untouched | PASS | `src/dash/src/api/session.test.ts`, `npm test` (#58) |
+| API | dashboard sign-in tokens: code exchange, refresh rotation, reuse revokes the session, expired and revoked refresh tokens, outage keeps the cookie, legacy session moved once, logout with a live or expired access token, cross-site and header checks, rate limit, cookie flags (HttpOnly, Secure, SameSite=Strict, path) | PASS | `apps/api/test/auth.test.ts` (#59) |
+| API | missing, malformed, expired, or revoked user token answers `401 unauthenticated` | PASS | `apps/api/test/api.test.ts` (#58) |
+| API | a request id on every response and in every error body; Cloudflare's ray id used only when well formed | PASS | `apps/api/test/reliability.test.ts` (#85) |
+| API | database failures classified by code: availability problems answer `503 service_unavailable`, anything else a `500`; neither leaks the internal text | PASS | `apps/api/test/errors.test.ts`, `reliability.test.ts` (#85) |
+| API | outbound calls: one time budget, GET and HEAD retried once with backoff and jitter, `Retry-After` honored or passed on, a POST never retried | PASS | `apps/api/test/http.test.ts` (#85) |
+| API | logs are one JSON line per event and redact tokens, keys, and email addresses | PASS | `apps/api/test/log.test.ts` (#85) |
+| API | readiness answers 200 when the database answers and 503 with no internals when it fails or is slow; rate limited; liveness touches no database | PASS | `apps/api/test/reliability.test.ts` (#85) |
+| API | config check names a missing or invalid setting without its value, and warns about a half-set optional feature | PASS | `apps/api/test/config.test.ts` (#85) |
+| Dashboard + CLI | a server error shows the request id; an id with the wrong shape is dropped | PASS | `apps/dashboard/src/api/errorMessage.test.ts`, `tests/test_fault_tolerance.py` (#85) |
+| Dashboard | refresh once and retry once on `401 unauthenticated`; one shared refresh for concurrent failures; no loop; other 401s and errors untouched | PASS | `apps/dashboard/src/api/session.test.ts`, `npm test` (#58) |
 | Dashboard + API + Pages worker | Google sign-in (PKCE) through the API, refresh cookie unreadable by script, reload restores the session, expired access token refreshed and the request retried, signed-in `/` goes to the dashboard and `/#pricing` does not, sign-out revokes and clears cookies, an old localStorage session moved into the cookie | PASS | Chrome against a local harness: the built site through `_worker.js`, the real API app, a fake Supabase Auth (2026-10-11) |
 | Pages worker | Content-Security-Policy on landing, dashboard, admin; no violations; landing inline scripts run by hash; Google Fonts and Razorpay Checkout (script and payment iframe) load | PASS | same local harness in Chrome (#60) |
 | Live | Google sign-in through the API cookie on app.aevrin.net | PASS | the maintainer signed in with Google 2026-10-11 after #64; the PKCE authorize request, return address `/dashboard/`, and the auth routes' 400, 401, and 403 answers were also checked directly |
@@ -238,9 +238,9 @@ Rows are grouped by area and were added as each phase landed. Older dated snapsh
 | Live | request ids, readiness, and error bodies on both API hosts | PASS | 2026-10-18 after #86, on `vyra.aevrin.ai` and `app.aevrin.net`: `/api/v1/health` 200 with `X-Request-Id`; `/api/v1/health/ready` 200 with `database: ok`; a 404 and a 401 each carry `requestId` (Cloudflare's ray id); the page redirect and the dashboard still work |
 | Local runtime | the Worker on Cloudflare's runtime with an unreachable database | PASS | 2026-10-18, `wrangler dev --local`: readiness answered 503 `unavailable` after its 3 s budget, liveness 200, every error carried a request id, logs were JSON, no uncaught errors |
 | Live | a quoted request id finds its request in Cloudflare Workers Logs | PASS | 2026-10-18: the `requestId` from a 404 on vyra (`a4c6db74aab53fa8`) found exactly that request (service `aevrin-api`, its path, status 404) through the Workers Observability query API, filtering `$workers.event.request.headers.cf-ray`; it appeared within about 30 seconds |
-| API `src/api` | every query is a named repository function; no controller, middleware, or service calls the database directly | PASS | 2026-10-18 (#89): a search for `db.table(` and `db.rpc(` outside `repositories/` and `database/` finds nothing; all 141 earlier API tests pass unchanged |
-| API `src/api` | repositories keep ownership and single use: another account's row is not returned, a device approval and its token claim each work once, a campaign moves only from its expected status, a paid order is never marked failed, a webhook event is recorded once | PASS | `test/repositories.test.ts` (#89) |
-| API `src/api` | a failed query names itself in the log (`operation`), the innermost name wins, other errors pass through untouched | PASS | `test/repositories.test.ts`; and 2026-10-18 on `wrangler dev --local` with an unreachable database: `device/me` and `device/code` logged `devices.findByCredentialHash` and `deviceAuthRequests.findByUserCode` with their 503 |
+| API `apps/api` | every query is a named repository function; no controller, middleware, or service calls the database directly | PASS | 2026-10-18 (#89): a search for `db.table(` and `db.rpc(` outside `repositories/` and `database/` finds nothing; all 141 earlier API tests pass unchanged |
+| API `apps/api` | repositories keep ownership and single use: another account's row is not returned, a device approval and its token claim each work once, a campaign moves only from its expected status, a paid order is never marked failed, a webhook event is recorded once | PASS | `test/repositories.test.ts` (#89) |
+| API `apps/api` | a failed query names itself in the log (`operation`), the innermost name wins, other errors pass through untouched | PASS | `test/repositories.test.ts`; and 2026-10-18 on `wrangler dev --local` with an unreachable database: `device/me` and `device/code` logged `devices.findByCredentialHash` and `deviceAuthRequests.findByUserCode` with their 503 |
 
 ## Summary
 
