@@ -26,6 +26,10 @@ happened - never invent historical entries.
   incident runbook: `docs/workflows/INCIDENT-RUNBOOK.md`.
 
 ### Changed
+- The product is named Vyra (ADR-0026): the landing page, the dashboard, their page titles and link
+  previews, and the logo say Vyra. The engine keeps the name modelWrecker (`pip install modelwrecker`, the
+  `modelwrecker` command, its environment variables and config folders), and the dashboard now spells it
+  `modelWrecker` everywhere, as the landing page and the README do.
 - The web apps and the API moved out of the Python package's `src/` folder (ADR-0025): `src/api` is
   now `apps/api`, `src/dash` is `apps/dashboard`, `src/web` is `apps/web`, and `src/shared` is
   `packages/shared`, so `src/` holds only the engine. Nothing else changed: the dashboard builds byte-identical, the
