@@ -93,7 +93,7 @@ See [`../security/authentication.md`](../security/authentication.md) for the ful
 
 ## Hosting and cost
 
-The dashboard is static (Cloudflare Pages). The thin API runs on Cloudflare Workers (`src/api`). The data
+The dashboard is static (Cloudflare Pages). The thin API runs on Cloudflare Workers (`apps/api`). The data
 store is Supabase Postgres with row-level security (a database rule that limits each row to its owner),
 decided in ADR-0015. All services are chosen so the control plane can start on free tiers and fail
 gracefully at quota. The full HTTP contract is [`control-plane-api.md`](control-plane-api.md). See

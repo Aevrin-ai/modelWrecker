@@ -4,7 +4,7 @@
 - **Date:** 2026-10-18
 
 ## Decision
-- The control-plane API (`src/api/src`) is organized in layers: `middleware/`, `routes/` (route tables
+- The control-plane API (`apps/api/src`) is organized in layers: `middleware/`, `routes/` (route tables
   only), `controllers/` (request handlers), `validators/`, `services/` (business rules and platform
   modules), `database/`, `lib/`, `types/`, and `config/`. Only `index.ts` (the Worker entry), `app.ts` (the
   pipeline), and `container.ts` (the composition root) sit at the top. See
@@ -24,7 +24,7 @@
 
 ## Exceptions kept on purpose
 - Python dunder methods (`__init__`, `__repr__`) keep their names, which the checker flags as not snake_case.
-- shadcn's lowercase primitives in `src/dash/src/components/ui/`, and its compound primitives that share
+- shadcn's lowercase primitives in `apps/dashboard/src/components/ui/`, and its compound primitives that share
   private context in one file, follow shadcn's convention.
 - The landing app keeps its kebab-case file names, its own consistent convention.
 - Hono's `c` context parameter and the class-name helper `cn` keep their framework names.
@@ -32,7 +32,7 @@
 
 ## Trade-offs
 - The first version left some controllers reading and writing through the `Database` interface directly.
-  Issue #89 closed that gap: every query now lives in `src/api/src/repositories/`, one named function per
+  Issue #89 closed that gap: every query now lives in `apps/api/src/repositories/`, one named function per
   query, and a failed query names itself in the logs. One-step handlers may still call a repository
   directly instead of going through a service, as the owner's style allows for small handlers.
 - More, smaller files. The JavaScript bundles grew by about 1 KB from the extra module structure.

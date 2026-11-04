@@ -13,7 +13,7 @@ from ..data import Finding
 from .run_files import read_evidence
 from .summary_values import MAX_TEXT, body_text, bounded_int, label, rate
 
-# these match src/api/src/schemas.ts
+# these match apps/api/src/schemas.ts
 EVIDENCE_TEXT_MAX = 20_000
 TRANSCRIPT_TEXT_MAX = 4_000
 

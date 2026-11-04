@@ -52,6 +52,21 @@ Modular, low-maintenance, and reusable as the AI red-teaming layer of the Aevrin
 strategies, providers, targets, judges, and transforms plug in behind interfaces without touching
 the core engine.
 
+## Repository layout
+
+| Path | What it is |
+| --- | --- |
+| `src/modelwrecker/` | The engine and CLI (Python), published to PyPI as `modelwrecker` |
+| `tests/` | The engine's offline test suite |
+| `apps/api/` | The control-plane API, a Cloudflare Worker (TypeScript) |
+| `apps/web/` | The landing page at vyra.aevrin.ai (React + Vite) |
+| `apps/dashboard/` | The dashboard at vyra.aevrin.ai/dashboard (React + Vite) |
+| `packages/shared/` | Plans, prices, and the page-view beacon, shared by the three apps |
+| `deploy/` | Cloudflare, Supabase, Google, and PyPI setup |
+| `docs/` | Architecture, security, billing, runbooks, and decision records |
+| `examples/` | Starter campaign configs |
+| `reports/` | Reports from live test runs |
+
 ## Where to start reading
 
 - [`CLAUDE.md`](https://github.com/Aevrin-ai/modelWrecker/blob/main/CLAUDE.md) - the project rules and reading order.

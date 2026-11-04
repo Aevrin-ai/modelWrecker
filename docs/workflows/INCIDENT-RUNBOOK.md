@@ -21,7 +21,7 @@ the field `requestId`, and a database failure adds `operation`, the query that b
 `payments.fulfil`). A new request takes about half a minute to show up. To watch live instead:
 
 ```bash
-cd src/api
+cd apps/api
 npx wrangler tail aevrin-api --format pretty --search "<request id>"
 ```
 
@@ -50,11 +50,11 @@ The log events are listed in [`../architecture/control-plane-api.md`](../archite
 - Fix: set the secret again. A secret takes effect without a redeploy.
 
   ```bash
-  cd src/api
+  cd apps/api
   npx wrangler secret put SUPABASE_URL
   ```
 
-  `APP_ORIGIN` is not a secret: change it in `src/api/wrangler.toml` and redeploy.
+  `APP_ORIGIN` is not a secret: change it in `apps/api/wrangler.toml` and redeploy.
 - Check: `/api/v1/health` answers 200.
 
 ## Requests answer 503 "service_unavailable"
@@ -104,7 +104,7 @@ order did not match, so it was deliberately not applied. Find out why before you
 
 Roll back first, then fix it properly.
 
-- The API Worker: `npx wrangler rollback` inside `src/api` returns to the previous version.
+- The API Worker: `npx wrangler rollback` inside `apps/api` returns to the previous version.
 - The site: in the Cloudflare dashboard, open Workers & Pages, `modelwrecker-app`, Deployments, and
   roll back to the last good deployment.
 - Then revert the pull request on GitHub. CI deploys the revert. A rollback on its own is undone by

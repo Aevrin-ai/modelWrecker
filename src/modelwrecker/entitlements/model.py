@@ -2,7 +2,7 @@
 
 The engine holds no prices and no plan logic beyond this: a signed entitlement from the cloud says
 which features are on and how much can run each month. Without a valid one, the engine runs the free
-baseline below. The numbers match the Free plan in src/shared/plans.json.
+baseline below. The numbers match the Free plan in packages/shared/plans.json.
 """
 
 from __future__ import annotations

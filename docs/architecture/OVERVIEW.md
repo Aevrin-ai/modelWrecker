@@ -131,10 +131,10 @@ modelWrecker/
 │  ├─ cloud/                  # device login + metadata and opt-in evidence sync
 │  ├─ entitlements/           # signed plan check, verified offline
 │  └─ cli/                    # Typer CLI, one module per command group
-├─ src/api/                   # control-plane API: Cloudflare Worker, TypeScript
-├─ src/web/                   # landing page
-├─ src/dash/                  # dashboard and staff admin console
-├─ src/shared/                # plans.json: tiers, limits, prices, shared by API, sites, engine
+├─ apps/api/                   # control-plane API: Cloudflare Worker, TypeScript
+├─ apps/web/                   # landing page
+├─ apps/dashboard/                  # dashboard and staff admin console
+├─ packages/shared/                # plans.json: tiers, limits, prices, shared by API, sites, engine
 └─ tests/                     # offline unit + e2e + mcp + strategy tests
 ```
 
@@ -150,7 +150,7 @@ helpers in `security/` are planned, not built.
 - **`security/` is its own module**, imported by targets/providers/payloads - an Aevrin security principle
   that security can't be bolted on per-call.
 - **The API is separate.** The engine is a library + CLI first ([`ADR-0012`](../decisions/ADR-0012-engine-library-first.md))
-  and opens no network listener. The hosted control-plane API in `src/api` is a separate service with
+  and opens no network listener. The hosted control-plane API in `apps/api` is a separate service with
   auth from day one ([`control-plane-api.md`](control-plane-api.md)).
 - `src/` layout keeps imports honest and packaging clean.
 

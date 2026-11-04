@@ -6,6 +6,14 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
+### Changed
+- The web apps and the API moved out of the Python package's `src/` folder (ADR-0025): `src/api` is
+  now `apps/api`, `src/dash` is `apps/dashboard`, `src/web` is `apps/web`, and `src/shared` is
+  `packages/shared`, so `src/` holds only the engine. Nothing else changed: the landing page, the dashboard,
+  and the API Worker build byte-identical to before, and the Python package, the Docker image, and PyPI
+  publishing are untouched. Workflows, configs, and docs use the new paths; older entries below keep the
+  paths of their time.
+
 ### Added
 - Fault tolerance across the hosted service and the engine (#85, ADR-0023). The API puts a request id on
   every response (`X-Request-Id`) and in every error body (`requestId`), writes one redacted JSON log line

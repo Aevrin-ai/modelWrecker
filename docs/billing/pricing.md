@@ -3,7 +3,7 @@
 > Read [`razorpay.md`](razorpay.md) for how people pay, and
 > [`../security/entitlements.md`](../security/entitlements.md) for how a plan is enforced. This page is the
 > single source of truth for **how prices are set**. The prices themselves live in one file:
-> `src/shared/plans.json`.
+> `packages/shared/plans.json`.
 
 ## Purpose
 
@@ -15,15 +15,15 @@ revenue without GST.
 
 ```mermaid
 flowchart LR
-  CFG[src/shared/plans.json] --> API[API: checkout charges this]
+  CFG[packages/shared/plans.json] --> API[API: checkout charges this]
   CFG --> DASH[Dashboard Billing page]
   CFG --> WEB[Landing page Pricing section]
-  MODEL[src/api/src/services/billing/pricing.ts cost model] --> TEST[test: margin inside 30-40 percent]
+  MODEL[apps/api/src/services/billing/pricing.ts cost model] --> TEST[test: margin inside 30-40 percent]
   CFG --> TEST
 ```
 
 One file feeds the checkout, the dashboard, and the landing page, so the page can never advertise a price
-the checkout does not charge. A test (`src/api/test/billing.test.ts`) fails CI if any paid price leaves the
+the checkout does not charge. A test (`apps/api/test/billing.test.ts`) fails CI if any paid price leaves the
 margin band.
 
 ## Current prices
@@ -68,15 +68,15 @@ inside the band.
 
 ## Changing a price or a cost
 
-1. Change the input in `src/api/src/services/billing/pricing.ts` (costs) or `src/shared/plans.json` (prices).
-2. Run `npm test` in `src/api`. The margin test prints which plan and interval left the band.
+1. Change the input in `apps/api/src/services/billing/pricing.ts` (costs) or `packages/shared/plans.json` (prices).
+2. Run `npm test` in `apps/api`. The margin test prints which plan and interval left the band.
 3. Update the table above and the CHANGELOG. Existing purchases keep the price they paid; the change
    applies to the next checkout.
 
 ## Limits are value fences, not costs
 
 The monthly campaign-run and attempt limits do not cost Aevrin anything (the engine runs locally). They
-separate Free from Pro and are set in `src/shared/plans.json`. Free stays genuinely useful with free,
+separate Free from Pro and are set in `packages/shared/plans.json`. Free stays genuinely useful with free,
 self-hostable parts: the full local engine, the core strategies, any OpenAI-compatible or local model, and
 the dashboard.
 

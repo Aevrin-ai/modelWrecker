@@ -30,7 +30,7 @@ and update everything in the right column.
 | Entitlement or plan change | `docs/security/entitlements.md` (plans are config, not engine code) |
 | MCP server tool or guardrail change | `docs/mcp/overview.md`; `docs/mcp/tools.md`; `docs/security/mcp.md` |
 | Billing change | `docs/billing/razorpay.md` |
-| Price, plan limit, or cost-model change | `src/shared/plans.json`, `docs/billing/pricing.md` (the margin test must pass) |
+| Price, plan limit, or cost-model change | `packages/shared/plans.json`, `docs/billing/pricing.md` (the margin test must pass) |
 | Dashboard analytics change | `docs/analytics/overview.md` |
 | Admin console access or action change | `docs/security/admin.md`; `docs/security/THREAT-MODEL.md` |
 | Page analytics change (what is collected or kept) | `docs/analytics/page-analytics.md` |

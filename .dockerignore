@@ -30,10 +30,10 @@ reports/
 tests/
 examples/
 deploy/
-src/web/
-src/dash/
-src/api/
-src/shared/
+apps/web/
+apps/dashboard/
+apps/api/
+packages/shared/
 **/node_modules/
 docker-compose.yml
 Dockerfile

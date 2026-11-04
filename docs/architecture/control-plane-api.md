@@ -9,7 +9,7 @@
 The control-plane API is the only network surface of the Aevrin cloud. It stores and serves metadata. It
 never runs attacks, never calls a model, and never accepts raw prompts or model responses by default.
 
-- Code: `src/api` (a Cloudflare Worker, TypeScript), in layers. See [Code layout](#code-layout).
+- Code: `apps/api` (a Cloudflare Worker, TypeScript), in layers. See [Code layout](#code-layout).
 - Base URL: served at `https://vyra.aevrin.ai/api/v1` (the dashboard's own origin, so the browser needs no
   cross-origin calls) and at `https://app.aevrin.net/api/v1`, which is the default the `modelwrecker` CLI
   uses and stays live for already-installed clients.
@@ -75,7 +75,7 @@ It never says why a check failed; the log line `readiness_database_failed` does.
 
 ## Errors, timeouts, and retries
 
-One place turns a failure into a response. Routes throw a typed error (`src/api/src/lib/errors.ts`); the
+One place turns a failure into a response. Routes throw a typed error (`apps/api/src/lib/errors.ts`); the
 app's error handler classifies it and answers with the shape above. The device-polling replies in
 [`POST /device/token`](#post-devicetoken-public) keep their standard RFC 8628 shape instead.
 
@@ -93,7 +93,7 @@ serialization failure (`40001`), a PostgREST connection code (`PGRST000` to `PGR
 all becomes `503 service_unavailable`, so the CLI and the dashboard know to retry. A constraint violation
 or a bad query stays a `500`: retrying a bug only repeats it.
 
-Every outbound call has a time budget (`src/api/src/lib/http.ts`). One budget covers every attempt and
+Every outbound call has a time budget (`apps/api/src/lib/http.ts`). One budget covers every attempt and
 every wait, so a retry can never push a call past it.
 
 | Service | Budget | Retries |
@@ -107,7 +107,7 @@ backoff and jitter (a random part, so callers that failed together do not retry 
 A POST is never retried: repeating one could create a second order, refund twice, or send a
 single-use refresh token twice and end the session.
 
-Logs are one JSON line per event (`src/api/src/lib/log.ts`); an unexpected failure's line carries the
+Logs are one JSON line per event (`apps/api/src/lib/log.ts`); an unexpected failure's line carries the
 request id, and a failed database query adds `operation`, the repository query that broke (for example
 `devices.findByCredentialHash`). The id is Cloudflare's ray id, so a reference a person quotes also finds the request itself
 in Workers Logs. Tokens, keys, and email addresses are redacted before anything
@@ -255,7 +255,7 @@ Prepaid plans through Razorpay Orders. The full flow, failure cases, and webhook
 
 | Method and path | Caller | Purpose |
 |-----------------|--------|---------|
-| `GET /plans` | public | Plans, limits, and prices from `src/shared/plans.json` |
+| `GET /plans` | public | Plans, limits, and prices from `packages/shared/plans.json` |
 | `GET /subscription` | user | The plan in effect, paid-until date, credit, bonus, limits, features, this month's usage. Also reconciles recent unpaid orders with Razorpay |
 | `GET /invoices` | user | Confirmed purchases (paid, refunded) |
 | `POST /billing/checkout` | user | `{ "plan": "pro", "interval": "month" or "year" }`. Creates a Razorpay order for the configured price minus account credit, or pays fully from credit. The amount never comes from the client |
@@ -393,7 +393,7 @@ First-party page-view beacon; always answers 204. What is kept: [`../analytics/p
 
 ## Dashboard routes (user)
 
-Responses use the dashboard's types in `src/dash/src/types/` (re-exported from `index.ts`), so the dashboard's `HttpApiClient`
+Responses use the dashboard's types in `apps/dashboard/src/types/` (re-exported from `index.ts`), so the dashboard's `HttpApiClient`
 is a thin mapping. All list routes accept `?projectId=` (and `campaignId` / `targetId` where it makes
 sense) and only ever return the caller's rows.
 
@@ -425,7 +425,7 @@ arbitrary URL.
 
 ## Code layout
 
-A request moves through layers, and each folder under `src/api/src` holds one of them. Only the entry
+A request moves through layers, and each folder under `apps/api/src` holds one of them. Only the entry
 point, the pipeline, and the composition root sit at the top.
 
 ```mermaid
@@ -464,7 +464,7 @@ client, where row-level security applies, or the server key for device and admin
 query is for: `...ForOwner` takes the verified account id and filters on it on top of row-level security.
 A missing row is `null`, and the caller decides whether that is a 404.
 
-Tests live in `src/api/test/` and build the app with the in-memory database;
+Tests live in `apps/api/test/` and build the app with the in-memory database;
 `repositories.test.ts` covers the queries that guard ownership and single use.
 
 ## Configuration
@@ -486,7 +486,7 @@ project-specific is in the public repo:
 | `ADMIN_TOTP_KEY` | secret | Encrypts admin authenticator secrets at rest (admin console) |
 | `ANALYTICS_SALT` | secret | Mixed into the daily visitor hash (page analytics) |
 
-The settings are checked before the first request is served (`src/api/src/config/checkConfig.ts`). A missing or
+The settings are checked before the first request is served (`apps/api/src/config/checkConfig.ts`). A missing or
 invalid required setting (the first four rows, plus `SUPABASE_URL` and `APP_ORIGIN` must be https) makes
 every request answer `503 unavailable`, and the log line `config_invalid` names the setting, never its
 value. An optional group that is only half set (one Razorpay key without the other, or part of the
@@ -495,6 +495,6 @@ entitlement key) stays off, and `config_incomplete` says which setting is missin
 ## Known limits
 
 - Rate limiting is best effort per Worker instance. A Cloudflare rate-limit binding is the upgrade path.
-- Payment amounts are fixed by the server from `src/shared/plans.json`; a renewal is a new payment.
+- Payment amounts are fixed by the server from `packages/shared/plans.json`; a renewal is a new payment.
 - Report files are not synced yet; the dashboard says so instead of guessing. Evidence and transcripts
   sync only when turned on (tables `finding_evidence` and `run_transcripts`, migration `0003`).
