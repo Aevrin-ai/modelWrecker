@@ -8,8 +8,8 @@ taxonomies (OWASP LLM Top 10, OWASP Agentic, OWASP MCP Top 10, MITRE ATLAS).
 > **Status: alpha, working end to end.** The local engine runs full campaigns against chat, agent, RAG,
 > and simulated MCP tool targets: adaptive attack strategies (including PyRIT and garak behind adapters), a
 > multi-signal judge, replay-based reliability checks, evidence, reports, and analytics. It is live-tested
-> against OpenRouter and covered by an offline test suite. An optional hosted dashboard at
-> <https://app.aevrin.net> receives run summaries from a signed-in install; the engine works fully
+> against OpenRouter and covered by an offline test suite. An optional hosted dashboard,
+> [Vyra](https://vyra.aevrin.ai), receives run summaries from a signed-in install; the engine works fully
 > without it. See the [roadmap](https://github.com/Aevrin-ai/modelWrecker/blob/main/ROADMAP.md) and the
 > [test matrix](https://github.com/Aevrin-ai/modelWrecker/blob/main/docs/testing/test-matrix.md) for
 > exactly what is built and tested.
