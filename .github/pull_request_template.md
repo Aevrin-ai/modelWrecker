@@ -1,3 +1,4 @@
-This repository is rebuilt from [Aevrin-ai/Vyra](https://github.com/Aevrin-ai/Vyra) on every change to the
-engine, so a pull request here cannot be merged. Please open it against Vyra instead: the engine lives in
-`src/modelwrecker/` there.
+This repository is published automatically from the private repository where modelWrecker is developed,
+so a pull request here cannot be merged as it is. Please open an
+[issue](https://github.com/Aevrin-ai/modelWrecker/issues) describing the change first; a maintainer brings
+accepted changes over and credits you.
