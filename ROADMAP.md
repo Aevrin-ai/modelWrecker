@@ -122,8 +122,9 @@ Each line links to the doc that owns the topic. Test evidence lives in
 
 ## Open work
 
-Open work is tracked as GitHub issues in
-[Aevrin-ai/Vyra](https://github.com/Aevrin-ai/Vyra/issues); see
+Open work is tracked as GitHub issues (label `roadmap`) in the private repository the engine is developed
+in. Bugs and ideas from outside go to
+[Aevrin-ai/modelWrecker issues](https://github.com/Aevrin-ai/modelWrecker/issues). See
 [`docs/reference/GIT-WORKFLOW.md`](docs/reference/GIT-WORKFLOW.md) for how issues, branches, and pull
 requests fit together.
 

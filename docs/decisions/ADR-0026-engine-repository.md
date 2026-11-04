@@ -11,8 +11,9 @@
   every push to `main` and every `v*` tag, and pushes without `--force`.
 - The product is named Vyra; the engine keeps the name modelWrecker (`pip install modelwrecker`, the
   `modelwrecker` command, its environment variables and config folders).
-- Issues stay here. The engine repository has issues and the wiki turned off, and its pull request template
-  points here.
+- Product and team issues stay here, and this repository is private. Bugs and ideas from outside go to the
+  issues on Aevrin-ai/modelWrecker, the one public repository; its wiki is off, and its pull request
+  template asks for an issue first, since changes are made here and published there.
 
 ## Why
 - The dashboard's Connect page tells people to clone the engine to run it in Docker. With the apps in the

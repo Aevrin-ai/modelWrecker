@@ -31,7 +31,7 @@ dependencies = [
 Homepage = "https://app.aevrin.net"
 Repository = "https://github.com/Aevrin-ai/modelWrecker"
 Documentation = "https://github.com/Aevrin-ai/modelWrecker/tree/main/docs"
-Issues = "https://github.com/Aevrin-ai/Vyra/issues"
+Issues = "https://github.com/Aevrin-ai/modelWrecker/issues"
 
 [project.optional-dependencies]
 # Provider adapters beyond the OpenAI-compatible baseline.

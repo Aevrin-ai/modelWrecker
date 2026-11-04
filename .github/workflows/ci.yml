@@ -1,7 +1,7 @@
 name: CI
 
-# The engine's offline test suite. This repository is rebuilt from Aevrin-ai/Vyra, where the engine is
-# developed (see its ADR-0026); this run checks each update here on its own.
+# The engine's offline test suite. This repository is published automatically from the private repository
+# where the engine is developed (ADR-0026); this run checks each update here on its own.
 
 on:
   push:

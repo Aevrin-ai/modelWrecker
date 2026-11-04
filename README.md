@@ -60,10 +60,11 @@ the core engine.
 
 ## Development
 
-modelWrecker is developed in [Aevrin-ai/Vyra](https://github.com/Aevrin-ai/Vyra), alongside the Vyra web
-app. [Aevrin-ai/modelWrecker](https://github.com/Aevrin-ai/modelWrecker) carries only the engine and is
-updated from it automatically. Please open issues and pull requests in
-[Vyra](https://github.com/Aevrin-ai/Vyra/issues).
+modelWrecker is developed alongside the Vyra web app in a private repository and published to
+[Aevrin-ai/modelWrecker](https://github.com/Aevrin-ai/modelWrecker) automatically, so pull requests there
+cannot be merged as they are. Please report bugs and ideas as
+[issues](https://github.com/Aevrin-ai/modelWrecker/issues); accepted changes are brought over by a
+maintainer.
 
 ## License
 
