@@ -71,4 +71,8 @@ Confirmed by the maintainer on 2026-10-02 (issues #11, #12, #42):
   `apps/web`, `apps/dashboard`, `packages/shared`. The Python package, its tests, and its build did not move.
   (ADR-0025)
 
+- **The engine is also published on its own as Aevrin-ai/modelWrecker**, rebuilt from this repository on
+  every push to `main` with its full history; issues stay here. The product is named Vyra and the engine
+  keeps the name modelWrecker. (ADR-0026)
+
 No open decisions remain.

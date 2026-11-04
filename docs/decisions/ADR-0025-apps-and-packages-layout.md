@@ -20,8 +20,10 @@
 
 ## How it was checked
 - The landing page, the dashboard, and the API Worker were built from `main` before the move and from the
-  branch after it. The output is byte-identical, with the same hashed file names the live site serves. The
-  dashboard and API tests pass and the API typecheck is clean.
+  branch after it. The `main` build reproduces the hashed file names the live site serves. After the move
+  the dashboard is byte-identical, and the landing page and the API Worker differ only in the text of the
+  `$comment` in `packages/shared/plans.json`, which names the new paths. The dashboard and API tests pass
+  and the API typecheck is clean.
 
 ## Trade-offs
 - Older CHANGELOG entries and applied database migrations keep the old `src/...` paths, since they record

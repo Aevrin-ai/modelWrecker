@@ -6,15 +6,12 @@ happened - never invent historical entries.
 
 ## [Unreleased]
 
-### Changed
-- The web apps and the API moved out of the Python package's `src/` folder (ADR-0025): `src/api` is
-  now `apps/api`, `src/dash` is `apps/dashboard`, `src/web` is `apps/web`, and `src/shared` is
-  `packages/shared`, so `src/` holds only the engine. Nothing else changed: the landing page, the dashboard,
-  and the API Worker build byte-identical to before, and the Python package, the Docker image, and PyPI
-  publishing are untouched. Workflows, configs, and docs use the new paths; older entries below keep the
-  paths of their time.
-
 ### Added
+- The engine is also published on its own at
+  [Aevrin-ai/modelWrecker](https://github.com/Aevrin-ai/modelWrecker) (ADR-0026), so cloning it no longer
+  brings the web apps. `sync-engine.yml` rebuilds it from this repository on every push to `main`, keeping
+  every engine commit's author and date. The repository's own page is now `.github/README.md`; `README.md`
+  stays the engine's page on PyPI and on Aevrin-ai/modelWrecker. Issue links point to Aevrin-ai/Vyra.
 - Fault tolerance across the hosted service and the engine (#85, ADR-0023). The API puts a request id on
   every response (`X-Request-Id`) and in every error body (`requestId`), writes one redacted JSON log line
   per event, and keeps its logs in Cloudflare Workers Logs. `GET /api/v1/health/ready` checks that the
@@ -29,6 +26,12 @@ happened - never invent historical entries.
   incident runbook: `docs/workflows/INCIDENT-RUNBOOK.md`.
 
 ### Changed
+- The web apps and the API moved out of the Python package's `src/` folder (ADR-0025): `src/api` is
+  now `apps/api`, `src/dash` is `apps/dashboard`, `src/web` is `apps/web`, and `src/shared` is
+  `packages/shared`, so `src/` holds only the engine. Nothing else changed: the dashboard builds byte-identical, the
+  landing page and the API Worker differ only in the text of a comment in `plans.json`, and the Python
+  package, the Docker image, and PyPI publishing are untouched. Workflows, configs, and docs use the new paths; older entries below keep the
+  paths of their time.
 - The owner's code style is applied across the repository (#87, ADR-0024), without changing behavior. The
   style checker went from 805 findings (97 errors) over 296 files to no errors. Every file is under 300
   lines, `any` is gone, no catch block is empty or silent, and test fixtures no longer look like real

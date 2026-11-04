@@ -123,7 +123,7 @@ Each line links to the doc that owns the topic. Test evidence lives in
 ## Open work
 
 Open work is tracked as GitHub issues in
-[Aevrin-ai/modelWrecker](https://github.com/Aevrin-ai/modelWrecker/issues); see
+[Aevrin-ai/Vyra](https://github.com/Aevrin-ai/Vyra/issues); see
 [`docs/reference/GIT-WORKFLOW.md`](docs/reference/GIT-WORKFLOW.md) for how issues, branches, and pull
 requests fit together.
 

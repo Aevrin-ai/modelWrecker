@@ -1,0 +1,28 @@
+name: CI
+
+# The engine's offline test suite. This repository is rebuilt from Aevrin-ai/Vyra, where the engine is
+# developed (see its ADR-0026); this run checks each update here on its own.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  engine:
+    name: Engine (Python tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,mcp,attacks]"
+      - name: Lint (ruff)
+        # Pinned to the version Vyra's CI runs.
+        run: |
+          pip install "ruff==0.16.9"
+          python -m ruff check src tests
+      - run: python -m pytest -q
